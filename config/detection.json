@@ -18,5 +18,5 @@
     "duplicate_policy": "exact-raw-box-normalized-phrase-highest-score-v1",
     "overlap_iou": 0.8
   },
-  "display": {"enabled": true, "backend": "TkAgg", "save_annotated": false}
+  "display": {"enabled": true, "backend": "terminal", "terminal_mode": "summary", "save_annotated": false}
 }

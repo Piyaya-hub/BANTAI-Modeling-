@@ -74,8 +74,12 @@ def validate_config(value, root=ROOT):
         if not finite_number(post["overlap_iou"]) or not 0 <= post["overlap_iou"] <= 1:
             raise ConfigError("overlap_iou must be finite in [0,1]")
         d = c["display"]
-        if type(d["enabled"]) is not bool or d["backend"] != "TkAgg" or d["save_annotated"] is not False:
-            raise ConfigError("display requires boolean enabled, TkAgg, save_annotated=false")
+        if type(d["enabled"]) is not bool or d["backend"] not in ("terminal", "TkAgg") or d["save_annotated"] is not False:
+            raise ConfigError("display requires boolean enabled, terminal backend, save_annotated=false")
+        # Accept historical configurations, but never launch their former GUI backend.
+        d["backend"] = "terminal"
+        if d.setdefault("terminal_mode", "summary") not in ("summary", "full"):
+            raise ConfigError("terminal_mode must be summary or full")
     except (KeyError, TypeError) as exc:
         raise ConfigError(f"missing or malformed configuration field: {exc}") from exc
     return c

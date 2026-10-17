@@ -75,6 +75,9 @@ def run_inference(config, files, *, local_files_only=False):
                                      error=error, unsupported=unsupported, library_version=library_version)
                 if timing is not None:
                     result["timing"] = timing
+                if completed and isinstance(getattr(detector, "query_diagnostics", None), dict):
+                    result["query_diagnostics"] = copy.deepcopy(detector.query_diagnostics)
+                result["display"].update(backend="terminal", terminal_mode=config["display"].get("terminal_mode", "summary"))
                 result["review"]["flags"] = flags
                 result = prepare_result(result)
                 # Initial failure exits before summary/viewer. Previous records remain saved.
@@ -84,18 +87,19 @@ def run_inference(config, files, *, local_files_only=False):
                 manifest["skipped_unsupported"] += unsupported
                 manifest["inference_completed_images"] += completed
                 atomic_json(folder / "run.json", manifest, replace=True)
-                print(summary(result))
                 if result["display"]["status"] == "pending":
                     try:
                         show_image(image, result, cache_dir=config["paths"]["cache"])
                     except Exception as exc:
                         display_error = {"stage": "display", "code": "viewer_failed",
-                                         "message": f"Native TkAgg rendering/return failed ({type(exc).__name__}); inference results remain saved"}
+                                         "message": f"Terminal rendering/write failed ({type(exc).__name__}); inference results remain saved"}
                         manifest["display_errors"] += 1
                         save_display_outcome(result_path, "error", error=display_error)
                         print(f"Display failed: {path.name}; inference JSON preserved", file=sys.stderr)
                     else:
                         save_display_outcome(result_path, "shown")
+                else:
+                    print(summary(result, mode=config["display"].get("terminal_mode", "summary")))
             finally:
                 if image is not None:
                     image.close()

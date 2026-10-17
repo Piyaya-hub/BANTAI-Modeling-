@@ -14,23 +14,28 @@ from scripts.persistence import atomic_json, create_run, source_key
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="BANTAI: preparation only by default; --mode infer runs pinned pretrained inference and optional native viewing")
+    parser = argparse.ArgumentParser(description="BANTAI: preparation only by default; --mode infer runs pinned pretrained inference and optional terminal viewing")
     parser.add_argument("--mode", choices=("prepare", "infer"), default="prepare")
     parser.add_argument("--config", default="config/detection.json")
     parser.add_argument("--input", help="override input directory; relative to repository root")
     parser.add_argument("--results", help="override JSON output directory; relative to repository root")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), help="override requested device")
-    parser.add_argument("--no-display", action="store_true", help="deliberately disable native viewing for inference")
+    parser.add_argument("--no-display", action="store_true", help="deliberately disable terminal image rendering for inference")
     parser.add_argument("--local-files-only", action="store_true", help="inference may use cached files only; never contact the Hub")
+    parser.add_argument("--terminal-mode", choices=("summary", "full"), help="summary or every raw query/token score; complete diagnostics always saved")
     args = parser.parse_args(argv)
     try:
         config = load_config(args.config, overrides={"input": args.input, "results": args.results})
+        if args.terminal_mode:
+            config["display"]["terminal_mode"] = args.terminal_mode
         if args.device:
             config["device"] = args.device
         if args.no_display:
             config["display"]["enabled"] = False
         files = discover_inputs(config["paths"]["input"])
         if args.mode == "infer":
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8")
             from scripts.pipeline import run_inference
             return run_inference(config, files, local_files_only=args.local_files_only)
         run_id, folder = create_run(config["paths"]["results"])

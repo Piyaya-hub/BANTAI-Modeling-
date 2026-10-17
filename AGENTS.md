@@ -1,5 +1,7 @@
 # BANTAI agent instructions
 
+The owner subsequently authorized replacing the native TkAgg pop-up with an in-memory ANSI/Unicode terminal viewer and adding complete pre-filter query/token score diagnostics in summary/full modes. This supersedes native-window requirements only; normal filtering, pinned dependencies, strict JSON, originals and all other scope boundaries remain. See [terminal viewer contract](docs/TERMINAL_VIEWER.md).
+
 ## Project boundary
 
 BANTAI is an academic intelligent-agent project for street-issue detection and hotspot prioritization. The initial development scope of this repository is **trash detection on still images only**. Roadside garbage, potholes, road-surface damage, incident management, and frequency-based hotspot prioritization belong to the broader proposal; they are not all approved implementation work here.

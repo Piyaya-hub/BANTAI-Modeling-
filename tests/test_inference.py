@@ -21,7 +21,7 @@ from scripts.inference import (GroundingDinoDetector, InferenceError, DIRECT_VER
 from scripts.pipeline import run_inference
 from scripts.postprocessing import apply_policies, map_phrase, normalize_phrase
 from scripts.results import candidate, make_result, prepare_result, save_result, validate_result
-from scripts.viewer import candidate_label, draw_overlays, show_image, summary
+from scripts.viewer import candidate_label, show_image, summary, terminal_image_lines
 
 
 class SyntheticTensor:
@@ -148,8 +148,8 @@ class InferenceTests(unittest.TestCase):
         processed, _ = apply_policies(predictions)
         self.assertEqual(processed[0]["state"],"invalid")
         text = summary(self.functional(processed))
-        self.assertIn("synthetic-bad invalid (excluded)",text)
-        self.assertIn("70.0% model score",text)
+        self.assertIn("null | FAIL (invalid)",text)
+        self.assertIn("70.000000% | PASS",text)
         self.assertIn("individual_litter=1",text)
         self.assertIn("Physical object count: unknown",text)
 
@@ -286,9 +286,9 @@ class InferenceTests(unittest.TestCase):
         model.config=config
         processor=MagicMock()
         processor.image_processor.to_dict.return_value={"synthetic_processor":True}
-        module=SimpleNamespace(AutoConfig=MagicMock(),AutoProcessor=MagicMock(),AutoModelForZeroShotObjectDetection=MagicMock())
+        module=SimpleNamespace(AutoConfig=MagicMock(),GroundingDinoProcessor=MagicMock(),AutoModelForZeroShotObjectDetection=MagicMock())
         module.AutoConfig.from_pretrained.return_value=config
-        module.AutoProcessor.from_pretrained.return_value=processor
+        module.GroundingDinoProcessor.from_pretrained.return_value=processor
         module.AutoModelForZeroShotObjectDetection.from_pretrained.return_value=model
         torch=SimpleNamespace(float32="synthetic-float32",cuda=SimpleNamespace(is_available=lambda:False,OutOfMemoryError=SyntheticCudaOOM))
         return module,torch,model,processor
@@ -298,7 +298,7 @@ class InferenceTests(unittest.TestCase):
         with patch("scripts.inference.runtime_versions",return_value=DIRECT_VERSIONS), \
                 patch.dict("sys.modules",{"torch":torch,"transformers":module}):
             d=GroundingDinoDetector(self.config,local_files_only=True)
-        for api in (module.AutoConfig,module.AutoProcessor,module.AutoModelForZeroShotObjectDetection):
+        for api in (module.AutoConfig,module.GroundingDinoProcessor,module.AutoModelForZeroShotObjectDetection):
             kwargs=api.from_pretrained.call_args.kwargs
             self.assertEqual(kwargs["revision"],REVISION)
             self.assertEqual(kwargs["cache_dir"],self.config["paths"]["cache"])
@@ -345,28 +345,110 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(calls,["cpu","enter","exit"])
         self.assertEqual(d.completed_forwards,1)
 
-    def test_native_viewer_requests_tk_draws_and_closes_after_normal_return_or_error(self):
-        # A call-order simulation, not evidence a native desktop window rendered.
-        for fail in (False,True):
-            mpl=MagicMock()
-            plt=MagicMock()
-            mpl.pyplot=plt
-            fig,ax=MagicMock(),MagicMock()
-            plt.subplots.return_value=(fig,ax)
-            if fail:
-                fig.canvas.draw.side_effect=RuntimeError("synthetic draw failure")
-            with Image.new("RGB",(6,4)) as image, \
-                    patch.dict("sys.modules",{"matplotlib":mpl,"matplotlib.pyplot":plt}), \
-                    patch("scripts.viewer.draw_overlays"):
-                if fail:
-                    with self.assertRaises(RuntimeError):
-                        show_image(image,self.functional(),cache_dir=self.root / "cache")
-                    plt.show.assert_not_called()
-                else:
-                    show_image(image,self.functional(),cache_dir=self.root / "cache")
-                    plt.show.assert_called_once_with(block=True)
-                mpl.use.assert_called_once_with("TkAgg",force=True)
-                plt.close.assert_called_once_with(fig)
+    def raw_fixture(self):
+        import torch
+        # Actual tensor operations on synthetic data, never pretrained predictions.
+        logits = torch.tensor([[[0., -2., float("-inf"), float("-inf")],
+                                [-4., -3., float("-inf"), float("-inf")],
+                                [float("nan"), -2., float("-inf"), float("-inf")]]])
+        outputs = SimpleNamespace(logits=logits, pred_boxes=torch.tensor([[[.5,.5,.5,.5]]*3]))
+        inputs = {"input_ids": torch.tensor([[101, 123, 0]]), "attention_mask": torch.tensor([[1,1,0]])}
+        processor = MagicMock()
+        processor.tokenizer.convert_ids_to_tokens.return_value = ["[CLS]", "litter", "[PAD]"]
+        processor.tokenizer.all_special_ids = [101, 0]
+        processor.tokenizer.pad_token_id = 0
+        processor.post_process_grounded_object_detection.return_value = [{
+            "text_labels": ["a discarded bag"], "boxes": torch.tensor([[1.5,1.,4.5,3.]]), "scores": torch.tensor([.5])}]
+        return torch, outputs, inputs, processor
+
+    def test_raw_scores_alignment_padding_invalid_and_filter_equivalence(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        raw = {}
+        args = (outputs, inputs, processor, self.config, 6, 4, torch)
+        with_raw = extract_candidates(*args, diagnostics=raw)
+        self.assertEqual(with_raw, extract_candidates(*args))
+        self.assertEqual([t["position"] for t in raw["tokens"]], [0,1])
+        self.assertEqual([t["token"] for t in raw["tokens"]], ["[CLS]", "litter"])
+        self.assertEqual(len(raw["queries"]), 3)
+        self.assertAlmostEqual(raw["queries"][0]["token_scores"][1], torch.sigmoid(torch.tensor(-2.)).item())
+        rejected = raw["queries"][1]
+        self.assertFalse(rejected["threshold_pass"])
+        self.assertIsNone(rejected["raw_phrase"])
+        self.assertIsNone(rejected["category"])
+        self.assertTrue(all(v > 0 for v in rejected["token_scores"]))
+        self.assertIsNone(raw["queries"][2]["token_scores"][0])
+        self.assertEqual(raw["queries"][2]["invalid_token_positions"], [0])
+        result = self.functional(with_raw)
+        result["query_diagnostics"] = raw
+        json.dumps(prepare_result(result), allow_nan=False)
+        full = summary(result, "full")
+        self.assertEqual(full.count("token["), 6)
+        self.assertIn("q1 | phrase=not decoded", full)
+        self.assertNotIn("token[", summary(result))
+        result["query_diagnostics"]["queries"][0]["token_scores"].pop()
+        with self.assertRaises(ValueError):
+            prepare_result(result)
+
+    def test_raw_strict_threshold_boundary_and_no_attention_mask(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        outputs.logits = torch.zeros((1,1,4))
+        outputs.logits[0,0,3] = -float("inf")
+        outputs.pred_boxes = outputs.pred_boxes[:,:1]
+        inputs.pop("attention_mask")
+        self.config.update(threshold=.5, text_threshold=.5)
+        processor.post_process_grounded_object_detection.return_value = [{
+            "text_labels": [], "boxes": torch.empty((0,4)), "scores": torch.empty(0)}]
+        raw = {}
+        self.assertEqual(extract_candidates(outputs, inputs, processor, self.config, 6,4,torch,diagnostics=raw), [])
+        self.assertEqual(len(raw["tokens"]), 2)
+        self.assertEqual(raw["queries"][0]["token_scores"], [.5]*2)
+        self.assertFalse(raw["queries"][0]["threshold_pass"])
+        self.assertEqual(raw["queries"][0]["token_threshold_pass"], [False]*2)
+
+    def test_terminal_image_no_exports_no_gui_and_results_below_image(self):
+        result = self.functional()
+        stream = io.StringIO()
+        with Image.new("RGB", (60,40), "black") as image:
+            before = image.tobytes()
+            with patch("PIL.Image.Image.save", side_effect=AssertionError("export forbidden")), \
+                    patch("PIL.Image.Image.show", side_effect=AssertionError("GUI forbidden")):
+                show_image(image, result, stream=stream)
+                lines = list(terminal_image_lines(image, result, columns=20, rows=8))
+                empty = list(terminal_image_lines(image, self.functional([]), columns=20, rows=8))
+            self.assertEqual(image.tobytes(), before)
+        self.assertNotEqual(lines, empty)
+        self.assertLessEqual(len(lines), 8)
+        self.assertIn("\x1b[38;2;", stream.getvalue())
+        self.assertLess(stream.getvalue().index("\u2580"), stream.getvalue().index("Detection results"))
+        self.assertTrue(stream.getvalue().endswith("\x1b[0m"))
+
+    def test_terminal_controls_escaped_and_write_errors_propagate(self):
+        result = self.functional()
+        result["source"]["image_id"] = "bad\x1b[2J\nname"
+        self.assertNotIn("\x1b", summary(result))
+        stream = MagicMock()
+        stream.write.side_effect = OSError("synthetic broken pipe")
+        with Image.new("RGB",(6,4)) as image, self.assertRaises(OSError):
+            show_image(image, result, stream=stream)
+
+    def test_pipeline_persists_complete_diagnostics_even_without_display(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        raw = {}
+        predictions = extract_candidates(outputs, inputs, processor, self.config, 6,4,torch,diagnostics=raw)
+        detector = self.detector(predictions)
+        detector.query_diagnostics = raw
+        self.config["display"]["enabled"] = False
+        code, _, records, _, show = self.run_pipeline([self.image_file()], detector)
+        self.assertEqual(code, 0)
+        self.assertEqual(records[0]["query_diagnostics"], raw)
+        show.assert_not_called()
+
+    def test_legacy_backend_migrates_and_invalid_terminal_mode_rejected(self):
+        self.config["display"]["backend"] = "TkAgg"
+        self.assertEqual(validate_config(self.config)["display"]["backend"], "terminal")
+        self.config["display"]["terminal_mode"] = "invalid"
+        with self.assertRaises(ConfigError):
+            validate_config(self.config)
 
     def bare_detector(self, requested="auto", actual="cuda"):
         d=GroundingDinoDetector.__new__(GroundingDinoDetector)
@@ -525,24 +607,6 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(records[0]["display"]["status"],"pending")
         self.assertEqual(records[0]["status"],"ok")
 
-    def test_headless_canvas_boxes_labels_and_pixel_frame_no_image_export(self):
-        # Real Matplotlib Agg drawing verifies geometry only, never native Tk rendering.
-        with patch.dict(os.environ,{"MPLCONFIGDIR":str(self.root / "mpl")}), \
-                patch("PIL.Image.Image.save",side_effect=AssertionError("image export forbidden")):
-            from matplotlib.figure import Figure
-            from matplotlib.backends.backend_agg import FigureCanvasAgg
-            result=self.functional([self.prediction(),self.prediction("synthetic-invalid",score=float("nan"))])
-            with Image.new("RGB",(6,4)) as image:
-                fig=Figure()
-                FigureCanvasAgg(fig)
-                ax=fig.subplots()
-                draw_overlays(ax,image,result)
-                fig.canvas.draw()
-                self.assertEqual(len(ax.patches),1)
-                self.assertEqual(ax.images[0].get_extent(),[0,6,4,0])
-                self.assertEqual(ax.texts[0].get_text(),candidate_label(result["detections"][0]))
-                self.assertEqual(tuple(ax.get_ylim()),(4,0))
-                fig.clear()
 
 
 if __name__ == "__main__":

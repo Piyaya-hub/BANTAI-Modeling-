@@ -1,5 +1,7 @@
 # Software and functional detection checks
 
+Terminal-viewer amendment: test actual sigmoid tensor operations on synthetic logits, strict threshold boundaries, padding exclusion/token alignment, complete JSON in both modes, unchanged candidate filtering, ANSI output order, source preservation, no export/GUI, and display failure/persistence lifecycle. Record actual model execution separately and do not infer VS Code visual readability from captured output. See [terminal evidence](TERMINAL_VIEWER.md).
+
 ## Current scope and evidence
 
 Phase 2A readiness and Phase 2B foundation are published. The owner has authorized Phase 2C baseline inference/mapping/native display. Software checks now include loader/device/API, exact mapping/duplicate/overlap behavior, persistence ordering and viewer failure handling. Actual commands/results are in [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). All fake predictions remain synthetic software fixtures; Agg canvas drawing is not native rendering, and no actual cloud model run occurred.

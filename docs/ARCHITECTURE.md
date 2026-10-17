@@ -1,5 +1,7 @@
 # Model inference architecture
 
+Current viewer amendment: ANSI truecolor/Unicode terminal previews replace TkAgg windows. Results appear below each image; complete aligned pre-filter query/token scores are an additive JSON field. Summary/full output modes do not change detection filtering. Display `shown` now means successful terminal writes/flush, not verified human visibility. See [terminal contract](TERMINAL_VIEWER.md). Earlier native-viewer descriptions below are historical.
+
 Status: Phase 2A readiness and Phase 2B foundation are published. Phase 2C now implements the baseline workflow below under the owner's proceed instruction, with an explicit CLI inference mode and preparation-only default. Software fixtures verify boundaries; actual pretrained loading/inference and target native overlays remain unrun in this cloud environment. See [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md) for provenance and limits.
 
 ## Intended functional-check path

@@ -1,5 +1,7 @@
 # Phase 2C — baseline implementation and evidence
 
+Terminal-viewer follow-up: [contract and actual checks](TERMINAL_VIEWER.md). This replaces the runtime GUI path while retaining the historical native-viewer evidence below.
+
 Latest direct target evidence: [Windows cached-model follow-up](PHASE_2C_WINDOWS_RUN.md) records 53 passing software tests/one skip and actual successful CUDA inference after the padding fix. The cloud and supplied evidence below remain historical and separate.
 
 Implemented for review on 2026-10-17 after the owner's “proceed now with phase 2C” instruction. Branch `feat/phase-2c-pretrained-inference` starts from published main `5db174bd402456582836c83fdf7c8a4446517d28`, the merge of PR #6. The initial checkout was clean. Existing branches/user files/environments and all requirements pins were preserved. Shell Git fetch still failed because the configured proxy could not be reached; the connected GitHub tools supplied the exact main commit, whose object hash and existing 2B tree were verified before branch creation. No merge is performed by this task.
