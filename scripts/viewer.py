@@ -1,4 +1,4 @@
-"""Interactive ANSI/Unicode previews and bounded tables, with honest capability errors."""
+"""Native in-memory TkAgg viewing and bounded diagnostic terminal tables."""
 
 import json
 import os
@@ -13,8 +13,8 @@ from .configuration import finite_number
 from .results import valid_candidates
 
 
-class TerminalDisplayError(RuntimeError):
-    """The current output cannot display an inline ANSI/Unicode image."""
+class NativeDisplayError(RuntimeError):
+    """Native display failed; saved predictions remain independent."""
 
 
 def safe_text(value):
@@ -40,56 +40,6 @@ def terminal_size(stream=None):
         return os.get_terminal_size((stream or sys.stdout).fileno())
     except (AttributeError, OSError, ValueError):
         return shutil.get_terminal_size(fallback=(80, 24))
-
-
-def terminal_facts(stream=None, input_stream=None):
-    stream = sys.stdout if stream is None else stream
-    input_stream = sys.stdin if input_stream is None else input_stream
-    size = terminal_size(stream)
-    return {"stdout_isatty": bool(stream.isatty()), "stdin_isatty": bool(input_stream.isatty()),
-            "encoding": getattr(stream,"encoding",None), "columns": size.columns, "rows": size.lines,
-            "TERM": os.environ.get("TERM",""), "COLORTERM": os.environ.get("COLORTERM",""),
-            "TERM_PROGRAM": os.environ.get("TERM_PROGRAM",""), "windows_terminal": bool(os.environ.get("WT_SESSION"))}
-
-
-def enable_windows_vt(stream):
-    if os.name != "nt":
-        return False
-    import ctypes
-    import msvcrt
-    try:
-        handle = ctypes.c_void_p(msvcrt.get_osfhandle(stream.fileno()))
-    except (AttributeError, OSError, ValueError):
-        return False
-    mode = ctypes.c_ulong()
-    kernel = ctypes.windll.kernel32
-    if not kernel.GetConsoleMode(handle, ctypes.byref(mode)):
-        return False  # ConPTY may advertise capability through its environment.
-    if not kernel.SetConsoleMode(handle, mode.value | 4):
-        raise TerminalDisplayError("Inline image unavailable: Windows virtual-terminal processing could not be enabled.")
-    return True
-
-
-def terminal_capabilities(stream):
-    size = terminal_size(stream)
-    facts = json.dumps(terminal_facts(stream),ensure_ascii=True)
-    if not stream.isatty():
-        raise TerminalDisplayError(f"Inline image unavailable: stdout is noninteractive/redirected ({facts}). Run in the VS Code integrated terminal; use --no-display for text/JSON only.")
-    term = os.environ.get("TERM", "")
-    color = os.environ.get("COLORTERM", "").lower()
-    known = os.environ.get("TERM_PROGRAM", "").lower() in ("vscode", "wezterm", "iterm.app") or bool(os.environ.get("WT_SESSION"))
-    # Windows consoles often leave TERM unset or inherited as dumb. A successful
-    # native VT enablement or a known terminal is stronger evidence than TERM.
-    native_vt = enable_windows_vt(stream)
-    if not (native_vt or known or color in ("truecolor", "24bit") or "direct" in term):
-        raise TerminalDisplayError(f"Inline image unavailable: ANSI truecolor support is unconfirmed ({facts}). Use a truecolor VS Code terminal.")
-    try:
-        "\u2580".encode(stream.encoding or "utf-8")
-    except (LookupError, UnicodeError):
-        raise TerminalDisplayError(f"Inline image unavailable: output encoding cannot represent Unicode half blocks ({facts}). Use UTF-8.") from None
-    if size.columns < 50 or size.lines < 1:
-        raise TerminalDisplayError(f"Inline image unavailable: terminal too small ({facts}); resize to at least 50 columns with a positive height.")
-    return size
 
 
 def float32_pass(score, threshold):
@@ -285,134 +235,136 @@ def summary(result, mode=None, **overrides):
     return "\n\n".join("\n".join(block) for block in presentation_blocks(result, mode, **options))
 
 
-def preview_dimensions(image, result, *, columns=None):
-    desired=result.get("display",{}).get("preview_width",120)
-    available=columns if columns is not None else min(desired,terminal_size().columns-1)
-    width=min(image.width,max(1,min(400,available)))
-    return width,max(1,round(image.height*width/image.width))
+def native_details(result):
+    """Full readable records in the same window, away from image overlays."""
+    rows=[]
+    for d in passing_candidates(result):
+        rows.append(f"{d['id']} | {d['model_score']*100:.1f}% model score\n"
+                    f"Category: {d['category'] or 'unmapped'}\n"
+                    f"Phrase: {quoted_text(d['raw_phrase'])}\n"
+                    f"Box xyxy (original px):\n{box_text(d['box_xyxy'])}")
+    return "\n\n".join(rows) if rows else "No valid retained queries pass the box threshold.\nOriginal image displayed without boxes."
 
 
-def preview_description(image,result,*,columns=None):
-    width,height=preview_dimensions(image,result,columns=columns)
-    lines=[f"Preview: source {image.width}x{image.height} px -> {width}x{height} sampled px / {(height+1)//2} terminal rows.",
-           "Truecolor half-block grid; Lanczos downsampling, no upscaling. Small details can disappear; terminal size limits resolution."]
-    if any(len(d["id"])>width for d in passing_candidates(result)):
-        lines.append("This source-sized grid is too narrow for some full query ID labels; see the detection records.")
-    return lines
+def draw_overlays(ax, image, result):
+    """Draw the EXIF-oriented source in pixel-edge coordinates, without resizing."""
+    from matplotlib.patches import Rectangle
+    colors={"garbage_pile":"#ffb000", "individual_litter":"#00ff70",
+            "group_of_individual_litter":"#00dfff", None:"#ff66ff"}
+    width,height=image.size
+    ax.imshow(image,origin="upper",extent=(0,width,height,0),interpolation="antialiased")
+    for d in passing_candidates(result):
+        x0,y0,x1,y1=d["box_xyxy"]
+        color=colors[d["category"]]
+        ax.add_patch(Rectangle((x0,y0),x1-x0,y1-y0,fill=False,
+                               edgecolor=color,linewidth=2,zorder=3))
+        label=d["category"] or "unmapped"
+        bottom=y0>height*.8
+        right=x0>width*.6
+        ax.annotate(label,(x1 if right else x0,y1 if bottom else y0),xytext=(-4 if right else 4,4 if bottom else -4),
+                    textcoords="offset points",va="bottom" if bottom else "top",ha="right" if right else "left",
+                    fontsize=10,color="white",clip_on=True,zorder=4,
+                    bbox=dict(boxstyle="round,pad=0.3",facecolor="black",edgecolor=color,alpha=.9))
+    ax.set(xlim=(0,width),ylim=(height,0),xlabel="x (original pixels)",ylabel="y (original pixels)")
+    ax.set_aspect("equal",adjustable="box")
+    ax.set_title("Model scores are not accuracy. Zoom / Pan: toolbar; Home: reset. Close to continue.",fontsize=10)
 
 
-def terminal_image_lines(image, result, *, columns=None, rows=None):
-    """Width-driven square pixels; vertical scrolling is intentional.
+def open_native_window(figure, title, *, details=None):
+    """Block until normal window closure; propagate Tk callback/render failures."""
+    import tkinter as tk
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
-    rows remains an accepted legacy argument but no longer limits image height.
-    """
-    from PIL import Image, ImageDraw
-    width,height=preview_dimensions(image,result,columns=columns)
-    colors = {"garbage_pile": (255,165,0), "individual_litter": (0,255,0), "group_of_individual_litter": (0,255,255), None: (255,0,255)}
-    labels = {}
-    with image.resize((width,height), Image.Resampling.LANCZOS).convert("RGB") as preview:
-        draw = ImageDraw.Draw(preview)
-        for d in passing_candidates(result):
-            x0,y0,x1,y1 = d["box_xyxy"]
-            box = (min(width-1,x0*width/image.width),min(height-1,y0*height/image.height),
-                   min(width-1,x1*width/image.width),min(height-1,y1*height/image.height))
-            color = colors[d["category"]]
-            draw.rectangle(box,outline=color,width=1)
-            ident = d["id"]
-            if len(ident)>width:
-                continue  # Never print a misleading, clipped query ID.
-            lx = max(0,min(int(box[0]),width-len(ident)))
-            preferred = min((height-1)//2,int(box[1])//2)
-            candidates = sorted(range((height+1)//2), key=lambda y: abs(y-preferred))
-            for ly in candidates:
-                if all((lx+j,ly) not in labels for j in range(len(ident))):
-                    for j,char in enumerate(ident):
-                        labels[lx+j,ly] = (char,color)
-                    break
-        pixels = preview.load()
-        for y in range(0,height,2):
-            line = []
-            for x in range(width):
-                if (x,y//2) in labels:
-                    char,(r,g,b) = labels[x,y//2]
-                    line.append(f"\x1b[38;2;0;0;0m\x1b[48;2;{r};{g};{b}m{char}")
-                else:
-                    r,g,b = pixels[x,y]
-                    background="\x1b[49m"
-                    if y+1<height:
-                        br,bg,bb=pixels[x,y+1]
-                        background=f"\x1b[48;2;{br};{bg};{bb}m"
-                    line.append(f"\x1b[38;2;{r};{g};{b}m{background}\u2580")
-            yield "".join(line)+"\x1b[0m"
+    class ViewToolbar(NavigationToolbar2Tk):
+        # Viewer-only navigation: no image save/export or subplot pop-ups.
+        toolitems=tuple(item for item in NavigationToolbar2Tk.toolitems
+                        if item[0] in ("Home","Back","Forward","Pan","Zoom"))
 
-
-def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None):
-    stream = sys.stdout if stream is None else stream
-    input_stream = sys.stdin if input_stream is None else input_stream
-    # No escape bytes are emitted until capabilities have been checked.
-    heading=f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}"
-    stream.write("\n".join(textwrap.wrap(heading,width=max(24,terminal_size(stream).columns-1)))+"\n")
-    stream.flush()
-    size = terminal_capabilities(stream)
-    settings=result.get("display",{})
-    mode=settings.get("terminal_mode","summary")
-    paginate=mode=="full" and settings.get("paginate",False)
-    if paginate and not input_stream.isatty():
-        raise TerminalDisplayError("Opt-in full-mode pagination requires interactive stdin; omit --paginate to scroll normally.")
-    width=size.columns-1
-    def write(lines):
-        stream.write("\n".join(lines)+"\n")
-        stream.flush()
-    def pause():
-        write(textwrap.wrap("Enter: continue; Ctrl+C: stop (JSON already saved).",width=width))
-        if input_stream.readline()=="":
-            raise TerminalDisplayError("Terminal input closed during paging; display unfinished.")
+    root=None
     try:
-        image_width=min(width,settings.get("preview_width",120))
-        write([line for text in preview_description(image,result,columns=image_width) for line in textwrap.wrap(text,width=width)])
-        for line in terminal_image_lines(image,result,columns=image_width):
-            write([line])
-        # Summary streams together with no Enter prompts. Full-mode paging is
-        # opt-in and uses larger chunks, never terminal-height micro-pauses.
-        used=0
-        for block in presentation_blocks(result,mode,width=width,page_rows=settings.get("page_rows",10),
-                                          include_special=settings.get("include_special_tokens",False)):
-            if paginate and used>=max(50,4*size.lines):
-                pause()
-                used=0
-            write([""]+block)
-            used+=len(block)+1
-
+        root=tk.Tk()
+        root.title(title)
+        root.geometry(f"{min(1400,int(root.winfo_screenwidth()*.9))}x{min(950,int(root.winfo_screenheight()*.85))}")
+        closed=False
+        failures=[]
+        def close():
+            nonlocal closed
+            closed=True
+            root.quit()
+        def callback_error(kind,error,traceback):
+            failures.append(error)
+            root.quit()
+        root.report_callback_exception=callback_error
+        root.protocol("WM_DELETE_WINDOW",close)
+        image_frame=root
+        if details is not None:
+            from tkinter.scrolledtext import ScrolledText
+            panel=ScrolledText(root,width=48,wrap=tk.WORD,font=("Consolas",11),
+                               background="#171717",foreground="white",padx=12,pady=12)
+            panel.insert("1.0","DETECTION DETAILS\nScores are model outputs, not accuracy.\n\n"+details)
+            panel.configure(state=tk.DISABLED)
+            panel.pack(side=tk.RIGHT,fill=tk.Y)
+            image_frame=tk.Frame(root)
+            image_frame.pack(side=tk.LEFT,fill=tk.BOTH,expand=True)
+        canvas=FigureCanvasTkAgg(figure,master=image_frame)
+        toolbar=ViewToolbar(canvas,image_frame,pack_toolbar=False)
+        toolbar.update()
+        toolbar.pack(side=tk.BOTTOM,fill=tk.X)
+        canvas.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+        canvas.draw()
+        root.mainloop()
+        if failures:
+            raise NativeDisplayError(f"Native viewer callback failed ({type(failures[0]).__name__})") from failures[0]
+        if not closed:
+            raise NativeDisplayError("Native viewer ended without normal window closure")
     finally:
-        stream.write("\x1b[0m\n")
-        stream.flush()
+        if root is not None:
+            # Figure.clear() updates its toolbar. Detach it before Tk widgets die.
+            figure.canvas.toolbar=None
+            root.destroy()
 
 
-def show_synthetic(*, stream=None, preview_width=120):
-    """Independent renderer exercise: all pixels/boxes are software fixtures."""
-    from PIL import Image, ImageDraw
-    stream = sys.stdout if stream is None else stream
-    stream.write("SYNTHETIC RENDERER CHECK: fixture boxes/IDs only; no model inference.\n")
-    stream.write(json.dumps(terminal_facts(stream),ensure_ascii=True)+"\n")
-    stream.write("IMAGE: synthetic-renderer-check\n")
+def show_image(image,result,*,cache_dir=None,stream=None,input_stream=None):
+    """Use existing TkAgg dependencies; stdout need not be an interactive terminal."""
+    from matplotlib.figure import Figure
+    stream=sys.stdout if stream is None else stream
+    stream.write(f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}\n")
+    stream.write(summary(result,mode="summary")+"\n")
+    stream.write("Opening native TkAgg viewer; close its window to continue.\n")
     stream.flush()
-    size = terminal_capabilities(stream)
-    fixture = {"inference": {"threshold": .35}, "detections": [
-        {"id": "test0", "state": "retained", "model_score": 1.0, "numeric_diagnostics": [],
-         "box_xyxy": [40,35,145,145], "category": "individual_litter"},
-        {"id": "test1", "state": "retained", "model_score": 1.0, "numeric_diagnostics": [],
-         "box_xyxy": [175,55,285,155], "category": "garbage_pile"}]}
-    with Image.new("RGB",(320,180)) as image:
-        image.putdata([(x*255//319,y*255//179,120) for y in range(180) for x in range(320)])
-        draw = ImageDraw.Draw(image)
-        draw.ellipse((50,45,135,135),fill=(40,70,220))
-        draw.rectangle((185,65,275,145),fill=(240,220,60))
+    figure=Figure(figsize=(12,8),dpi=100,layout="constrained")
+    try:
+        draw_overlays(figure.subplots(),image,result)
+        open_native_window(figure,"BANTAI | "+safe_text(result["source"]["image_id"]),details=native_details(result))
+    except NativeDisplayError:
+        raise
+    except Exception as exc:
+        raise NativeDisplayError(f"Native TkAgg viewer failed ({type(exc).__name__}): {exc}") from exc
+    finally:
+        figure.clear()
+
+
+def show_synthetic(*,stream=None,preview_width=120):
+    """Independent native-window check, without model execution or file writes."""
+    from PIL import Image,ImageDraw
+    from matplotlib.figure import Figure
+    stream=sys.stdout if stream is None else stream
+    stream.write("SYNTHETIC NATIVE VIEWER CHECK: fixture boxes/IDs only; no model inference.\n")
+    stream.flush()
+    result={"inference":{"threshold":.35},"detections":[
+        {"id":"test0","state":"retained","model_score":.86,"numeric_diagnostics":[],
+         "raw_phrase":"synthetic blue circle","category":"individual_litter","box_xyxy":[40,35,145,145]},
+        {"id":"test1","state":"retained","model_score":.91,"numeric_diagnostics":[],
+         "raw_phrase":"synthetic yellow rectangle","category":"garbage_pile","box_xyxy":[175,55,285,155]}]}
+    with Image.new("RGB",(320,180),"#ddddee") as image:
+        draw=ImageDraw.Draw(image)
+        draw.ellipse((50,45,135,135),fill="blue")
+        draw.rectangle((185,65,275,145),fill="yellow")
+        figure=Figure(figsize=(12,8),dpi=100,layout="constrained")
         try:
-            for line in terminal_image_lines(image,fixture,columns=min(size.columns-1,preview_width)):
-                stream.write(line+"\n")
-            stream.flush()
+            draw_overlays(figure.subplots(),image,result)
+            open_native_window(figure,"BANTAI | synthetic viewer check",details=native_details(result))
         finally:
-            stream.write("\x1b[0m\n")
-            stream.flush()
-    stream.write("Renderer output returned. Visual verification remains pending until the image, boxes and test0/test1 IDs are actually inspected.\n")
+            figure.clear()
+    stream.write("Native window closed normally. Visual appearance remains unverified unless observed.\n")
     stream.flush()

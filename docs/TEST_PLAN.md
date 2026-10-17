@@ -1,6 +1,6 @@
 # Software and functional detection checks
 
-Terminal-viewer amendment: test actual sigmoid tensor operations on synthetic logits, strict threshold boundaries, padding exclusion/token alignment, complete JSON in both modes, unchanged candidate filtering, ANSI output order, source preservation, no export/GUI, and display failure/persistence lifecycle. Record actual model execution separately and do not infer VS Code visual readability from captured output. See [terminal evidence](TERMINAL_VIEWER.md).
+Native-viewer amendment: verify oriented pixel alignment, full-source image preservation, valid passing overlays, matching IDs/phrases/categories/scores, contrasting labels, empty results, zoom/pan, normal closure and failures, source-verified replay and atomic lifecycle. Agg drawing and mock Tk checks are software evidence; record actual Windows observations separately. Keep complete raw scores and unchanged filtering. See [native viewer evidence](NATIVE_VIEWER.md).
 
 ## Current scope and evidence
 

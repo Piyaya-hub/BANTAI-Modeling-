@@ -75,9 +75,9 @@ def validate_config(value, root=ROOT):
             raise ConfigError("overlap_iou must be finite in [0,1]")
         d = c["display"]
         if type(d["enabled"]) is not bool or d["backend"] not in ("terminal", "TkAgg") or d["save_annotated"] is not False:
-            raise ConfigError("display requires boolean enabled, terminal backend, save_annotated=false")
-        # Accept historical configurations, but never launch their former GUI backend.
-        d["backend"] = "terminal"
+            raise ConfigError("display requires boolean enabled, TkAgg backend, save_annotated=false")
+        # Historical terminal configurations migrate to the owner's native viewer.
+        d["backend"] = "TkAgg"
         if d.setdefault("terminal_mode", "summary") not in ("summary", "full"):
             raise ConfigError("terminal_mode must be summary or full")
         for key, default, maximum in (("summary_below_threshold", 0, 900), ("page_rows", 10, 100)):

@@ -17,7 +17,7 @@ from scripts.inputs import load_image
 from scripts.persistence import atomic_json
 from scripts.replay import run_replay
 from scripts.results import candidate, make_result, save_result
-from scripts.viewer import TerminalDisplayError, show_synthetic, terminal_capabilities
+from scripts.viewer import NativeDisplayError, show_synthetic
 
 
 class ReplayTests(unittest.TestCase):
@@ -27,6 +27,7 @@ class ReplayTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config = load_config(overrides={"input": str(self.root / "unused-input"), "results": str(self.root / "replays")})
+        self.config.update(threshold=.35,text_threshold=.25)  # Saved fixture, independent of owner edits.
         self.image_path = self.root / "original.png"
         with Image.new("RGB", (12,8), "blue") as image:
             image.save(self.image_path)
@@ -91,7 +92,7 @@ class ReplayTests(unittest.TestCase):
         self.assertFalse((self.root / "replays").exists())
 
     def test_replay_renderer_failure_and_interrupt_keep_originals(self):
-        with patch("scripts.replay.show_image",side_effect=TerminalDisplayError("unsupported fixture stream")):
+        with patch("scripts.replay.show_image",side_effect=NativeDisplayError("unsupported fixture stream")):
             self.assertEqual(self.invoke(),1)
         self.assertEqual(self.replay_records()[0]["display"]["status"],"error")
         with patch("scripts.replay.show_image",side_effect=KeyboardInterrupt()):
@@ -124,22 +125,6 @@ class ReplayTests(unittest.TestCase):
         show.assert_not_called()
         self.assertEqual(self.replay_records()[0]["display"]["status"],"disabled")
         self.assert_originals()
-
-    def test_synthetic_renderer_rejects_redirected_output_without_escape_bytes(self):
-        out=io.StringIO()
-        with self.assertRaises(TerminalDisplayError), patch("PIL.Image.Image.save",side_effect=AssertionError("No image files")):
-            show_synthetic(stream=out)
-        self.assertNotIn("\x1b",out.getvalue())
-        self.assertIn("SYNTHETIC",out.getvalue())
-
-    def test_known_native_windows_vt_is_not_rejected_by_inherited_dumb_term(self):
-        import os
-        from types import SimpleNamespace
-        stream=SimpleNamespace(isatty=lambda:True,encoding="utf-8")
-        with patch.dict(os.environ,{"TERM":"dumb","TERM_PROGRAM":"","COLORTERM":"","WT_SESSION":""}), \
-                patch("scripts.viewer.enable_windows_vt",return_value=True), \
-                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,24))):
-            self.assertEqual(terminal_capabilities(stream).columns,80)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,6 @@
 # BANTAI agent instructions
 
-Latest owner viewer policy: summary stays passing-only; explicit full mode includes saved below-threshold query/token diagnostics. Use configurable width-driven ANSI previews with vertical scrolling, grouped aligned token tables and no default Enter pauses. Synthetic display-check and source-verified replay are authorized without inference. Owner VS Code visual verification stays pending unless actually observed. This supersedes the previous all-console passing-only restriction; see [current terminal contract](docs/TERMINAL_VIEWER.md).
-
-The owner subsequently authorized replacing the native TkAgg pop-up with an in-memory ANSI/Unicode terminal viewer and adding complete pre-filter query/token score diagnostics in summary/full modes. This supersedes native-window requirements only; normal filtering, pinned dependencies, strict JSON, originals and all other scope boundaries remain. See [terminal viewer contract](docs/TERMINAL_VIEWER.md).
+Latest owner viewer policy: native Matplotlib/TkAgg windows replace terminal image rendering, superseding terminal-only/no-pop-up requirements. Keep passing-only terminal tables, source-verified replay, original oriented pixel coordinates, zoom/pan, in-memory overlays and atomic separate display status. Preserve complete JSON diagnostics and model behavior. See [current native viewer contract](docs/NATIVE_VIEWER.md). Earlier terminal-only decisions are history.
 
 ## Project boundary
 

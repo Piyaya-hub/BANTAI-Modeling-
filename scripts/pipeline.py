@@ -10,7 +10,7 @@ from .inputs import load_image
 from .persistence import atomic_json, create_run
 from .postprocessing import DUPLICATE_POLICY, MAPPING_VERSION, apply_policies
 from .results import make_result, prepare_result, save_display_outcome, save_result
-from .viewer import TerminalDisplayError, safe_text, show_image, summary
+from .viewer import NativeDisplayError, safe_text, show_image, summary
 
 
 def run_inference(config, files, *, local_files_only=False):
@@ -78,7 +78,7 @@ def run_inference(config, files, *, local_files_only=False):
                 if completed and isinstance(getattr(detector, "query_diagnostics", None), dict):
                     result["query_diagnostics"] = copy.deepcopy(detector.query_diagnostics)
                 result["display"].update({key: config["display"][key] for key in ("backend", "terminal_mode", "summary_below_threshold", "page_rows", "include_special_tokens", "preview_width", "paginate")})
-                result["display"].update(console_policy="full_raw" if config["display"]["terminal_mode"] == "full" else "passing_only", visual_verification="pending")
+                result["display"].update(console_policy="passing_only" if config["display"]["enabled"] or config["display"]["terminal_mode"]=="summary" else "full_raw", visual_verification="pending")
                 result["review"]["flags"] = flags
                 result = prepare_result(result)
                 # Initial failure exits before summary/viewer. Previous records remain saved.
@@ -92,12 +92,12 @@ def run_inference(config, files, *, local_files_only=False):
                     try:
                         show_image(image, result, cache_dir=config["paths"]["cache"])
                     except Exception as exc:
-                        display_error = {"stage": "display", "code": "unsupported_terminal" if isinstance(exc, TerminalDisplayError) else "viewer_failed",
-                                         "message": str(exc) if isinstance(exc, TerminalDisplayError) else f"Terminal rendering/write failed ({type(exc).__name__}); inference results remain saved"}
+                        display_error = {"stage": "display", "code": "viewer_failed",
+                                         "message": str(exc) if isinstance(exc, NativeDisplayError) else f"Native viewing/write failed ({type(exc).__name__}); inference results remain saved"}
                         manifest["display_errors"] += 1
                         save_display_outcome(result_path, "error", error=display_error)
                         print(f"Display failed: {safe_text(path.name)}; {display_error['message']}; inference JSON preserved", file=sys.stderr)
-                        print(summary(result, mode=config["display"]["terminal_mode"]))
+                        print(summary(result, mode="summary"))
                     else:
                         save_display_outcome(result_path, "shown")
                 else:

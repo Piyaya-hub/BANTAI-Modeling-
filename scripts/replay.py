@@ -9,7 +9,7 @@ from .configuration import resolve_path, strict_load
 from .inputs import load_image
 from .persistence import atomic_json, create_run
 from .results import validate_result
-from .viewer import TerminalDisplayError, safe_text, show_image, summary
+from .viewer import NativeDisplayError, safe_text, show_image, summary
 
 
 def run_replay(config, result_path, image_path):
@@ -28,7 +28,7 @@ def run_replay(config, result_path, image_path):
             if source[key] != result["source"][key]:
                 raise ValueError(f"Replay source mismatch: {key}; use the matching unchanged original")
         shown = copy.deepcopy(result)
-        policy="full_raw" if config["display"]["terminal_mode"]=="full" else "passing_only"
+        policy="passing_only" if config["display"]["enabled"] or config["display"]["terminal_mode"]=="summary" else "full_raw"
         shown["display"].update(config["display"], console_policy=policy)
         run_id, folder = create_run(config["paths"]["results"])
         path = folder / "replay.json"
@@ -40,7 +40,7 @@ def run_replay(config, result_path, image_path):
                   "thresholds_from_saved_result": {k: result["inference"][k] for k in ("threshold", "text_threshold")},
                   "display": {"enabled": config["display"]["enabled"],
                               "status": "pending" if config["display"]["enabled"] else "disabled",
-                              "error": None, "visual_verification": "pending", "console_policy": policy,
+                              "error": None, "backend": "TkAgg", "visual_verification": "pending", "console_policy": policy,
                               "terminal_mode": config["display"]["terminal_mode"], "preview_width": config["display"]["preview_width"],
                               "paginate": config["display"]["paginate"], "page_rows": config["display"]["page_rows"],
                               "include_special_tokens": config["display"]["include_special_tokens"]}}
@@ -51,11 +51,11 @@ def run_replay(config, result_path, image_path):
                     show_image(image, shown)
                 except Exception as exc:
                     record["display"].update(status="error", error={
-                        "stage": "display", "code": "unsupported_terminal" if isinstance(exc, TerminalDisplayError) else "viewer_failed",
-                        "message": str(exc) if isinstance(exc, TerminalDisplayError) else f"Replay rendering/write failed ({type(exc).__name__})"})
+                        "stage": "display", "code": "viewer_failed",
+                        "message": str(exc) if isinstance(exc, NativeDisplayError) else f"Replay rendering/write failed ({type(exc).__name__})"})
                     atomic_json(path, record, replace=True)
                     print(f"Replay display failed: {safe_text(record['display']['error']['message'])}", file=sys.stderr)
-                    print(summary(shown))
+                    print(summary(shown,mode="summary"))
                 else:
                     record["display"]["status"] = "shown"
                     atomic_json(path, record, replace=True)
