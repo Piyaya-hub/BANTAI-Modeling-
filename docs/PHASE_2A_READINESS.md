@@ -4,9 +4,9 @@
 
 The owner authorizes Codex to perform **local Windows environment setup/readiness only**, corresponding to [PHASE_1_IMPLEMENTATION_PLAN.md](PHASE_1_IMPLEMENTATION_PLAN.md) Section 4 and Section 8 stages 2–3. Codex replaces Antigravity; the owner states Antigravity made no changes. See the [phase definition](PHASES.md#phase-2a--local-windows-environment-setup-and-readiness-verification) and D-022/D-023 in [DECISIONS.md](DECISIONS.md).
 
-**Partially prepared, not yet ready: Python 3.11.9 x64, local cloning and venv creation are confirmed by supplied outputs; ML package/device/viewer and checkpoint readiness remain outstanding.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are instructions; only the owner-supplied command results explicitly recorded below have been observed. Codex has not executed on the target. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
+**Partially prepared, not yet ready: Python 3.11.9 x64, local cloning and venv creation are confirmed by supplied outputs; direct package installation/imports, dependency consistency and CPU/GPU tensor probes also passed in supplied outputs; viewer, checkpoint metadata and final reproducibility capture remain outstanding.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are instructions; only the owner-supplied command results explicitly recorded below have been observed. Codex has not executed on the target. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
 
-No dependency installation, GPU/CPU package probe, native viewer operation, model download/loading or inference on the target is claimed. Do not install ML packages in the cloud as a substitute. No photographs, annotations or detector implementation are needed for these readiness checks.
+Owner-supplied target outputs confirm dependency installation/imports, `pip check`, and CPU/GPU tensor probes. Native viewer operation, checkpoint metadata verification, model download/loading and inference are not claimed. Do not install ML packages in the cloud as a substitute. No photographs, annotations or detector implementation are needed for these readiness checks.
 
 ## Evidence ledger
 
@@ -14,13 +14,13 @@ No dependency installation, GPU/CPU package probe, native viewer operation, mode
 | --- | --- | --- |
 | Repository baseline | Fetched latest `main`: `7a776cf`, merge of PR #4; started from a clean checkout | Preserve local Windows checkout/user changes when inspecting it |
 | Windows/Git/Python | Supplied CMD output: Windows 10 version 10.0.19045.6466; Git 2.45.1.windows.1; WinGet installed Python 3.11.9 x64 with verified hash; new-terminal Python probe returned 3.11.9/AMD64/64 bits and real Python311 executable | Use the verified interpreter and target venv; do not confuse earlier Store alias with the installed interpreter |
-| GPU/driver/memory | Supplied successful `nvidia-smi` query: NVIDIA GeForce GTX 1660 Ti; driver 472.19; 6144 MiB total, 5235–5236 MiB free at query time | Validate driver/wheel compatibility and actual CUDA tensor execution or diagnosed CPU fallback; model-memory fit remains untested |
-| Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Actual Windows imports, `pip check`, exact resolved packages; metadata alone is not runtime verification |
-| Proposed CUDA wheel | Official cu118 index lists torch 2.7.1 CPython 3.11 Windows x64 wheel | Driver/build/capability check and actual tensor operation on target |
+| GPU/driver/memory | Supplied successful `nvidia-smi` query: NVIDIA GeForce GTX 1660 Ti; driver 472.19; 6144 MiB total, 5235–5236 MiB free at query time | Actual supplied CUDA tensor test passed on this driver/build; model-memory fit remains untested |
+| Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Direct library imports and `pip check` now passed in supplied output; full exact dependency manifest remains to capture |
+| Proposed CUDA wheel | Official cu118 index lists torch 2.7.1 CPython 3.11 Windows x64 wheel | Supplied target reports build 11.8, CUDA available, capability (7,5), successful GPU tensor |
 | Checkpoint/configuration/conditions/revision/safetensors | Metadata-only request to Hugging Face API blocked by cloud proxy: tunnel `403 Forbidden` | Inspect official model metadata/card/files on accessible target; record immutable commit and conditions; do not fetch weights |
 | NVIDIA driver reference | Official CUDA 11.8 release-notes request blocked by cloud proxy: tunnel `403 Forbidden` | Compare target driver to official NVIDIA compatibility/release guidance; no guessed minimum asserted |
-| Local checkout/environment | Supplied clone succeeded at the owner-selected Documents/Python/Project Image-object Detection folder on this preparation branch; `.venv` creation/verification returned Python 3.11.9 | Install/test proposed packages inside this venv; record exact resolved dependencies and CUDA/CPU index, not an unexecuted lock |
-| CPU/GPU probes | Unrun | Actual package/device operations below; GPU unavailable may produce diagnosed CPU readiness only |
+| Local checkout/environment | Supplied clone succeeded at the owner-selected Documents/Python/Project Image-object Detection folder on this preparation branch; `.venv` creation/verification returned Python 3.11.9 | Direct packages installed and imports/dependency check passed; capture full exact dependency manifest and CUDA index |
+| CPU/GPU probes | Supplied results: torch 2.7.1+cu118; CUDA build 11.8; CPU result 2.0; CUDA available True; GTX 1660 Ti; capability (7,5); GPU result 2.0 | Passed basic CPU/CUDA execution only; no model-memory/performance inference |
 | Native Tk/Matplotlib viewer | Unrun | Visible synthetic window, successful drawing/normal return and resource closure; no saved images |
 
 Official references rechecked for metadata only: [Transformers metadata](https://pypi.org/pypi/transformers/4.51.3/json), [torchvision metadata](https://pypi.org/pypi/torchvision/0.22.1/json), [CUDA 11.8 wheel listing](https://download.pytorch.org/whl/cu118/torch/). Metadata verification does not establish Windows/GPU compatibility or acceptance of all proposed pins. Earlier source findings and limits remain in the plan; they are not upgraded to local evidence.
@@ -38,7 +38,7 @@ where python3
 winget --version
 ```
 
-If `python --version` launches Microsoft Store, close it and record that an app-execution alias was encountered; do not treat it as an installed interpreter. If Python is found, inspect its version/architecture before creating a venv. `winget` availability informs the installation route if Python must be installed; no installation command is issued until discovery is resolved. Driver 472.19 compatibility with the proposed cu118 wheel is not yet established; do not declare it either compatible or incompatible based on version text alone. No CUDA toolkit or model download is needed for discovery.
+If `python --version` launches Microsoft Store, close it and record that an app-execution alias was encountered; do not treat it as an installed interpreter. If Python is found, inspect its version/architecture before creating a venv. `winget` availability informs the installation route if Python must be installed; no installation command is issued until discovery is resolved. This historical version-only uncertainty was subsequently narrowed by a successful supplied CUDA tensor probe on driver 472.19/cu118; official driver-reference access from the cloud remains blocked, and no model compatibility is inferred. No CUDA toolkit or model download is needed for discovery.
 
 ## 1. Windows preflight and local repository copy
 
@@ -91,15 +91,24 @@ Check the real driver against [CUDA 11.8 release notes](https://docs.nvidia.com/
 
 Keep the existing proposed baseline unless a diagnosed compatibility issue or applicable package advisory requires a documented change: Python 3.11 x64, torch 2.7.1/cu118, torchvision 0.22.1, Transformers 4.51.3, Pillow 11.2.1, Matplotlib 3.10.3. These are not locally tested pins. Recheck affected APIs if any version changes; no silent upgrade or altered checksum/TLS verification.
 
-## Current next step — install and probe the candidate PyTorch build
+## Completed package/device checks and next steps
 
-The verified target venv is `%USERPROFILE%\Documents\Python\Project Image-object Detection\.venv`. Run commands in CMD using its quoted Python executable. Candidate package installation is within Phase 2A and does not download pretrained model weights. Driver 472.19 compatibility remains a hypothesis to check through official guidance and actual tensor execution; a successful wheel installation alone is not GPU readiness.
+Owner-supplied installation/import results:
 
-```bat
-"%USERPROFILE%\Documents\Python\Project Image-object Detection\.venv\Scripts\python.exe" -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu118
-```
+| Library | Observed target version |
+| --- | --- |
+| Python | 3.11.9 x64 |
+| torch | 2.7.1+cu118 |
+| torchvision | 0.22.1+cu118 |
+| Transformers | 4.51.3 |
+| Pillow | 11.2.1 |
+| Matplotlib | 3.10.3 |
 
-After this command succeeds, verify CPU/GPU tensor execution before claiming compatibility. A failing GPU probe needs diagnosis or a clearly recorded CPU fallback; model-memory fit and detection behavior remain untested. Supporting packages and viewer checks follow. Do not run a model to validate environment setup.
+The CUDA torch/torchvision install command used `https://download.pytorch.org/whl/cu118`. The supporting-package command pinned Transformers/Pillow/Matplotlib as above; Pillow 12.3.0 (initially resolved by torchvision) was replaced by the planned 11.2.1, and the final import check confirms 11.2.1. Installation logs and imports are supplied by the owner, not directly executed by cloud Codex. `pip check` returned `No broken requirements found.`
+
+The CPU tensor produced 2.0. CUDA was available, identified GTX 1660 Ti/capability (7,5), and its GPU tensor also produced 2.0 without a reported error. No driver update is justified by an imagined failed check: this tested package/device route works on the reported driver 472.19. Model-memory fit, checkpoint loading and inference are deliberately untested. Do not repeat passing probes without a change/failure/concern.
+
+Next: confirm native TkAgg synthetic viewing, inspect official checkpoint metadata/conditions/revision without downloading weights, and capture the full exact dependency/install-source preparation manifest. No detector implementation or inference is authorized.
 
 ## 3. Authorized isolated setup — reproduction only
 
