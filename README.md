@@ -8,7 +8,7 @@ This repository is dedicated exclusively to AI modelling and computer vision: mo
 
 The three required output categories are **Garbage Pile**, **Individual Litter**, and **Group of Individual Litter**. Images may contain multiple independent regions and mixed categories. These are intended project outputs, not guaranteed pretrained classes. Direct prompting must be evaluated before considering spatial grouping; DBSCAN and other grouping methods are conditional alternatives requiring evidence and explicit authorization. See [scope](docs/SCOPE.md) for definitions and counting requirements.
 
-Execution is intended for the owner’s Windows computer with an owner-reported NVIDIA RTX 2080 Super, preferring GPU with CPU fallback. Local Python, NVIDIA driver, available memory, runtime compatibility, and native viewer operation remain unverified. Checkpoint conditions, safetensors availability, and immutable revision also require verification.
+Execution is intended for the owner’s Windows computer, preferring GPU with CPU fallback. Owner-supplied Command Prompt output now reports Windows 10 build 19045.6466, a GTX 1660 Ti with 6144 MiB VRAM, driver 472.19, and about 5235–5236 MiB free at the time of the query. This replaces the earlier RTX 2080 Super assumption. Git works; `py` is unavailable in that shell. Python installation/location, CUDA compatibility and native viewer operation remain unverified; see the [preflight record](docs/PHASE_2A_READINESS.md). Checkpoint conditions, safetensors availability, and immutable revision also require verification.
 
 ## Current state
 

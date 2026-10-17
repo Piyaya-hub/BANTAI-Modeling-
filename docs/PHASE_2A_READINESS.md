@@ -4,7 +4,7 @@
 
 The owner authorizes Codex to perform **local Windows environment setup/readiness only**, corresponding to [PHASE_1_IMPLEMENTATION_PLAN.md](PHASE_1_IMPLEMENTATION_PLAN.md) Section 4 and Section 8 stages 2–3. Codex replaces Antigravity; the owner states Antigravity made no changes. See the [phase definition](PHASES.md#phase-2a--local-windows-environment-setup-and-readiness-verification) and D-022/D-023 in [DECISIONS.md](DECISIONS.md).
 
-**Not yet ready: target access/preflight and the existence of a local checkout are unconfirmed.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are prepared instructions, not claimed executions. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
+**Not yet ready: partial Windows preflight is supplied; Python, CUDA compatibility, environment/viewer readiness and a local checkout remain unconfirmed.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are instructions; only the owner-supplied command results explicitly recorded below have been observed. Codex has not executed on the target. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
 
 No dependency installation, GPU/CPU package probe, native viewer operation, model download/loading or inference on the target is claimed. Do not install ML packages in the cloud as a substitute. No photographs, annotations or detector implementation are needed for these readiness checks.
 
@@ -13,23 +13,38 @@ No dependency installation, GPU/CPU package probe, native viewer operation, mode
 | Check | Actual outcome in this task | Required next evidence |
 | --- | --- | --- |
 | Repository baseline | Fetched latest `main`: `7a776cf`, merge of PR #4; started from a clean checkout | Preserve local Windows checkout/user changes when inspecting it |
-| Windows/Python | Unrun: target unavailable | Windows version/architecture, available Python interpreters and chosen Python 3.11 x64, existing environment inspection |
-| GPU/driver/memory | Owner reports RTX 2080 Super; no local measurement | `nvidia-smi` identity/driver/total and free memory, actual CUDA tensor execution or diagnosed CPU fallback |
+| Windows/Git/Python | Owner-supplied CMD output: Windows 10 version 10.0.19045.6466; Git 2.45.1.windows.1 works; `py -0p` is not recognized | Discover Python through `where python`/`python --version` and other locations; confirm architecture/venv. Missing launcher does not prove missing Python |
+| GPU/driver/memory | Supplied successful `nvidia-smi` query: NVIDIA GeForce GTX 1660 Ti; driver 472.19; 6144 MiB total, 5235–5236 MiB free at query time | Validate driver/wheel compatibility and actual CUDA tensor execution or diagnosed CPU fallback; model-memory fit remains untested |
 | Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Actual Windows imports, `pip check`, exact resolved packages; metadata alone is not runtime verification |
 | Proposed CUDA wheel | Official cu118 index lists torch 2.7.1 CPython 3.11 Windows x64 wheel | Driver/build/capability check and actual tensor operation on target |
 | Checkpoint/configuration/conditions/revision/safetensors | Metadata-only request to Hugging Face API blocked by cloud proxy: tunnel `403 Forbidden` | Inspect official model metadata/card/files on accessible target; record immutable commit and conditions; do not fetch weights |
 | NVIDIA driver reference | Official CUDA 11.8 release-notes request blocked by cloud proxy: tunnel `403 Forbidden` | Compare target driver to official NVIDIA compatibility/release guidance; no guessed minimum asserted |
-| Isolated environment/lock | Unrun: local preflight unavailable | Preserve existing environment; create/reuse an inspected isolated environment, exact package list plus CUDA/CPU index |
+| Isolated environment/lock | Unrun: Python/interpreter and local checkout unresolved | Preserve existing environment; create/reuse an inspected isolated environment, exact package list plus CUDA/CPU index |
 | CPU/GPU probes | Unrun | Actual package/device operations below; GPU unavailable may produce diagnosed CPU readiness only |
 | Native Tk/Matplotlib viewer | Unrun | Visible synthetic window, successful drawing/normal return and resource closure; no saved images |
 
 Official references rechecked for metadata only: [Transformers metadata](https://pypi.org/pypi/transformers/4.51.3/json), [torchvision metadata](https://pypi.org/pypi/torchvision/0.22.1/json), [CUDA 11.8 wheel listing](https://download.pytorch.org/whl/cu118/torch/). Metadata verification does not establish Windows/GPU compatibility or acceptance of all proposed pins. Earlier source findings and limits remain in the plan; they are not upgraded to local evidence.
 
+## Supplied Command Prompt evidence and immediate next check
+
+The supplied transcript uses **Command Prompt (CMD)**, not PowerShell. Its successful GPU query identifies GTX 1660 Ti, replacing the earlier RTX 2080 Super assumption. The first failed GPU command accidentally joined `--format=csv` to `git --version`; the later correctly separated queries succeeded. This is a paste error, not a GPU failure. Git availability is confirmed by supplied output; `py` availability failed, but Python installation is still unknown. A subsequent combined line (`where python, python --version, ...`) ran only `where` lookups, not the intended version commands. It exposed a `WindowsApps` Python path but did not verify an interpreter; that path may be a Store alias. The next requested check is the single command `python --version`. No personal filesystem path from the transcript is needed in Git.
+
+Run these discovery commands **one at a time in CMD** and record the outputs:
+
+```bat
+where python
+python --version
+where python3
+winget --version
+```
+
+If `python --version` launches Microsoft Store, close it and record that an app-execution alias was encountered; do not treat it as an installed interpreter. If Python is found, inspect its version/architecture before creating a venv. `winget` availability informs the installation route if Python must be installed; no installation command is issued until discovery is resolved. Driver 472.19 compatibility with the proposed cu118 wheel is not yet established; do not declare it either compatible or incompatible based on version text alone. No CUDA toolkit or model download is needed for discovery.
+
 ## 1. Windows preflight and local repository copy
 
 A **checkout** means the local folder containing a cloned GitHub repository. The cloud copy used in this chat is not on the owner's PC. The owner asked what the Windows checkout meant, so no local clone or existing `.venv` is assumed.
 
-Start in any PowerShell window on the owner's Windows PC with `git --version`, `py -0p`, and the `nvidia-smi` query below. These hardware/tool checks do not require a repository folder. If Git is absent, install Git for Windows from its official distribution before cloning; diagnose missing Python/GPU tools separately. Do not request a token merely because a command has not been run.
+The initial Git/GPU checks already have supplied results. Continue with the CMD interpreter-discovery block above. For the fuller setup blocks below, open PowerShell explicitly (the current CMD prompt does not understand PowerShell variable or `Get-*` syntax). Use `py` commands only if the launcher is installed; otherwise substitute the verified Python executable. These hardware/tool checks do not require a repository folder. If Git is absent, install Git for Windows from its official distribution before cloning; diagnose missing Python/GPU tools separately. Do not request a token merely because a command has not been run.
 
 If there is no existing local copy and Git works, create one without overwriting a directory. After this preparation branch is pushed, it can be cloned directly:
 
