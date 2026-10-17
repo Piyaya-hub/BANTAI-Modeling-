@@ -1,6 +1,6 @@
 # Model inference architecture
 
-Status: Phase 2A readiness is recorded in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Phase 2B implements configuration, in-memory image preparation, result validation and atomic persistence only. The CLI uses a separate preparation schema and never claims inference. The complete detector workflow below remains the proposed later design; model execution, mapping/duplicate selection, overlap computation and viewer implementation are deferred beyond 2B. No successful detection or model-memory fit is established.
+Status: Phase 2A readiness and Phase 2B foundation are published. Phase 2C now implements the baseline workflow below under the owner's proceed instruction, with an explicit CLI inference mode and preparation-only default. Software fixtures verify boundaries; actual pretrained loading/inference and target native overlays remain unrun in this cloud environment. See [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md) for provenance and limits.
 
 ## Intended functional-check path
 

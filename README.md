@@ -12,11 +12,11 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-Phase 0/Phase 1 planning and Phase 2A preparation are published (2A merged through PR #5). Codex has implemented **Phase 2B — Input and Output Foundation** for review: configuration, image preparation, result-contract utilities and strict atomic JSON persistence. The owner explicitly superseded the prior 2A-only stop boundary. No model loading, inference or viewer is implemented. Software fixtures are not model evidence; no detection quality or model-memory result exists.
+Phase 2B foundation is published through merged PR #6. The owner has authorized **Phase 2C**, and the pinned pretrained inference/mapping/native-display baseline is implemented for review. The default CLI remains preparation-only; `--mode infer` explicitly enables model loading/inference and optional viewing. Software checks pass, but no actual pretrained-model, target Windows/GPU or real-photo result is claimed by this cloud implementation. See [2C checks and limitations](docs/PHASE_2C_CHECKS.md).
 
 The owner supplies unannotated team photographs, manually downloaded/extracted from Google Drive into a configurable project folder (proposed `data/input/`). The planned detection activity is functional checking and visual inspection, with no required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets.
 
-The planned outputs are an in-memory display of original photographs with predicted boxes, category labels, and individual model-score percentages; readable summaries; per-image JSON; and run/environment metadata. Preserve originals and do not automatically save annotated copies. Model-score percentages are not accuracy, calibrated correctness probabilities, or image-area coverage. Inference and display outcomes are recorded separately under the [proposed output contract](docs/PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract). No model has been implemented or evaluated by this documentation work.
+The planned outputs are an in-memory display of original photographs with predicted boxes, category labels, and individual model-score percentages; readable summaries; per-image JSON; and run/environment metadata. Preserve originals and do not automatically save annotated copies. Model-score percentages are not accuracy, calibrated correctness probabilities, or image-area coverage. Inference and display outcomes are recorded separately under the [proposed output contract](docs/PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract). The baseline is implemented; model execution and detection quality remain unverified.
 
 ## Documentation
 
@@ -43,12 +43,27 @@ Use the existing verified Windows `.venv`; no reinstall is needed:
 
 `--config`, `--input` and `--results` accept absolute paths or paths relative to the repository root, regardless of shell working directory. Configuration is [config/detection.json](config/detection.json). Missing/empty inputs return 2; image read/decode errors return 1 after continuing the batch; unsupported-only input returns 2 with skips recorded; completed preparation returns 0. Configuration/persistence failures return 2. Generated output is JSON only under an ignored run directory. `prepared` means decoded/oriented/RGB-converted in memory, with inference explicitly unrun. No predictions are generated. Default display intent is enabled, but preparation records always say `not_attempted`.
 
-Reusable helpers live in [scripts/](scripts/): `configuration.py`, `inputs.py`, `results.py` and `persistence.py`. Section 7 functional-result construction requires explicit inference completion/provenance; synthetic predictions appear only in [tests/test_foundation.py](tests/test_foundation.py). Mapping, duplicate selection and overlap computation are deferred.
+Reusable helpers live in [scripts/](scripts/): `configuration.py`, `inputs.py`, `results.py` and `persistence.py`. Section 7 functional-result construction requires explicit inference completion/provenance. New baseline modules are `inference.py`, `postprocessing.py`, `pipeline.py` and `viewer.py`. Synthetic predictions appear only in tests and are not observed model evidence.
+
+## Authorized inference usage
+
+In the unchanged verified Windows environment, first run the new software checks, then invoke inference on manually supplied unannotated images:
+
+```bat
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+.venv\Scripts\python.exe scripts\detect_images.py --mode infer --input data/input --results results
+```
+
+Inference mode may download the pinned processor/config/safetensors into `.cache/huggingface` on first use. `--local-files-only` refuses Hub access and requires all pinned files already cached. `--device cpu` or `--device cuda` overrides the configured request; auto prefers CUDA and records unavailable-device or one OOM CPU fallback. Explicit CUDA failures are errors. `--no-display` records deliberate disablement; it does not verify viewing.
+
+Inference results, `run.json`, `environment.json` and `preprocessing.json` are JSON-only outputs under a reserved run directory. Source images are unchanged. Default native TkAgg viewing waits for normal window closure, then atomically updates display outcome. Closing/interruption before the final update can leave pending; failed display preserves successful inference. Failures to initialize the runtime/load the model are processing errors with no detections fabricated. Direct package versions must match the 2A baseline; missing/mismatched packages fail before any download.
+
+Exit codes: 0 for completed requested processing/display; 1 for per-image processing or enabled-display errors after batch continuation; 2 for configuration/input-folder/persistence errors or unsupported-only inputs; 130 for interrupted inference runs. `no_detections` only follows successful model/postprocessing with no above-threshold or invalid candidates. Candidate counts are not physical object/independent-region counts, which remain unknown. Scores are not accuracy.
 
 ## Dependency reproduction reference
 
-[requirements.txt](requirements.txt) contains direct supporting pins; [requirements-cuda.txt](requirements-cuda.txt) selects the original cu118 source for torch/torchvision. [requirements-windows.lock.txt](requirements-windows.lock.txt) transcribes all 36 observed packages, including bootstrap tools, with the cu118 supplementary index. It is a version snapshot without artifact hashes. No fresh installation was tested in 2B. For a future clean Windows Python 3.11 x64 environment only, the complete snapshot can be applied with `python -m pip install -r requirements-windows.lock.txt`; the original two-source route uses `requirements-cuda.txt` followed by `requirements.txt`. Revalidate affected readiness on a rebuilt environment. Preserve the existing target environment.
+[requirements.txt](requirements.txt) contains direct supporting pins; [requirements-cuda.txt](requirements-cuda.txt) selects the original cu118 source for torch/torchvision. [requirements-windows.lock.txt](requirements-windows.lock.txt) transcribes all 36 observed packages, including bootstrap tools, with the cu118 supplementary index. It is a version snapshot without artifact hashes. No package reinstall or fresh installation was tested in 2B/2C. For a future clean Windows Python 3.11 x64 environment only, the complete snapshot can be applied with `python -m pip install -r requirements-windows.lock.txt`; the original two-source route uses `requirements-cuda.txt` followed by `requirements.txt`. Revalidate affected readiness on a rebuilt environment. Preserve the existing target environment.
 
 ## Next step
 
-Review [2B checks and limitations](docs/PHASE_2B_CHECKS.md) and [handoff](docs/HANDOFF.md). Phase 2C/model loading/inference/viewer implementation remains outside this task; no merge is authorized. The 2A records remain supplied Windows preparation evidence, while 2B checks are cloud-executed software fixtures.
+Review [2C checks/evidence](docs/PHASE_2C_CHECKS.md) and [handoff](docs/HANDOFF.md). Run the new checks and authorized baseline in the existing Windows environment to obtain actual model/GPU/native-overlay evidence. The cloud lacks torch/Transformers; its actual CLI probe exercised the missing-runtime error, not inference. No merge or automatic optimization/grouping is authorized.

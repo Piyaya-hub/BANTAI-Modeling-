@@ -66,6 +66,13 @@ def validate_config(value, root=ROOT):
             raise ConfigError("prompt must be nonempty")
         if c["device"] not in ("auto", "cpu", "cuda") or c["dtype"] != "float32":
             raise ConfigError("device must be auto/cpu/cuda; dtype must be float32")
+        from .postprocessing import DUPLICATE_POLICY, MAPPING_VERSION
+        post = c.setdefault("postprocessing", {"mapping_version": MAPPING_VERSION,
+                                               "duplicate_policy": DUPLICATE_POLICY, "overlap_iou": 0.8})
+        if post["mapping_version"] != MAPPING_VERSION or post["duplicate_policy"] != DUPLICATE_POLICY:
+            raise ConfigError("unsupported mapping version or duplicate policy")
+        if not finite_number(post["overlap_iou"]) or not 0 <= post["overlap_iou"] <= 1:
+            raise ConfigError("overlap_iou must be finite in [0,1]")
         d = c["display"]
         if type(d["enabled"]) is not bool or d["backend"] != "TkAgg" or d["save_annotated"] is not False:
             raise ConfigError("display requires boolean enabled, TkAgg, save_annotated=false")

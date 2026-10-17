@@ -2,13 +2,13 @@
 
 ## Current scope and evidence
 
-Phase 2A preparation is complete on supplied Windows evidence. Phase 2B authorizes configuration/input/result/persistence software checks only. Actual commands and results are in [PHASE_2B_CHECKS.md](PHASE_2B_CHECKS.md). Tests use synthetic images and clearly identified synthetic predictions; no model runs, real-photo evidence or viewer implementation. The broader mapping/overlap/visual checks below remain planned beyond 2B.
+Phase 2A readiness and Phase 2B foundation are published. The owner has authorized Phase 2C baseline inference/mapping/native display. Software checks now include loader/device/API, exact mapping/duplicate/overlap behavior, persistence ordering and viewer failure handling. Actual commands/results are in [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). All fake predictions remain synthetic software fixtures; Agg canvas drawing is not native rendering, and no actual cloud model run occurred.
 
 The owner manually downloads/extracts unannotated team photographs from Google Drive into a project folder. Current model checking is functional visual inspection, not formal ground-truth evaluation. No annotation work, benchmark split, precision/recall/mAP, or numerical accuracy target is required. Software fixtures verify program behavior and are not ground-truth evaluation of the model.
 
 ## Documentation checks
 
-Check all tracked Markdown references, parse every fenced JSON example strictly, and review current-state/category/phase/output/status consistency. Confirm existing ignore rules, including `/data/input/`, `/results/`, and `/.cache/huggingface/`, remain intact. Inspect for already tracked photos/results/caches without silently untracking them. Ensure the Phase 2B diff contains only the authorized foundation, requirements snapshots, tests and documentation. Preserve existing ignore rules and append `/work/` for synthetic/scratch artifacts; no tracked images, results, caches or environments.
+Check all tracked Markdown references, parse every fenced JSON example strictly, and review current-state/category/phase/output/status consistency. Confirm existing ignore rules, including `/data/input/`, `/results/`, and `/.cache/huggingface/`, remain intact. Inspect for already tracked photos/results/caches without silently untracking them. Ensure the Phase 2C diff contains only the authorized baseline, supporting tests and documentation; preserve requirements pins/source and prior evidence. Preserve existing ignore rules and append `/work/` for synthetic/scratch artifacts; no tracked images, results, caches or environments.
 
 ## Planned software checks
 

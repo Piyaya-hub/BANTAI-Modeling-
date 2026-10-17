@@ -39,7 +39,7 @@ class FoundationTests(unittest.TestCase):
     def result(self, detections=None, config=None):
         return make_result("synthetic-run", self.source, config or self.config,
                            detections=[self.prediction()] if detections is None else detections,
-                           inference_completed=True, execution=self.execution)
+                           inference_completed=True, execution=self.execution, library_version="4.51.3")
 
     def test_config_relative_paths_independent_of_cwd(self):
         previous = Path.cwd()
