@@ -77,8 +77,8 @@ def run_inference(config, files, *, local_files_only=False):
                     result["timing"] = timing
                 if completed and isinstance(getattr(detector, "query_diagnostics", None), dict):
                     result["query_diagnostics"] = copy.deepcopy(detector.query_diagnostics)
-                result["display"].update({key: config["display"][key] for key in ("backend", "terminal_mode", "summary_below_threshold", "page_rows", "include_special_tokens")})
-                result["display"].update(console_policy="passing_only", visual_verification="pending")
+                result["display"].update({key: config["display"][key] for key in ("backend", "terminal_mode", "summary_below_threshold", "page_rows", "include_special_tokens", "preview_width", "paginate")})
+                result["display"].update(console_policy="full_raw" if config["display"]["terminal_mode"] == "full" else "passing_only", visual_verification="pending")
                 result["review"]["flags"] = flags
                 result = prepare_result(result)
                 # Initial failure exits before summary/viewer. Previous records remain saved.

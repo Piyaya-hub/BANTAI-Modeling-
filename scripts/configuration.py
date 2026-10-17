@@ -86,9 +86,12 @@ def validate_config(value, root=ROOT):
                 raise ConfigError(f"{key} must be an integer in the supported range")
         if type(d.setdefault("include_special_tokens", False)) is not bool:
             raise ConfigError("include_special_tokens must be boolean")
-        # Historical diagnostic-console flags cannot opt out of passing-only output.
+        # Summary remains passing-only; full explicitly opts into raw diagnostics.
         d["summary_below_threshold"] = 0
-        d["include_special_tokens"] = False
+        if type(d.setdefault("preview_width",120)) is not int or not 20 <= d["preview_width"] <= 400:
+            raise ConfigError("preview_width must be an integer in [20,400]")
+        if type(d.setdefault("paginate",False)) is not bool:
+            raise ConfigError("paginate must be boolean")
 
     except (KeyError, TypeError) as exc:
         raise ConfigError(f"missing or malformed configuration field: {exc}") from exc

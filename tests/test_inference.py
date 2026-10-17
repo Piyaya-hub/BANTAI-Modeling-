@@ -383,10 +383,10 @@ class InferenceTests(unittest.TestCase):
         result["query_diagnostics"] = raw
         json.dumps(prepare_result(result), allow_nan=False)
         full = summary(result, "full", width=120, include_special=True)
-        self.assertNotIn("SPECIAL",full)
-        self.assertNotIn("litter [pos=1 id=123]",full)
-        self.assertNotIn("not decoded",full)
-        self.assertIn("No ordinary text tokens pass",full)
+        self.assertEqual(full.count("SPECIAL"),3)
+        self.assertEqual(full.count("litter [pos=1 id=123]"),3)
+        self.assertIn("not decoded",full)
+        self.assertIn("BELOW THRESHOLD",full)
         self.assertNotIn("SPECIAL", summary(result))
         result["query_diagnostics"]["queries"][0]["token_scores"].pop()
         with self.assertRaises(ValueError):
@@ -462,7 +462,7 @@ class InferenceTests(unittest.TestCase):
         result["query_diagnostics"] = raw
         return result
 
-    def test_presentation_is_passing_only_even_with_legacy_full_options(self):
+    def test_summary_passing_only_and_full_restores_raw_coverage(self):
         result = self.presentation_fixture()
         raw = result["query_diagnostics"]
         raw["queries"][0]["token_scores"][1] = .8123456789
@@ -474,13 +474,18 @@ class InferenceTests(unittest.TestCase):
         q3 = copy.deepcopy(raw["queries"][0]); q3.update(id="q3",query_index=3,model_score=.49)
         raw["queries"].append(q3)
         before = copy.deepcopy(result)
-        for mode in ("summary","full"):
+        for mode in ("summary",):
             self.assertEqual([q["id"] for q in selected_queries(result,mode,900)],["q0"])
             text = summary(result,mode,width=120,below_count=900,include_special=True)
             self.assertEqual(text.count("litter [pos=1 id=123]"),1)
             self.assertIn("0.8123",text)
             for excluded in ("q1", "q2", "q3", "SPECIAL", "not decoded", "INVALID", "BELOW THRESHOLD"):
                 self.assertNotIn(excluded,text)
+        self.assertEqual([q["id"] for q in selected_queries(result,"full")],["q0","q1","q2","q3"])
+        full=summary(result,"full",width=120,include_special=True)
+        for included in ("QUERY q0", "QUERY q1", "QUERY q2", "QUERY q3", "BELOW THRESHOLD", "INVALID", "SPECIAL", "duplicate"):
+            self.assertIn(included,full)
+        self.assertEqual(full.count("litter [pos=1 id=123]"),4)
         self.assertEqual(result,before)  # Raw precision and excluded diagnostics intact.
 
     def test_token_console_uses_stored_strict_mask_and_excludes_invalid_values(self):
@@ -542,7 +547,7 @@ class InferenceTests(unittest.TestCase):
         self.assertGreaterEqual(len(tables),2)
         self.assertTrue(all(len(b)<=6 for b in tables))
 
-    def test_terminal_layout_image_ids_and_interactive_paging(self):
+    def test_terminal_layout_groups_tables_without_any_default_pauses(self):
         import re
         result = self.presentation_fixture()
         out = io.StringIO()
@@ -555,12 +560,12 @@ class InferenceTests(unittest.TestCase):
         self.assertTrue(text.startswith("IMAGE: synthetic-fixture.png\n"))
         markers = [text.index(m) for m in ("IMAGE:","\u2580","DETECTION SUMMARY","TEXT-TOKEN SCORE DETAILS","CONFIGURATION")]
         self.assertEqual(markers,sorted(markers))
-        image_text = text.split("Enter: continue;")[0]
+        image_text = text.split("DETECTION SUMMARY")[0]
         image_text = re.sub(r"\x1b\[[0-9;]*m","",image_text)
         self.assertIn("q0",image_text)
         self.assertNotIn("q1",image_text)  # below threshold is table-only
-        self.assertGreater(reader.readline.call_count,1)
-        self.assertGreater(text.rfind("Enter: continue;"),text.index("CONFIGURATION"))
+        reader.readline.assert_not_called()
+        self.assertNotIn("Enter: continue;",text)
         narrow = io.StringIO()
         with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((50,12))):
             show_image(image,result,stream=narrow,input_stream=reader)
@@ -602,11 +607,43 @@ class InferenceTests(unittest.TestCase):
         with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((80,24))):
             with patch("scripts.viewer.terminal_image_lines",side_effect=RuntimeError("synthetic render failure")), self.assertRaises(RuntimeError):
                 show_image(image,result,stream=io.StringIO(),input_stream=reader)
-            with self.assertRaisesRegex(TerminalDisplayError,"input closed"):
+            result["display"].update(terminal_mode="full",paginate=True)
+            with patch("scripts.viewer.presentation_blocks",return_value=iter([["line"]*100,["next"]])), self.assertRaisesRegex(TerminalDisplayError,"input closed"):
                 show_image(image,result,stream=io.StringIO(),input_stream=reader)
 
+    def test_preview_uses_width_and_scrolls_instead_of_shrinking_to_height(self):
+        import re
+        strip=lambda line: re.sub(r"\x1b\[[0-9;]*m","",line)
+        result=self.functional([])
+        result["display"]["preview_width"]=60
+        with Image.new("RGB",(300,600),"blue") as image, patch("scripts.viewer.terminal_size",return_value=os.terminal_size((100,12))):
+            normal=list(terminal_image_lines(image,result))
+            wide=list(terminal_image_lines(image,result,columns=90,rows=2))
+        self.assertEqual(len(normal),60)
+        self.assertTrue(all(len(strip(line))==60 for line in normal))
+        self.assertEqual(len(wide),90)
+        self.assertTrue(all(len(strip(line))==90 for line in wide))
+        with patch.dict(os.environ,{"TERM_PROGRAM":"vscode"}), patch("scripts.viewer.enable_windows_vt",return_value=False), \
+                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,2))):
+            self.assertEqual(terminal_capabilities(SimpleNamespace(isatty=lambda:True,encoding="utf-8")).lines,2)
+
+
+    def test_token_groups_and_unwrapped_status_header(self):
+        result=self.presentation_fixture()
+        for width in (49,79,119):
+            blocks=list(presentation_blocks(result,"full",width=width,page_rows=2))
+            groups=[b for b in blocks if b[0].startswith("QUERY ")]
+            self.assertEqual([b[0].split()[1] for b in groups],["q0","q1","q2"])
+            for block in groups:
+                self.assertIn("Text Threshold Status",block[1])
+                header_positions=[i for i,c in enumerate(block[1]) if c=="|"]
+                for row in block[3:]:
+                    if "|" in row:
+                        self.assertEqual([i for i,c in enumerate(row) if c=="|"],header_positions)
+                self.assertTrue(all(len(line)<=width for line in block))
+
     def test_terminal_presentation_configuration_limits(self):
-        for key,value in (("summary_below_threshold",-1),("summary_below_threshold",True),("page_rows",0),("include_special_tokens",1)):
+        for key,value in (("summary_below_threshold",-1),("summary_below_threshold",True),("page_rows",0),("include_special_tokens",1),("preview_width",0),("preview_width",True),("paginate",1)):
             bad=copy.deepcopy(self.config)
             bad["display"][key]=value
             with self.assertRaises(ConfigError):

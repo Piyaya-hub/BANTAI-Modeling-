@@ -22,10 +22,12 @@ def main(argv=None):
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), help="override requested device")
     parser.add_argument("--no-display", action="store_true", help="deliberately disable terminal image rendering for inference")
     parser.add_argument("--local-files-only", action="store_true", help="inference may use cached files only; never contact the Hub")
-    parser.add_argument("--terminal-mode", choices=("summary", "full"), help="legacy summary/full aliases: console is passing-only; complete diagnostics stay in JSON")
+    parser.add_argument("--terminal-mode", choices=("summary", "full"), help="summary: passing-only; full: all saved raw query/token scores, including below threshold")
     parser.add_argument("--summary-below-threshold", type=int, help="legacy option, ignored by passing-only console output")
     parser.add_argument("--page-rows", type=int, help="maximum physical data lines per table page (1..100; default 10)")
-    parser.add_argument("--include-special-tokens", action="store_true", help="legacy option; special tokens remain JSON-only")
+    parser.add_argument("--include-special-tokens", action="store_true", help="full mode: include active special-token diagnostics")
+    parser.add_argument("--preview-width", type=int, help="ANSI preview width in cells (20..400; default 120), clamped to terminal width; image may scroll vertically")
+    parser.add_argument("--paginate", action=argparse.BooleanOptionalAction, default=None, help="opt-in full-mode pauses between large chunks; default is continuous scrolling")
     parser.add_argument("--result", help="replay: existing functional result JSON (no model execution)")
     parser.add_argument("--image", help="replay: matching unchanged original JPEG/PNG")
     args = parser.parse_args(argv)
@@ -33,7 +35,7 @@ def main(argv=None):
         config = load_config(args.config, overrides={"input": args.input, "results": args.results})
         if args.terminal_mode:
             config["display"]["terminal_mode"] = args.terminal_mode
-        for key in ("summary_below_threshold", "page_rows"):
+        for key in ("summary_below_threshold", "page_rows", "preview_width", "paginate"):
             value = getattr(args,key)
             if value is not None:
                 config["display"][key] = value
@@ -52,7 +54,7 @@ def main(argv=None):
                 raise ValueError("display-check requires display; use replay --no-display to verify source identity without rendering")
             from scripts.viewer import show_synthetic, TerminalDisplayError
             try:
-                show_synthetic()
+                show_synthetic(preview_width=config["display"]["preview_width"])
             except TerminalDisplayError as exc:
                 print(str(exc), file=sys.stderr)
                 return 1

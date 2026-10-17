@@ -28,7 +28,8 @@ def run_replay(config, result_path, image_path):
             if source[key] != result["source"][key]:
                 raise ValueError(f"Replay source mismatch: {key}; use the matching unchanged original")
         shown = copy.deepcopy(result)
-        shown["display"].update(config["display"], console_policy="passing_only")
+        policy="full_raw" if config["display"]["terminal_mode"]=="full" else "passing_only"
+        shown["display"].update(config["display"], console_policy=policy)
         run_id, folder = create_run(config["paths"]["results"])
         path = folder / "replay.json"
         record = {"schema_version": "bantai.display-replay.v1", "run_id": run_id,
@@ -39,7 +40,10 @@ def run_replay(config, result_path, image_path):
                   "thresholds_from_saved_result": {k: result["inference"][k] for k in ("threshold", "text_threshold")},
                   "display": {"enabled": config["display"]["enabled"],
                               "status": "pending" if config["display"]["enabled"] else "disabled",
-                              "error": None, "visual_verification": "pending", "console_policy": "passing_only"}}
+                              "error": None, "visual_verification": "pending", "console_policy": policy,
+                              "terminal_mode": config["display"]["terminal_mode"], "preview_width": config["display"]["preview_width"],
+                              "paginate": config["display"]["paginate"], "page_rows": config["display"]["page_rows"],
+                              "include_special_tokens": config["display"]["include_special_tokens"]}}
         atomic_json(path, record)
         try:
             if config["display"]["enabled"]:

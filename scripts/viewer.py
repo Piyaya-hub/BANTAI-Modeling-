@@ -87,8 +87,8 @@ def terminal_capabilities(stream):
         "\u2580".encode(stream.encoding or "utf-8")
     except (LookupError, UnicodeError):
         raise TerminalDisplayError(f"Inline image unavailable: output encoding cannot represent Unicode half blocks ({facts}). Use UTF-8.") from None
-    if size.columns < 50 or size.lines < 12:
-        raise TerminalDisplayError(f"Inline image unavailable: terminal too small ({facts}); resize to at least 50 columns x 12 rows.")
+    if size.columns < 50 or size.lines < 1:
+        raise TerminalDisplayError(f"Inline image unavailable: terminal too small ({facts}); resize to at least 50 columns with a positive height.")
     return size
 
 
@@ -119,105 +119,145 @@ def passing_candidates(result):
 
 
 def selected_queries(result, mode="summary", below_count=0):
-    # Legacy mode/selection arguments cannot enable excluded console rows.
     raw = result.get("query_diagnostics")
+    if mode == "full" and raw is not None:
+        return raw["queries"]
     by_id = {q["id"]: q for q in raw["queries"]} if raw is not None else {}
     return [by_id.get(d["id"], dict(d, threshold_pass=True)) for d in passing_candidates(result)]
 
 
 def table_pages(headers, rows, *, width, page_rows):
-    """Wrap cells deliberately inside bounded columns; never rely on terminal wrap."""
-    width = max(24, width)
-    query_width = min(8, max(5, max((len(str(r[0])) for r in rows), default=5)))
-    widths = [query_width, width-query_width-6-15-9, 6, 15]
-    if widths[1] < 5:
-        # Very narrow text-only output: stack each row with its field names.
-        for i in range(0, max(1, len(rows)), page_rows):
-            lines = []
-            for row in rows[i:i+page_rows]:
-                for h, cell in zip(headers, row):
-                    lines.extend(textwrap.wrap(f"{h}: {cell}", width=width) or [""])
-                lines.append("")
-            yield lines or ["(no rows)"]
+    """Aligned 3/4-column tables; the status heading never needs to wrap."""
+    width = max(24,width)
+    status_width = max(len(headers[-1]), max((len(str(r[-1])) for r in rows),default=0))
+    status_width = max(15,status_width)
+    if len(headers) == 4:
+        query_width = min(8,max(5,max((len(str(r[0])) for r in rows),default=5)))
+        widths = [query_width,width-query_width-6-status_width-9,6,status_width]
+        flexible = 1
+    else:
+        widths = [width-6-status_width-6,6,status_width]
+        flexible = 0
+    if widths[flexible] < 8:
+        # Narrow text-only streams: deliberate stacked fields, not terminal wrap.
+        page = []
+        for row in rows:
+            for h,cell in zip(headers,row):
+                for line in textwrap.wrap(f"{h}: {cell}",width=width):
+                    if len(page) == page_rows:
+                        yield page
+                        page=[]
+                    page.append(line)
+        if page or not rows:
+            yield page or ["(no rows)"]
         return
+    labels = list(headers)
+    if len(labels[flexible]) > widths[flexible]:
+        labels[flexible] = "Phrase" if len(headers)==4 else "Token"
     def render(row):
-        cells = [textwrap.wrap(str(c), width=w, break_long_words=True, break_on_hyphens=False) or [""] for c,w in zip(row,widths)]
+        cells = [textwrap.wrap(str(c),width=w,break_long_words=True,break_on_hyphens=False) or [""] for c,w in zip(row,widths)]
         return [" | ".join((c[i] if i<len(c) else "").ljust(w) for c,w in zip(cells,widths)).rstrip()
                 for i in range(max(map(len,cells)))]
-    heading = render(headers)
-    divider = "-+-".join("-"*w for w in widths)
-    # Bound physical lines as well as logical rows, so long subwords/phrases do
-    # not silently grow one page beyond terminal height.
-    page = []
+    heading = render(labels)+["-+-".join("-"*w for w in widths)]
+    page=[]
     for row in rows:
-        for line in render(row):
-            if len(page) == page_rows:
-                yield heading + [divider] + page
-                page = []
+        lines=render(row)
+        if page and len(page)+len(lines)>page_rows:
+            yield heading+page
+            page=[]
+        for line in lines:
+            if len(page)==page_rows:
+                yield heading+page
+                page=[]
             page.append(line)
     if page or not rows:
-        yield heading + [divider] + (page or ["(no rows)"])
+        yield heading+(page or ["(no rows)"])
 
 
 def presentation_blocks(result, mode="summary", *, width=80, below_count=0, page_rows=10, include_special=False):
-    if mode not in ("summary", "full"):
+    if mode not in ("summary","full"):
         raise ValueError("terminal mode must be summary or full")
-    # Both historical console modes now obey the owner's passing-only policy.
-    raw = result.get("query_diagnostics")
-    detections = passing_candidates(result)
-    queries = selected_queries(result)
-    query_rows = [(d["id"], safe_text(d["raw_phrase"]), score_text(d["model_score"]), "PASS") for d in detections]
-    for page in table_pages(("Query", "Detected Phrase", "Score", "Box Status"), query_rows, width=width, page_rows=page_rows):
-        yield ["DETECTION SUMMARY"] + page
+    raw=result.get("query_diagnostics")
+    detections=passing_candidates(result)
+    queries=selected_queries(result,mode)
+    full=mode=="full" and raw is not None
+    by_id={d["id"]:d for d in result["detections"]}
+    if full:
+        query_rows=[(q["id"],"not decoded" if q["raw_phrase"] is None else safe_text(q["raw_phrase"]),score_text(q["model_score"]),
+                     decision(q["model_score"],q["threshold_pass"],bool(q["numeric_diagnostics"]) or bool(q.get("invalid_token_positions")))) for q in queries]
+    else:
+        query_rows=[(d["id"],safe_text(d["raw_phrase"]),score_text(d["model_score"]),"PASS") for d in detections]
+    for page in table_pages(("Query","Detected Phrase","Score","Box Status"),query_rows,width=width,page_rows=page_rows):
+        yield ["DETECTION SUMMARY"]+page
     if not detections:
-        yield textwrap.wrap("No valid retained queries pass the configured box threshold.", width=width)
-    counts = Counter(d["category"] or "unmapped" for d in detections)
-    info = ["PASS is a strict threshold decision, never correctness.",
-            "Retained candidates: " + (", ".join(f"{k}={v}" for k,v in sorted(counts.items())) or "0"),
-            "Physical object count: unknown; independent region count: unknown"]
-    yield [line for text in info for line in textwrap.wrap(text, width=width)]
+        yield textwrap.wrap("No valid retained queries pass the configured box threshold; no boxes are drawn.",width=width)
+    counts=Counter(d["category"] or "unmapped" for d in detections)
+    info=["PASS is a strict threshold decision, never correctness.",
+          "Retained candidates: "+(", ".join(f"{k}={v}" for k,v in sorted(counts.items())) or "0"),
+          "Physical object count: unknown; independent region count: unknown"]
+    if full:
+        info.append("Full diagnostics include every saved raw query. Only valid retained passing boxes are drawn.")
+    elif mode=="full":
+        info.append("Raw diagnostics unavailable in this older record; only saved retained predictions can be shown.")
+    yield [line for text in info for line in textwrap.wrap(text,width=width)]
     for d in detections:
-        yield [line for text in [f"BOX {d['id']}: {d['box_xyxy']}", f"CATEGORY {d['id']}: {d['category'] or 'unmapped'}"] for line in textwrap.wrap(text,width=width)]
-    token_rows = []
-    if raw is not None:
-        for q in queries:
-            for t, score, passed in zip(raw["tokens"], q["token_scores"], q["token_threshold_pass"]):
-                if (t["special"] or t["token"] == "[PAD]" or not passed or not finite_number(score)
-                        or not 0 <= score <= 1 or t["position"] in q["invalid_token_positions"]):
-                    continue
-                label = f"{safe_text(t['token'])} [pos={t['position']} id={t['token_id']}]"
-                token_rows.append((q["id"], label, score_text(score), "PASS"))
-    for page in table_pages(("Query", "Token", "Score", "Text Threshold Status"), token_rows, width=width, page_rows=page_rows):
-        yield ["TEXT-TOKEN SCORE DETAILS"] + page
-    if not token_rows:
-        message = "No ordinary text tokens pass the configured text threshold for the retained queries."
+        yield [line for text in [f"BOX {d['id']}: {d['box_xyxy']}",f"CATEGORY {d['id']}: {d['category'] or 'unmapped'}"] for line in textwrap.wrap(text,width=width)]
+    yield ["TEXT-TOKEN SCORE DETAILS"]
+    token_count=0
+    for q in queries if raw is not None else []:
+        token_rows=[]
+        for t,score,passed in zip(raw["tokens"],q["token_scores"],q["token_threshold_pass"]):
+            if t["token"]=="[PAD]" or (t["special"] and not (full and include_special)):
+                continue
+            invalid=t["position"] in q["invalid_token_positions"] or not finite_number(score) or not 0<=score<=1
+            if not full and (not passed or invalid):
+                continue
+            label=f"{safe_text(t['token'])} [pos={t['position']} id={t['token_id']}]"
+            if t["special"]:
+                label+=" SPECIAL"
+            token_rows.append((label,score_text(score),decision(score,passed,invalid)))
+        if token_rows:
+            state=by_id[q["id"]]["state"] if q["id"] in by_id else "diagnostic only"
+            for page in table_pages(("Token","Score","Text Threshold Status"),token_rows,width=width,page_rows=page_rows):
+                yield [f"QUERY {q['id']} ({state})"]+page
+        elif full:
+            yield [f"QUERY {q['id']}","No ordinary token scores available."]
+        token_count+=len(token_rows)
+        if full and q["numeric_diagnostics"]:
+            yield [f"NUMERIC DIAGNOSTICS {q['id']}"]+textwrap.wrap(safe_text(q["numeric_diagnostics"]),width=width)
+    if not token_count:
+        message="No ordinary text tokens pass the configured text threshold for the retained queries."
         if raw is None:
-            message = "Token diagnostics are unavailable in this older result; no token scores were invented."
+            message="Token diagnostics are unavailable in this older result; no token scores were invented."
         yield textwrap.wrap(message,width=width)
-    yield textwrap.wrap("Console shows passing retained queries and passing ordinary tokens only. Complete raw scores and excluded/invalid diagnostics remain in the saved JSON.",width=width)
+    policy="Full mode shows below-threshold/invalid diagnostics as well as passing scores." if full else "Summary shows passing retained queries and passing ordinary tokens only."
+    yield textwrap.wrap(policy+" Complete raw precision and all diagnostics remain in the saved JSON.",width=width)
     if result["error"]:
-        yield ["PROCESSING ERROR"] + textwrap.wrap(safe_text(result["error"]), width=width)
-    inference = result["inference"]
-    yield ["CONFIGURATION", f"Box threshold: {inference['threshold']:.4f}", f"Text threshold: {inference['text_threshold']:.4f}",
-           "Model: Grounding DINO Tiny", "Scores in [0,1]; not accuracy."]
+        yield ["PROCESSING ERROR"]+textwrap.wrap(safe_text(result["error"]),width=width)
+    inference=result["inference"]
+    yield ["CONFIGURATION",f"Box threshold: {inference['threshold']:.4f}",f"Text threshold: {inference['text_threshold']:.4f}",
+           "Model: Grounding DINO Tiny","Scores in [0,1]; not accuracy."]
 
 
-def summary(result, mode="summary", **overrides):
+def summary(result, mode=None, **overrides):
     settings = result.get("display", {})
+    mode = mode or settings.get("terminal_mode","summary")
     options = dict(width=max(24, terminal_size().columns-1), below_count=0,
-                   page_rows=settings.get("page_rows",10), include_special=False)
+                   page_rows=settings.get("page_rows",10), include_special=settings.get("include_special_tokens",False))
     options.update(overrides)
     return "\n\n".join("\n".join(block) for block in presentation_blocks(result, mode, **options))
 
 
 def terminal_image_lines(image, result, *, columns=None, rows=None):
-    """Square-pixel RGB half blocks with query IDs at full terminal-cell size."""
+    """Width-driven square pixels; vertical scrolling is intentional.
+
+    rows remains an accepted legacy argument but no longer limits image height.
+    """
     from PIL import Image, ImageDraw
     size = terminal_size()
-    columns = max(1, min(240, columns if columns is not None else size.columns-1))
-    rows = max(1, min(120, rows if rows is not None else size.lines-5))
-    scale = min(columns/image.width, (2*rows)/image.height)
-    width, height = max(1,int(image.width*scale)), max(1,int(image.height*scale))
+    desired = result.get("display",{}).get("preview_width",120)
+    columns = max(1,min(400,columns if columns is not None else min(desired,size.columns-1)))
+    width, height = columns,max(1,round(image.height*columns/image.width))
     colors = {"garbage_pile": (255,165,0), "individual_litter": (0,255,0), "group_of_individual_litter": (0,255,255), None: (255,0,255)}
     labels = {}
     with image.resize((width,height), Image.Resampling.LANCZOS).convert("RGB") as preview:
@@ -258,47 +298,40 @@ def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None)
     stream.write(f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}\n")
     stream.flush()
     size = terminal_capabilities(stream)
-    if not input_stream.isatty():
-        raise TerminalDisplayError("Inline display requires interactive stdin for paging; run in the VS Code terminal, or use --no-display for text/JSON.")
-    width = size.columns-1
-    settings = result.get("display",{})
-    mode = settings.get("terminal_mode","summary")
+    settings=result.get("display",{})
+    mode=settings.get("terminal_mode","summary")
+    paginate=mode=="full" and settings.get("paginate",False)
+    if paginate and not input_stream.isatty():
+        raise TerminalDisplayError("Opt-in full-mode pagination requires interactive stdin; omit --paginate to scroll normally.")
+    width=size.columns-1
     def write(lines):
         stream.write("\n".join(lines)+"\n")
         stream.flush()
     def pause():
-        write(textwrap.wrap("Enter: continue; Ctrl+C: stop (JSON already saved).", width=width))
-        if input_stream.readline() == "":
+        write(textwrap.wrap("Enter: continue; Ctrl+C: stop (JSON already saved).",width=width))
+        if input_stream.readline()=="":
             raise TerminalDisplayError("Terminal input closed during paging; display unfinished.")
     try:
-        for line in terminal_image_lines(image,result,columns=width,rows=size.lines-5):
+        image_width=min(width,settings.get("preview_width",120))
+        for line in terminal_image_lines(image,result,columns=image_width):
             write([line])
-        # Preserve a chance to inspect the actual image before tables scroll it.
-        pause()
-        blocks = presentation_blocks(result,mode,width=width,
-                     below_count=0,
-                     page_rows=min(settings.get("page_rows",10),max(1,size.lines-10)),
-                     include_special=False)
-        used = 0
-        for block in blocks:
-            budget = size.lines-4
-            if used and used+len(block)+1 > budget:
+        # Summary streams together with no Enter prompts. Full-mode paging is
+        # opt-in and uses larger chunks, never terminal-height micro-pauses.
+        used=0
+        for block in presentation_blocks(result,mode,width=width,page_rows=settings.get("page_rows",10),
+                                          include_special=settings.get("include_special_tokens",False)):
+            if paginate and used>=max(50,4*size.lines):
                 pause()
-                used = 0
-            for line in [""]+block:
-                if used == budget:
-                    pause()
-                    used = 0
-                write([line])
-                used += 1
-        # Let the last page be inspected before the next image can scroll it.
-        pause()
+                used=0
+            write([""]+block)
+            used+=len(block)+1
+
     finally:
         stream.write("\x1b[0m\n")
         stream.flush()
 
 
-def show_synthetic(*, stream=None):
+def show_synthetic(*, stream=None, preview_width=120):
     """Independent renderer exercise: all pixels/boxes are software fixtures."""
     from PIL import Image, ImageDraw
     stream = sys.stdout if stream is None else stream
@@ -318,7 +351,7 @@ def show_synthetic(*, stream=None):
         draw.ellipse((50,45,135,135),fill=(40,70,220))
         draw.rectangle((185,65,275,145),fill=(240,220,60))
         try:
-            for line in terminal_image_lines(image,fixture,columns=size.columns-1,rows=size.lines-8):
+            for line in terminal_image_lines(image,fixture,columns=min(size.columns-1,preview_width)):
                 stream.write(line+"\n")
             stream.flush()
         finally:
