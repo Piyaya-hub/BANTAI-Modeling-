@@ -1,6 +1,16 @@
 # Phase 0 handoff
 
-## Latest foundation
+## Current planning handoff
+
+Phase 0 is complete per the owner; fetched `main` at `8baf785` confirms PR #2 merged. The owner authorized a planning-only Phase 1 handoff and then requested that it be pushed to GitHub. See [PHASE_1_IMPLEMENTATION_PLAN.md](PHASE_1_IMPLEMENTATION_PLAN.md) on `docs/phase-1-implementation-plan` for the technical proposal, official-source findings, unresolved verification prerequisites, fictional JSON examples, and Antigravity acceptance checklist.
+
+The latest requirements select Hugging Face Transformers and functional visual checks on manually supplied, unannotated team photos. They supersede older requirements here for annotations, held-out benchmarks, and numeric accuracy metrics for this activity. No model implementation, dependency installation, model download, or experiment is authorized by the planning/publication request. Implementation and Phase 1 acceptance remain pending owner review and authorization. Windows hardware/driver compatibility and checkpoint-specific conditions are not yet verified.
+
+The sections below preserve the earlier Phase 0 handoff as historical context; their pending-review and annotation/benchmark prerequisites describe that earlier request, not the current planning instructions. Commit/push/PR outcomes for this plan are reported in the task completion message.
+
+## Earlier Phase 0 handoff — historical
+
+### Latest foundation
 
 PR #1 merged the initial foundation into `main`; fetched Git history records merge commit `0a9c738`. These final revisions begin from that latest `main` on `docs/finalize-phase-0-detection-scope` and require a new pull request. The GitHub PR API returned `Forbidden` when checking PR #1; the merge was confirmed through repository history. These revisions are not claimed merged or accepted; owner review remains pending.
 
