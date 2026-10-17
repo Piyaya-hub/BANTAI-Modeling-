@@ -2,7 +2,7 @@
 
 ## Phase 0 documentation checks
 
-Verify that `AGENTS.md`, `README.md`, and the six required `docs/` files exist. Check relative Markdown links, consistent trash-only initial scope, explicit unresolved decisions, approval boundaries, phase acceptance criteria, and absence of unsupported model or benchmark claims. Inspect the Git diff for documentation-only changes and confirm `.gitignore` is unchanged. Do not run or invent model tests during this phase.
+Verify that `AGENTS.md`, `README.md`, and the six required `docs/` files exist. Check relative Markdown links, consistent trash-only AI modelling scope, three-category/multi-region requirements, GroundingDINO-T selection, prompt-first strategy with grouping conditional, explicit unresolved decisions, approval boundaries, phase acceptance criteria, and absence of unsupported model or benchmark claims. Inspect the Git diff for documentation-only changes and confirm `.gitignore` is unchanged. Do not run or invent model tests during this phase.
 
 ## Proposed future evaluation protocol
 
@@ -14,6 +14,25 @@ This section is a proposal, not executed testing. Resolve and approve its concre
 - Choose suitable detection metrics, such as precision, recall, and an agreed average-precision formulation where annotations support it. Define owner-approved numeric success criteria before evaluation; no target values are assumed here.
 - Record per-image predictions, false positives, missed objects, and representative failure cases. Measure latency and resource use only under a documented device and timing procedure.
 - Retain enough non-sensitive metadata and instructions to repeat the experiment, including the model revision and configuration.
+
+## Required future coverage
+
+Evaluate direct GroundingDINO-T predictions for Garbage Pile, isolated Individual Litter, Group of Individual Litter, mixed-category scenes (including all three categories), and images with no relevant trash. Use suitable reference annotations and consistent definitions; do not assume prompt phrases establish category membership.
+
+Include these spatial cases:
+
+- Isolated litter far from a nearby group.
+- Multiple separate groups within one photograph.
+- Small or distant litter objects.
+- Overlapping and partially obscured objects.
+- Garbage piles near individual litter.
+- A garbage pile and a scattered group in the same image.
+
+Evaluate localization, category identification/phrase matching, false positives, missed detections, absent group-region boxes, incorrect group assignments, and duplicate/overlapping predictions. Evaluate direct object-level detections separately from region-level or grouping performance. Check independent-region counting and membership handling, including the illustrative five-object/two-region requirement in [SCOPE.md](SCOPE.md); it is not an observed result.
+
+Compare separate prompts against combined descriptions using a documented exploratory protocol. Keep prompt/threshold experimentation separate from final held-out evaluation. Record inference time, resource use, and reproducibility. Do not invent numeric targets during Phase 0.
+
+If the baseline cannot reliably meet the three-category or multi-region requirement, report that limitation. DBSCAN, scale-normalized proximity, custom bounding-box grouping, hybrid methods, alternative models, and fine-tuning may be evaluated only in a later separately authorized phase. No grouping algorithm is a mandatory Phase 1 implementation.
 
 ## Future functional checks
 
