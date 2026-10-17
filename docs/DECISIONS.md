@@ -112,3 +112,7 @@ D-026: The owner explicitly requested replacing TkAgg with ANSI/Unicode renderin
 ## Terminal presentation correction owner instruction - 2026-10-17
 
 D-027: Continue `feat/terminal-viewer-diagnostics`/PR #9; diagnose missing inline output, require IMAGE-first actual terminal rendering and aligned decimal-score tables, compact configurable summary selection, bounded full output, explicit special-token inclusion, separate threshold/policy states, and honest unsupported-terminal outcomes. Preserve raw precision, inference, thresholds, pinned checkpoint, originals and atomic display lifecycle. No new branch or merge. See [presentation contract and evidence](TERMINAL_VIEWER.md).
+
+## Passing-only console and replay owner instruction - 2026-10-18
+
+D-028: The owner supersedes below-threshold/full-dump console selection with passing-only retained query rows and passing ordinary-token rows, preserving all diagnostics in JSON. Authorizes independent synthetic renderer checks and source-verified display-only replay before further inference. Requires honest pending visual status when the actual Windows/VS Code surface cannot be inspected; keep the same branch/PR and no merge. Model revision, thresholds, originals and inference/display persistence remain protected. See [current terminal contract](TERMINAL_VIEWER.md).

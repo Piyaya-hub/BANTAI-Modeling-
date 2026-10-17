@@ -1,5 +1,7 @@
 # BANTAI agent instructions
 
+Latest owner console policy: print only valid retained box-threshold-passing queries and their ordinary text-threshold-passing tokens; full excluded diagnostics stay in JSON. Synthetic `--mode display-check` and source-verified `--mode replay` are authorized to test display without model execution. Owner VS Code visual verification must remain pending unless actually observed. See [current terminal contract](docs/TERMINAL_VIEWER.md).
+
 The owner subsequently authorized replacing the native TkAgg pop-up with an in-memory ANSI/Unicode terminal viewer and adding complete pre-filter query/token score diagnostics in summary/full modes. This supersedes native-window requirements only; normal filtering, pinned dependencies, strict JSON, originals and all other scope boundaries remain. See [terminal viewer contract](docs/TERMINAL_VIEWER.md).
 
 ## Project boundary

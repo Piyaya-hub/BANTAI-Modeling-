@@ -21,7 +21,7 @@ from scripts.inference import (GroundingDinoDetector, InferenceError, DIRECT_VER
 from scripts.pipeline import run_inference
 from scripts.postprocessing import apply_policies, map_phrase, normalize_phrase
 from scripts.results import candidate, make_result, prepare_result, save_result, validate_result
-from scripts.viewer import candidate_label, show_image, summary, terminal_image_lines, TerminalDisplayError, terminal_capabilities, selected_queries, presentation_blocks, decision
+from scripts.viewer import candidate_label, show_image, summary, terminal_image_lines, TerminalDisplayError, terminal_capabilities, selected_queries, presentation_blocks, decision, passing_candidates, float32_pass
 
 
 class SyntheticTensor:
@@ -148,8 +148,8 @@ class InferenceTests(unittest.TestCase):
         processed, _ = apply_policies(predictions)
         self.assertEqual(processed[0]["state"],"invalid")
         text = summary(self.functional(processed))
-        self.assertIn("INVALID",text)
-        self.assertIn("state=invalid",text)
+        self.assertNotIn("synthetic-bad",text)
+        self.assertNotIn("INVALID",text)
         self.assertIn("0.7000",text)
         self.assertIn("individual_litter=1",text)
         self.assertIn("Physical object count: unknown",text)
@@ -383,9 +383,10 @@ class InferenceTests(unittest.TestCase):
         result["query_diagnostics"] = raw
         json.dumps(prepare_result(result), allow_nan=False)
         full = summary(result, "full", width=120, include_special=True)
-        self.assertEqual(full.count("SPECIAL"), 3)
-        self.assertEqual(full.count("litter [pos=1 id=123]"), 3)
-        self.assertIn("not decoded", full)
+        self.assertNotIn("SPECIAL",full)
+        self.assertNotIn("litter [pos=1 id=123]",full)
+        self.assertNotIn("not decoded",full)
+        self.assertIn("No ordinary text tokens pass",full)
         self.assertNotIn("SPECIAL", summary(result))
         result["query_diagnostics"]["queries"][0]["token_scores"].pop()
         with self.assertRaises(ValueError):
@@ -461,23 +462,61 @@ class InferenceTests(unittest.TestCase):
         result["query_diagnostics"] = raw
         return result
 
-    def test_presentation_selection_full_coverage_and_special_tokens(self):
+    def test_presentation_is_passing_only_even_with_legacy_full_options(self):
         result = self.presentation_fixture()
-        self.assertEqual([q["id"] for q in selected_queries(result,"summary",0)], ["q0"])
-        self.assertEqual([q["id"] for q in selected_queries(result,"summary",1)], ["q0","q1"])
-        self.assertEqual([q["id"] for q in selected_queries(result,"full",0)], ["q0","q1","q2"])
-        text = summary(result,"summary",width=120)
-        self.assertIn("Query rows omitted: 1",text)
-        self.assertEqual(text.count("litter [pos=1 id=123]"),2)
-        self.assertIn("not decoded",text)
-        self.assertIn("Token rows omitted: 4",text)
-        full = summary(result,"full",width=120)
-        self.assertEqual(full.count("litter [pos=1 id=123]"),3)
-        self.assertNotIn("SPECIAL",full)
-        included = summary(result,"full",width=120,include_special=True)
-        self.assertEqual(included.count("SPECIAL"),3)
-        self.assertIn("Token rows omitted: 0",included)
-        self.assertIn("invalid token positions [0]",included)
+        raw = result["query_diagnostics"]
+        raw["queries"][0]["token_scores"][1] = .8123456789
+        raw["queries"][0]["token_threshold_pass"][1] = True
+        # Passing raw duplicates are still excluded from normal output/overlays.
+        duplicate = copy.deepcopy(result["detections"][0])
+        duplicate.update(id="q3",model_score=.49,state="duplicate",duplicate_of="q0")
+        result["detections"].append(duplicate)
+        q3 = copy.deepcopy(raw["queries"][0]); q3.update(id="q3",query_index=3,model_score=.49)
+        raw["queries"].append(q3)
+        before = copy.deepcopy(result)
+        for mode in ("summary","full"):
+            self.assertEqual([q["id"] for q in selected_queries(result,mode,900)],["q0"])
+            text = summary(result,mode,width=120,below_count=900,include_special=True)
+            self.assertEqual(text.count("litter [pos=1 id=123]"),1)
+            self.assertIn("0.8123",text)
+            for excluded in ("q1", "q2", "q3", "SPECIAL", "not decoded", "INVALID", "BELOW THRESHOLD"):
+                self.assertNotIn(excluded,text)
+        self.assertEqual(result,before)  # Raw precision and excluded diagnostics intact.
+
+    def test_token_console_uses_stored_strict_mask_and_excludes_invalid_values(self):
+        result=self.presentation_fixture()
+        q=result["query_diagnostics"]["queries"][0]
+        for score,mask,invalid in ((.25,False,[]),(float("nan"),True,[]),(.8,True,[1])):
+            q["token_scores"][1]=score
+            q["token_threshold_pass"][1]=mask
+            q["invalid_token_positions"]=invalid
+            self.assertNotIn("litter [pos=1",summary(result,width=120))
+        q["token_scores"][1]=.2500000298023224
+        q["token_threshold_pass"][1]=True
+        q["invalid_token_positions"]=[]
+        self.assertIn("litter [pos=1",summary(result,width=120))
+        self.assertEqual(q["token_scores"][1],.2500000298023224)
+
+    def test_empty_passing_results_render_original_and_empty_tables(self):
+        result = self.presentation_fixture()
+        result["detections"] = []
+        text = summary(result,width=120)
+        self.assertIn("No valid retained queries pass",text)
+        self.assertIn("No ordinary text tokens pass",text)
+        self.assertEqual(passing_candidates(result),[])
+        with Image.new("RGB",(60,40),"blue") as image:
+            lines=list(terminal_image_lines(image,result,columns=30,rows=10))
+            expected=list(terminal_image_lines(image,self.functional([]),columns=30,rows=10))
+        self.assertEqual(lines,expected)
+        self.assertTrue(any("\u2580" in line for line in lines))
+
+    def test_legacy_float32_boundary_without_model_import(self):
+        self.assertFalse(float32_pass(.35,.35))
+        self.assertFalse(float32_pass(.35000000001,.35))
+        self.assertTrue(float32_pass(.3500000238418579,.35))
+        result=self.functional([self.prediction(score=.35)])
+        self.assertEqual(passing_candidates(result),[])
+        self.assertNotIn("0.3500 | PASS",summary(result))
 
     def test_presentation_decimal_units_and_status_boundaries(self):
         result = self.presentation_fixture()
@@ -500,7 +539,7 @@ class InferenceTests(unittest.TestCase):
             self.assertTrue(all(len(line)<=width for line in text.splitlines()),(width,text))
         blocks = list(presentation_blocks(result,"full",width=79,page_rows=2))
         tables = [b for b in blocks if b[0] in ("DETECTION SUMMARY","TEXT-TOKEN SCORE DETAILS")]
-        self.assertTrue(len(tables)>2)
+        self.assertGreaterEqual(len(tables),2)
         self.assertTrue(all(len(b)<=6 for b in tables))
 
     def test_terminal_layout_image_ids_and_interactive_paging(self):

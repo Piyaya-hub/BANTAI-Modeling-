@@ -15,17 +15,19 @@ from scripts.persistence import atomic_json, create_run, source_key
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="BANTAI: preparation only by default; --mode infer runs pinned pretrained inference and optional terminal viewing")
-    parser.add_argument("--mode", choices=("prepare", "infer"), default="prepare")
+    parser.add_argument("--mode", choices=("prepare", "infer", "replay", "display-check"), default="prepare")
     parser.add_argument("--config", default="config/detection.json")
     parser.add_argument("--input", help="override input directory; relative to repository root")
     parser.add_argument("--results", help="override JSON output directory; relative to repository root")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), help="override requested device")
     parser.add_argument("--no-display", action="store_true", help="deliberately disable terminal image rendering for inference")
     parser.add_argument("--local-files-only", action="store_true", help="inference may use cached files only; never contact the Hub")
-    parser.add_argument("--terminal-mode", choices=("summary", "full"), help="summary or every raw query/token score; complete diagnostics always saved")
-    parser.add_argument("--summary-below-threshold", type=int, help="summary: show this many highest-scoring valid below-threshold queries (0..900; default 1)")
+    parser.add_argument("--terminal-mode", choices=("summary", "full"), help="legacy summary/full aliases: console is passing-only; complete diagnostics stay in JSON")
+    parser.add_argument("--summary-below-threshold", type=int, help="legacy option, ignored by passing-only console output")
     parser.add_argument("--page-rows", type=int, help="maximum physical data lines per table page (1..100; default 10)")
-    parser.add_argument("--include-special-tokens", action="store_true", help="full mode: explicitly include active special tokens in the readable table")
+    parser.add_argument("--include-special-tokens", action="store_true", help="legacy option; special tokens remain JSON-only")
+    parser.add_argument("--result", help="replay: existing functional result JSON (no model execution)")
+    parser.add_argument("--image", help="replay: matching unchanged original JPEG/PNG")
     args = parser.parse_args(argv)
     try:
         config = load_config(args.config, overrides={"input": args.input, "results": args.results})
@@ -43,10 +45,28 @@ def main(argv=None):
             config["device"] = args.device
         if args.no_display:
             config["display"]["enabled"] = False
+        if args.mode != "prepare" and hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8")
+        if args.mode == "display-check":
+            if args.no_display:
+                raise ValueError("display-check requires display; use replay --no-display to verify source identity without rendering")
+            from scripts.viewer import show_synthetic, TerminalDisplayError
+            try:
+                show_synthetic()
+            except TerminalDisplayError as exc:
+                print(str(exc), file=sys.stderr)
+                return 1
+            except Exception as exc:
+                print(f"Synthetic renderer failed ({type(exc).__name__}): {exc}",file=sys.stderr)
+                return 1
+            return 0
+        if args.mode == "replay":
+            if not args.result or not args.image:
+                raise ValueError("--mode replay requires --result and --image")
+            from scripts.replay import run_replay
+            return run_replay(config,args.result,args.image)
         files = discover_inputs(config["paths"]["input"])
         if args.mode == "infer":
-            if hasattr(sys.stdout, "reconfigure"):
-                sys.stdout.reconfigure(encoding="utf-8")
             from scripts.pipeline import run_inference
             return run_inference(config, files, local_files_only=args.local_files_only)
         run_id, folder = create_run(config["paths"]["results"])
@@ -82,7 +102,7 @@ def main(argv=None):
             return 2
         return 1 if errors else 0
     except (ConfigError, InputError, OSError, ValueError) as exc:
-        print(f"Preparation failed [{getattr(exc, 'code', type(exc).__name__)}]: {exc}", file=sys.stderr)
+        print(f"{args.mode.capitalize()} failed [{getattr(exc, 'code', type(exc).__name__)}]: {exc}", file=sys.stderr)
         return 2
 
 

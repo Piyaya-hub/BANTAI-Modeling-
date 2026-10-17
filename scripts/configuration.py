@@ -80,12 +80,15 @@ def validate_config(value, root=ROOT):
         d["backend"] = "terminal"
         if d.setdefault("terminal_mode", "summary") not in ("summary", "full"):
             raise ConfigError("terminal_mode must be summary or full")
-        for key, default, maximum in (("summary_below_threshold", 1, 900), ("page_rows", 10, 100)):
+        for key, default, maximum in (("summary_below_threshold", 0, 900), ("page_rows", 10, 100)):
             value = d.setdefault(key, default)
             if type(value) is not int or not (0 if key == "summary_below_threshold" else 1) <= value <= maximum:
                 raise ConfigError(f"{key} must be an integer in the supported range")
         if type(d.setdefault("include_special_tokens", False)) is not bool:
             raise ConfigError("include_special_tokens must be boolean")
+        # Historical diagnostic-console flags cannot opt out of passing-only output.
+        d["summary_below_threshold"] = 0
+        d["include_special_tokens"] = False
 
     except (KeyError, TypeError) as exc:
         raise ConfigError(f"missing or malformed configuration field: {exc}") from exc

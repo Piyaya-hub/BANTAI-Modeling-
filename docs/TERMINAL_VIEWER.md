@@ -1,65 +1,61 @@
-# Terminal viewer and complete query diagnostics
+# Passing-only terminal viewer and display-only replay
 
-The owner requires actual inline ANSI truecolor/Unicode images with retained bounding boxes and full-size query IDs, followed by readable tables. No GUI, browser or saved annotated-image copy is used. The pinned model, thresholds, numeric validation, normal filtering and complete JSON diagnostics are unchanged.
+The owner's latest instruction limits console tables to **valid retained queries passing the box threshold** and their **ordinary tokens passing the text threshold**. Below-threshold, invalid, duplicate, padding and special-token rows remain in complete diagnostics JSON, never in normal console tables. This supersedes the earlier summary-selection/full-dump console policy. Inference, prompts, thresholds and the pinned checkpoint are unchanged.
 
-## Usage and terminal requirements
+## Check the renderer before inference
 
-Run directly in the **VS Code integrated terminal**, with interactive stdin/stdout, UTF-8 and truecolor support. Do not redirect or pipe output when an image is required. Use a terminal at least 50 columns x 12 rows; a wider/taller terminal makes photos easier to inspect. The Unicode half-block renderer assumes a roughly 2:1 terminal cell height/width. Actual appearance depends on font/cell geometry.
+Run directly in the owner's Windows **VS Code integrated terminal**, not the Output panel, Debug Console or a redirected pipeline:
 
 ```bat
-.venv\Scripts\python.exe scripts\detect_images.py --mode infer --input data/input --local-files-only --terminal-mode summary --summary-below-threshold 1
-.venv\Scripts\python.exe scripts\detect_images.py --mode infer --input data/input --local-files-only --terminal-mode full --page-rows 10
-.venv\Scripts\python.exe scripts\detect_images.py --mode infer --input data/input --local-files-only --terminal-mode full --include-special-tokens --page-rows 10
+.venv\Scripts\python.exe scripts\detect_images.py --mode display-check
 ```
 
-After each image, press Enter to begin reading its tables. Continue with Enter at subsequent page boundaries. Ctrl+C stops the run and leaves any already persisted pending display unfinished. The preview is sized to terminal width/height without stretching. Query IDs are rendered as normal terminal characters over the preview rather than raster text squeezed into a tiny resized image; colors match the retained boxes. The image is not replaced by a placeholder.
+This runs no model and reads no photo. It prints output-stream facts and draws an in-memory colored fixture with two boxes and normal-size `test0`/`test1` character labels. No image, browser, external window or annotated file is created. Inspect whether the colored image and both labeled boxes actually appear. Exit 0 alone establishes output completion, not visual success.
 
-`display.backend` remains `terminal`. Configuration defaults are `terminal_mode=summary`, `summary_below_threshold=1`, `page_rows=10`, `include_special_tokens=false`. CLI flags override them; below-threshold selection accepts 0..900 and page rows 1..100. Page size is also limited to actual terminal height; headers repeat and long cells wrap within their columns. Historical `TkAgg` configuration values normalize to `terminal` without launching a window. Preparation remains the safe default. `--no-display` explicitly requests text and JSON only, without interactive paging, with `display.status=disabled` after successful inference.
+Requirements: interactive UTF-8 stdout, ANSI truecolor/Unicode support, at least 50 columns x 12 rows, and interactive stdin for paged photo display. Windows VT processing is explicitly enabled on native console handles. A recognized terminal or successfully enabled native Windows VT is used as capability evidence; inherited `TERM=dumb` alone no longer rejects a working Windows console. Unknown terminals, redirection, unsupported Unicode and insufficient dimensions receive a clear diagnostic rather than literal escape/image-placeholder output. The half-block renderer assumes roughly 2:1 terminal-cell height/width. Narrow or short terminals reduce photo detail; enlarge the terminal for inspection.
 
-## Per-image layout and selection
+## Replay existing results without model execution
 
-The output order is:
+This exact command uses an existing local result and its matching original:
 
-```text
-IMAGE: sample_01.jpg
-(actual ANSI/Unicode photo, retained boxes and query IDs)
-
-DETECTION SUMMARY
-Query | Detected Phrase | Score | Box Status
-
-TEXT-TOKEN SCORE DETAILS
-Query | Token | Score | Text Threshold Status
-
-CONFIGURATION
-Box threshold: 0.3500
-Text threshold: 0.2500
-Model: Grounding DINO Tiny
+```bat
+.venv\Scripts\python.exe scripts\detect_images.py --mode replay --result results/a2ef6836b41b4e18a793642b1ad461a4/274440b3fafe83d696f38e5f18e3630ada5109802f9eaf5fc0a20faa3ead9e9f.json --image "data/input/test#1.jpg"
 ```
 
-The outline above documents the layout; the runtime emits actual colored half blocks, not the parenthesized description. Category/xyxy geometry and retained/duplicate/invalid policy states are reported separately within the summary section. Query IDs match the image, both tables and JSON.
+For another record, supply its per-image functional JSON and unchanged original. Replay validates strict JSON/result structure and source identity: resolved source path identity, SHA-256 bytes, EXIF-oriented dimensions and coordinate frame must match. A copy at another path or modified original is rejected before display or replay output reservation. Saved thresholds and predictions are used unchanged, even if current configuration thresholds differ. Replay does not import torch, Transformers, the detector or inference pipeline, contact the Hub, load weights or discover the configured photo folder.
 
-- Summary shows valid retained predictions and up to N highest-scoring valid below-threshold queries, ties broken by original query index. Default N=1; set `--summary-below-threshold 0` for accepted predictions only. Token rows correspond to that selected query set. Query/token omission counts are disclosed, including hidden special-token rows. Summary may still span pages; image inspection happens before any tables scroll it away.
-- Full shows every raw query and token in the same two table formats, in bounded pages. Active special tokens are hidden from the ordinary token table. Explicitly pass `--include-special-tokens` with full mode to include them. Token text retains tokenizer subwords, original positions and token IDs; special rows are marked. Padding is always excluded.
-- Scores and thresholds use consistent **decimal [0,1] units**, e.g. `0.8600`. Only presentation is rounded to four decimals; JSON retains raw precision. The stored dtype-aware strict comparison controls `PASS` or `BELOW THRESHOLD`; equality is below threshold even when nearby values round to identical strings. Nonfinite/invalid values show `null` and `INVALID`, with their diagnostics separate. PASS is a threshold decision, never correctness. Duplicate/excluded states are separate policy information, never replacements for threshold status.
-- Below-threshold queries display `not decoded`. No diagnostic phrase synthesis or accepted category mapping is added. Their rows are not accepted detections and do not create boxes. Physical-object and independent-region counts remain unresolved.
+Replay creates a new ignored `results/<uuid>/replay.json` using `bantai.display-replay.v1`. It records the original result path/hash, saved run ID/model/threshold provenance, verified source and `inference_executed=false`. It atomically saves pending before display and final shown/error afterward. Interruption or a failed final write leaves pending; `--no-display` creates a deliberately disabled identity-verification attempt. **The original result JSON and its display status are never rewritten**, including when replaying an already final shown/error result. Complete raw diagnostics stay intact in that original JSON.
 
-## Complete diagnostics and persistence
+## Normal inference and layout
 
-`bantai.functional.v1` fields retain their meanings. Additive `query_diagnostics` (`bantai.query-diagnostics.v1`) always saves every raw query, even in summary mode or with display disabled. Ordered `tokens` preserve original positions, IDs, tokenizer strings and special markers. Attention-mask zero positions, pad IDs and fixed-width padding tail are excluded. Active special tokens remain in JSON regardless of console settings.
+Once the renderer is visually confirmed, normal inference remains explicit:
 
-Every query retains its original ID/index, maximum pre-filter sigmoid score, dtype-aware threshold decision, raw pixel box, actual upstream-decoded phrase/category or null, numeric diagnostics, aligned token sigmoid scores/decisions, and invalid-token positions. Normal pinned postprocessing still determines accepted detections. Invalid numbers remain null with diagnostics, and expected negative-infinity padding remains excluded. No NaN/Infinity or invented confidence is emitted. Old result records without raw diagnostics remain readable; unavailable scores are disclosed rather than fabricated.
+```bat
+.venv\Scripts\python.exe scripts\detect_images.py --mode infer --input data/input --local-files-only --page-rows 10
+```
 
-Inference results and all diagnostics are atomically persisted before display. A capability check rejects noninteractive stdout, unknown/dumb color support, unrepresentable Unicode and insufficient dimensions with a clear message. It emits no ANSI image on unsupported output. Display is recorded as `error/unsupported_terminal`; successful inference remains intact, with a nonzero CLI outcome. An interactive output with noninteractive stdin is also rejected because paging cannot complete. Rendering/write failures remain separate display errors. Interruptions/final persistence failures retain pending as before.
+Each image block follows IMAGE filename, the actual in-memory annotated half-block image, DETECTION SUMMARY, TEXT-TOKEN SCORE DETAILS, then CONFIGURATION. Only valid retained passing boxes are drawn, with query IDs matching both tables and JSON. If no queries pass, the original image still appears with no boxes and an explicit empty-result message. If no ordinary tokens pass, the token table says so. Old result JSON without token diagnostics is disclosed without inventing scores.
 
-A final `shown` means capability checks, output writes, paging and flush completed. It does **not** establish human visibility or visual correctness. The tool session is not the owner's VS Code terminal; its visual verification remains pending until the owner inspects the command above.
+Tables align within terminal width and use decimal scores/thresholds in [0,1], rounded to four places **only for presentation**. Stored dtype-aware comparison masks control filtering; equality does not pass. For older records without raw query masks, the viewer reproduces the pinned float32 comparison using Python struct conversion, without a torch import. Above-threshold valid unmapped predictions retain their actual phrase, without invented category names. Token text preserves subwords, original positions and IDs. Raw precision, invalid-value diagnostics and all excluded queries/tokens remain in JSON. PASS is a threshold decision, not visual correctness, accuracy or calibrated correctness probability. Physical-object and independent-region counts remain unresolved.
 
-## Diagnosis of the missing image
+Press Enter after inspecting the image and at page boundaries. Ctrl+C stops with the persisted pending attempt unfinished. `--page-rows` bounds table data lines, further limited by terminal height. `--terminal-mode summary/full`, `--summary-below-threshold` and `--include-special-tokens` are accepted as legacy syntax but cannot enable excluded console rows; the latter two normalize to zero/false. Both console mode aliases now follow `passing_only`. Complete diagnostics can be inspected in the original result JSON, not an unbounded console dump.
 
-Direct inspection of the actual tool stream found `isatty=False`, `TERM=dumb`, initial encoding `cp1252` (the CLI previously changed this to UTF-8), and fallback dimensions 80x24. The previous implementation emitted ANSI even into captured/noninteractive streams and treated successful writes as shown. Such output is not necessarily rendered by the tool/UI. Existing captured full-mode output contained 45,900 token lines across three photos, enough to scroll previews out of ordinary terminal scrollback. Neither observation proves what the owner's VS Code displayed; both are concrete failure paths addressed here.
+The inference display record adds `console_policy=passing_only` and `visual_verification=pending`. Its existing persist-before-display and atomic shown/error lifecycle remains. Unsupported output produces display error with successful inference preserved. Inference stays preparation-only unless `--mode infer` is selected. `--no-display` explicitly skips rendering and still prints passing-only tables.
 
-Corrections add capability checks, IMAGE-before-render ordering, character-cell ID overlays, width-bounded aligned tables, compact disclosed selection, and inspection pauses/bounded pages. No threshold was lowered and no renderer is presented as visually verified from writes alone.
+## Actual verification and remaining blocker - 2026-10-18
 
-## Presentation correction checks - 2026-10-18
+- Latest source head was fetched and inspected at `b2c50c2` before work; tracked files were clean and the untracked `BANTAI-Modeling-/` folder was preserved. Work stays on `feat/terminal-viewer-diagnostics`/PR #9, without merge.
+- **77 software tests: 76 passed, one Windows symlink privilege skip**, 4.016 seconds. Fixtures cover passing-only query/token output even with legacy full/special-token flags, invalid/duplicate exclusions, strict mask/equality boundaries, no-pass original-image rendering, raw precision, narrow tables, renderer errors and replay identity/persistence failures. Software fixtures are not owner visual evidence.
+- Independently ran synthetic `--mode display-check` in a real Windows pseudo-terminal before any model activity: stdout/stdin TTY true, UTF-8, 80x24, TERM=dumb, no terminal-program/truecolor environment advertisement. Native Windows VT enabling succeeded; the command emitted the colored fixture/IDs and exited 0. This establishes an old false rejection path and successful native output execution, **not visually inspected VS Code rendering**.
+- Replayed the first photo in that real pseudo-terminal without model execution. The output contained two passing retained query rows (`q0=0.4191`, `q1=0.4087`) and seven passing ordinary token rows, followed by unchanged thresholds `0.3500`/`0.2500`. Paging completed and exit was 0. New replay: `results/47259f21189e43468f4bdfbdb7f115e5/replay.json`, display shown, **visual_verification=pending**.
+- Also tested the actual redirected/noninteractive tool stream. Replay emitted no ANSI, returned 1 and recorded unsupported-terminal display error at `results/393b7fa34dd44c15a7dc05b76e8f9db6/replay.json`. The isolated process imported no torch/Transformers/detector/pipeline module and attempted zero socket connections.
+- Both attempts verified and preserved the saved source-result JSON and original photo hashes. The original record still contains all 900 queries x 17 non-padding tokens. No new inference, installation, threshold change, weight deletion, photo copy or annotated export occurred.
+
+Static checks resolved 106 relative Markdown links and parsed five JSON examples; compilation, CLI help and whitespace checks passed. Inference/input/result/persistence source, checkpoint/prompt/threshold settings, requirements and ignore rules match the fetched starting head.
+
+**Exact blocker:** tools expose a redirected stream and a separate Windows pseudo-terminal as text/control output, without visual access to the owner's running VS Code terminal surface. Neither is a visual inspection of the photo, colors or label legibility in that target. Owner visual verification remains pending; run the synthetic check and replay commands above inside VS Code and inspect their actual appearance before repeating inference. No visual success is claimed from writes or mocked tests.
+
+## Historical passing/below-threshold presentation checks (superseded console policy)
 
 Results from direct Windows software/model checks are recorded here separately from historical rendering claims below.
 

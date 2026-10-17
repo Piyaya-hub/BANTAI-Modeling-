@@ -3,6 +3,7 @@
 import json
 import os
 import shutil
+import struct
 import sys
 import textwrap
 from collections import Counter
@@ -41,15 +42,46 @@ def terminal_size(stream=None):
         return shutil.get_terminal_size(fallback=(80, 24))
 
 
+def terminal_facts(stream=None, input_stream=None):
+    stream = sys.stdout if stream is None else stream
+    input_stream = sys.stdin if input_stream is None else input_stream
+    size = terminal_size(stream)
+    return {"stdout_isatty": bool(stream.isatty()), "stdin_isatty": bool(input_stream.isatty()),
+            "encoding": getattr(stream,"encoding",None), "columns": size.columns, "rows": size.lines,
+            "TERM": os.environ.get("TERM",""), "COLORTERM": os.environ.get("COLORTERM",""),
+            "TERM_PROGRAM": os.environ.get("TERM_PROGRAM",""), "windows_terminal": bool(os.environ.get("WT_SESSION"))}
+
+
+def enable_windows_vt(stream):
+    if os.name != "nt":
+        return False
+    import ctypes
+    import msvcrt
+    try:
+        handle = ctypes.c_void_p(msvcrt.get_osfhandle(stream.fileno()))
+    except (AttributeError, OSError, ValueError):
+        return False
+    mode = ctypes.c_ulong()
+    kernel = ctypes.windll.kernel32
+    if not kernel.GetConsoleMode(handle, ctypes.byref(mode)):
+        return False  # ConPTY may advertise capability through its environment.
+    if not kernel.SetConsoleMode(handle, mode.value | 4):
+        raise TerminalDisplayError("Inline image unavailable: Windows virtual-terminal processing could not be enabled.")
+    return True
+
+
 def terminal_capabilities(stream):
     size = terminal_size(stream)
-    facts = f"isatty={bool(stream.isatty())}, encoding={getattr(stream, 'encoding', None)}, TERM={safe_text(os.environ.get('TERM', ''))}, size={size.columns}x{size.lines}"
+    facts = json.dumps(terminal_facts(stream),ensure_ascii=True)
     if not stream.isatty():
         raise TerminalDisplayError(f"Inline image unavailable: stdout is noninteractive/redirected ({facts}). Run in the VS Code integrated terminal; use --no-display for text/JSON only.")
     term = os.environ.get("TERM", "")
     color = os.environ.get("COLORTERM", "").lower()
     known = os.environ.get("TERM_PROGRAM", "").lower() in ("vscode", "wezterm", "iterm.app") or bool(os.environ.get("WT_SESSION"))
-    if term in ("dumb", "unknown") or not (known or color in ("truecolor", "24bit") or "direct" in term):
+    # Windows consoles often leave TERM unset or inherited as dumb. A successful
+    # native VT enablement or a known terminal is stronger evidence than TERM.
+    native_vt = enable_windows_vt(stream)
+    if not (native_vt or known or color in ("truecolor", "24bit") or "direct" in term):
         raise TerminalDisplayError(f"Inline image unavailable: ANSI truecolor support is unconfirmed ({facts}). Use a truecolor VS Code terminal.")
     try:
         "\u2580".encode(stream.encoding or "utf-8")
@@ -57,35 +89,40 @@ def terminal_capabilities(stream):
         raise TerminalDisplayError(f"Inline image unavailable: output encoding cannot represent Unicode half blocks ({facts}). Use UTF-8.") from None
     if size.columns < 50 or size.lines < 12:
         raise TerminalDisplayError(f"Inline image unavailable: terminal too small ({facts}); resize to at least 50 columns x 12 rows.")
-    if os.name == "nt":
-        # Enable ANSI processing on real Windows console handles; ConPTY/VS Code
-        # already handles ANSI when GetConsoleMode does not expose a console.
-        import ctypes
-        import msvcrt
-        handle = msvcrt.get_osfhandle(stream.fileno())
-        mode = ctypes.c_ulong()
-        kernel = ctypes.windll.kernel32
-        if kernel.GetConsoleMode(ctypes.c_void_p(handle), ctypes.byref(mode)):
-            if not kernel.SetConsoleMode(ctypes.c_void_p(handle), mode.value | 4):
-                raise TerminalDisplayError("Inline image unavailable: Windows virtual-terminal processing could not be enabled.")
     return size
 
 
-def selected_queries(result, mode, below_count):
+def float32_pass(score, threshold):
+    """Match the pinned float32 tensor comparison without importing torch."""
+    if not finite_number(score) or not 0 <= score <= 1:
+        return False
+    f32 = lambda value: struct.unpack("f", struct.pack("f", value))[0]
+    return f32(score) > f32(threshold)
+
+
+def passing_candidates(result):
     raw = result.get("query_diagnostics")
-    if raw is None:
-        threshold = result["inference"]["threshold"]
-        return [{"id": d["id"], "model_score": d["model_score"], "raw_phrase": d["raw_phrase"],
-                 "category": d["category"], "threshold_pass": finite_number(d["model_score"]) and d["model_score"] > threshold,
-                 "numeric_diagnostics": d["numeric_diagnostics"]} for d in result["detections"]]
-    queries = raw["queries"]
-    if mode == "full":
-        return queries
-    retained = {d["id"] for d in valid_candidates(result)}
-    below = [q for q in queries if not q["threshold_pass"] and not q["numeric_diagnostics"] and finite_number(q["model_score"])]
-    below.sort(key=lambda q: (-q["model_score"], q["query_index"]))
-    chosen = retained | {q["id"] for q in below[:below_count]}
-    return [q for q in queries if q["id"] in chosen]
+    by_id = {q["id"]: q for q in raw["queries"]} if raw is not None else None
+    passing = []
+    for d in valid_candidates(result):
+        if d["numeric_diagnostics"] or not finite_number(d["model_score"]):
+            continue
+        if by_id is not None:
+            q = by_id.get(d["id"])
+            if (q is None or not q["threshold_pass"] or q["numeric_diagnostics"]
+                    or q.get("invalid_token_positions") or not finite_number(q["model_score"])):
+                continue
+        elif not float32_pass(d["model_score"], result["inference"]["threshold"]):
+            continue
+        passing.append(d)
+    return passing
+
+
+def selected_queries(result, mode="summary", below_count=0):
+    # Legacy mode/selection arguments cannot enable excluded console rows.
+    raw = result.get("query_diagnostics")
+    by_id = {q["id"]: q for q in raw["queries"]} if raw is not None else {}
+    return [by_id.get(d["id"], dict(d, threshold_pass=True)) for d in passing_candidates(result)]
 
 
 def table_pages(headers, rows, *, width, page_rows):
@@ -122,58 +159,42 @@ def table_pages(headers, rows, *, width, page_rows):
         yield heading + [divider] + (page or ["(no rows)"])
 
 
-def presentation_blocks(result, mode="summary", *, width=80, below_count=1, page_rows=10, include_special=False):
+def presentation_blocks(result, mode="summary", *, width=80, below_count=0, page_rows=10, include_special=False):
     if mode not in ("summary", "full"):
         raise ValueError("terminal mode must be summary or full")
+    # Both historical console modes now obey the owner's passing-only policy.
     raw = result.get("query_diagnostics")
-    queries = selected_queries(result, mode, below_count)
-    query_rows = [(q["id"], "not decoded" if q["raw_phrase"] is None else safe_text(q["raw_phrase"]),
-                   score_text(q["model_score"]), decision(q["model_score"], q["threshold_pass"], bool(q["numeric_diagnostics"]))) for q in queries]
+    detections = passing_candidates(result)
+    queries = selected_queries(result)
+    query_rows = [(d["id"], safe_text(d["raw_phrase"]), score_text(d["model_score"]), "PASS") for d in detections]
     for page in table_pages(("Query", "Detected Phrase", "Score", "Box Status"), query_rows, width=width, page_rows=page_rows):
         yield ["DETECTION SUMMARY"] + page
-    counts = Counter(d["category"] or "unmapped" for d in valid_candidates(result))
-    info = ["PASS describes a threshold decision, never correctness.",
+    if not detections:
+        yield textwrap.wrap("No valid retained queries pass the configured box threshold.", width=width)
+    counts = Counter(d["category"] or "unmapped" for d in detections)
+    info = ["PASS is a strict threshold decision, never correctness.",
             "Retained candidates: " + (", ".join(f"{k}={v}" for k,v in sorted(counts.items())) or "0"),
             "Physical object count: unknown; independent region count: unknown"]
-    if raw is not None:
-        omitted = len(raw["queries"])-len(queries)
-        info.append(f"Summary selection: retained predictions + up to {below_count} highest-scoring valid below-threshold queries." if mode == "summary" else "Full selection: every raw query.")
-        info.append(f"Query rows omitted: {omitted}. Use --terminal-mode full for all rows.")
-    else:
-        info.append("Raw query/token diagnostics unavailable in this older record.")
-    info.append("Accepted boxes: valid retained predictions only.")
-    yield [line for s in info for line in textwrap.wrap(s, width=width)]
-    # Keep category/geometry/policy separate from threshold decisions.
-    policies = [(d["id"], safe_text(d["category"] or "unmapped"), d["state"], str(d["box_xyxy"])) for d in result["detections"]]
-    for ident, category, state, box in policies:
-        yield [line for s in [f"POLICY: {ident} category={category} state={state}", f"BOX xyxy: {box}"] for line in textwrap.wrap(s, width=width)]
+    yield [line for text in info for line in textwrap.wrap(text, width=width)]
+    for d in detections:
+        yield [line for text in [f"BOX {d['id']}: {d['box_xyxy']}", f"CATEGORY {d['id']}: {d['category'] or 'unmapped'}"] for line in textwrap.wrap(text,width=width)]
     token_rows = []
-    hidden = omitted_tokens = 0
     if raw is not None:
-        included = mode == "full" and include_special
         for q in queries:
             for t, score, passed in zip(raw["tokens"], q["token_scores"], q["token_threshold_pass"]):
-                if t["special"] and not included:
-                    hidden += 1
+                if (t["special"] or t["token"] == "[PAD]" or not passed or not finite_number(score)
+                        or not 0 <= score <= 1 or t["position"] in q["invalid_token_positions"]):
                     continue
                 label = f"{safe_text(t['token'])} [pos={t['position']} id={t['token_id']}]"
-                if t["special"]:
-                    label += " SPECIAL"
-                token_rows.append((q["id"], label, score_text(score), decision(score, passed, t["position"] in q["invalid_token_positions"])))
-        omitted_tokens = len(raw["queries"])*len(raw["tokens"])-len(token_rows)
+                token_rows.append((q["id"], label, score_text(score), "PASS"))
     for page in table_pages(("Query", "Token", "Score", "Text Threshold Status"), token_rows, width=width, page_rows=page_rows):
         yield ["TEXT-TOKEN SCORE DETAILS"] + page
-    yield [line for s in [f"Token rows omitted: {omitted_tokens} ({hidden} special-token rows hidden in selected queries).",
-                         "Use --terminal-mode full --include-special-tokens to inspect every non-padding token.",
-                         "Complete raw precision, token alignment and numeric diagnostics are preserved in per-image JSON."] for line in textwrap.wrap(s, width=width)]
-    diagnostics = []
-    for q in queries:
-        if q["numeric_diagnostics"]:
-            diagnostics.append(f"{q['id']}: {safe_text(q['numeric_diagnostics'])}")
-        if q.get("invalid_token_positions"):
-            diagnostics.append(f"{q['id']}: invalid token positions {q['invalid_token_positions']}")
-    for text in diagnostics:
-        yield ["NUMERIC DIAGNOSTICS"] + textwrap.wrap(text, width=width)
+    if not token_rows:
+        message = "No ordinary text tokens pass the configured text threshold for the retained queries."
+        if raw is None:
+            message = "Token diagnostics are unavailable in this older result; no token scores were invented."
+        yield textwrap.wrap(message,width=width)
+    yield textwrap.wrap("Console shows passing retained queries and passing ordinary tokens only. Complete raw scores and excluded/invalid diagnostics remain in the saved JSON.",width=width)
     if result["error"]:
         yield ["PROCESSING ERROR"] + textwrap.wrap(safe_text(result["error"]), width=width)
     inference = result["inference"]
@@ -183,8 +204,8 @@ def presentation_blocks(result, mode="summary", *, width=80, below_count=1, page
 
 def summary(result, mode="summary", **overrides):
     settings = result.get("display", {})
-    options = dict(width=max(24, terminal_size().columns-1), below_count=settings.get("summary_below_threshold",1),
-                   page_rows=settings.get("page_rows",10), include_special=settings.get("include_special_tokens",False))
+    options = dict(width=max(24, terminal_size().columns-1), below_count=0,
+                   page_rows=settings.get("page_rows",10), include_special=False)
     options.update(overrides)
     return "\n\n".join("\n".join(block) for block in presentation_blocks(result, mode, **options))
 
@@ -201,7 +222,7 @@ def terminal_image_lines(image, result, *, columns=None, rows=None):
     labels = {}
     with image.resize((width,height), Image.Resampling.LANCZOS).convert("RGB") as preview:
         draw = ImageDraw.Draw(preview)
-        for d in valid_candidates(result):
+        for d in passing_candidates(result):
             x0,y0,x1,y1 = d["box_xyxy"]
             box = (min(width-1,x0*width/image.width),min(height-1,y0*height/image.height),
                    min(width-1,x1*width/image.width),min(height-1,y1*height/image.height))
@@ -255,9 +276,9 @@ def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None)
         # Preserve a chance to inspect the actual image before tables scroll it.
         pause()
         blocks = presentation_blocks(result,mode,width=width,
-                     below_count=settings.get("summary_below_threshold",1),
+                     below_count=0,
                      page_rows=min(settings.get("page_rows",10),max(1,size.lines-10)),
-                     include_special=settings.get("include_special_tokens",False))
+                     include_special=False)
         used = 0
         for block in blocks:
             budget = size.lines-4
@@ -275,3 +296,33 @@ def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None)
     finally:
         stream.write("\x1b[0m\n")
         stream.flush()
+
+
+def show_synthetic(*, stream=None):
+    """Independent renderer exercise: all pixels/boxes are software fixtures."""
+    from PIL import Image, ImageDraw
+    stream = sys.stdout if stream is None else stream
+    stream.write("SYNTHETIC RENDERER CHECK: fixture boxes/IDs only; no model inference.\n")
+    stream.write(json.dumps(terminal_facts(stream),ensure_ascii=True)+"\n")
+    stream.write("IMAGE: synthetic-renderer-check\n")
+    stream.flush()
+    size = terminal_capabilities(stream)
+    fixture = {"inference": {"threshold": .35}, "detections": [
+        {"id": "test0", "state": "retained", "model_score": 1.0, "numeric_diagnostics": [],
+         "box_xyxy": [40,35,145,145], "category": "individual_litter"},
+        {"id": "test1", "state": "retained", "model_score": 1.0, "numeric_diagnostics": [],
+         "box_xyxy": [175,55,285,155], "category": "garbage_pile"}]}
+    with Image.new("RGB",(320,180)) as image:
+        image.putdata([(x*255//319,y*255//179,120) for y in range(180) for x in range(320)])
+        draw = ImageDraw.Draw(image)
+        draw.ellipse((50,45,135,135),fill=(40,70,220))
+        draw.rectangle((185,65,275,145),fill=(240,220,60))
+        try:
+            for line in terminal_image_lines(image,fixture,columns=size.columns-1,rows=size.lines-8):
+                stream.write(line+"\n")
+            stream.flush()
+        finally:
+            stream.write("\x1b[0m\n")
+            stream.flush()
+    stream.write("Renderer output returned. Visual verification remains pending until the image, boxes and test0/test1 IDs are actually inspected.\n")
+    stream.flush()
