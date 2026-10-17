@@ -14,7 +14,7 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 - Functionally check pretrained GroundingDINO-T (Swin-T / Tiny configuration) through Hugging Face Transformers and direct text prompts. Automatic grouping, training, fine-tuning, and alternative models are outside this baseline.
 - Establish documentation and verifiable phase gates before model work.
 
-Phase 0 is complete and Phase 1 planning is published. Environment preparation is unverified. Current work is documentation correction only; Antigravity performs later authorized implementation under [PHASES.md](PHASES.md).
+Phase 0 is complete and Phase 1 planning is published. Phase 2A technical environment preparation is complete on supplied evidence, recorded in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md); detector behavior remains unverified. Codex now owns implementation. Current authorization is Phase 2A local Windows environment setup/readiness only, mapped to plan Section 4 and Section 8 stages 2–3 under [PHASES.md](PHASES.md). No detector implementation or inference is authorized.
 
 ## Initial exclusions
 
@@ -42,7 +42,7 @@ The owner supplies team photographs with no annotations or ground-truth boxes, d
 
 Plan an in-memory display of photographs with predicted boxes, labels, and individual model-score percentages, a readable summary, per-image JSON, and run/environment metadata. No automatic annotated-image copies or source overwrites. Scores are not measured accuracy, calibrated correctness probabilities, or image-area percentages. Inference and display statuses are distinct; invalid numeric values become null with diagnostics, and invalid candidates are excluded from displayed boxes/valid summaries under the [contract](PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract).
 
-Execution is on the owner’s Windows computer with an owner-reported RTX 2080 Super; local Python, driver, memory availability, and compatibility are unverified. Checkpoint details, prompts, thresholds, and conservative mapping/duplicate policies remain technical proposals or prerequisites. Do not assume all roadside objects are discarded trash or that a detection is an incident. Confirm the supplied photos may be processed without turning this task into data collection or required annotation.
+Execution is on the owner’s Windows computer. Supplied preflight now reports GTX 1660 Ti, 6144 MiB VRAM and driver 472.19, superseding the earlier RTX 2080 Super report. Supplied output now confirms Python 3.11.9 x64 and a local `.venv`; supplied dependency/import and basic CPU/CUDA tensor checks passed; native viewing/normal return and exact metadata capture also passed, completing technical environment preparation; model-memory fit and detector behavior remain unverified; observed free VRAM is a time-specific measurement, not a capacity guarantee. Checkpoint details, prompts, thresholds, and conservative mapping/duplicate policies remain technical proposals or prerequisites. Do not assume all roadside objects are discarded trash or that a detection is an incident. Confirm the supplied photos may be processed without turning this task into data collection or required annotation.
 
 A still-image detection alone does not establish location, repeated observations, incident identity, or hotspot frequency. Any future hotspot work belongs to the broader system and will need an approved data and aggregation policy outside this repository.
 

@@ -29,7 +29,7 @@ Source: the project owner's final Phase 0 revision request. The original D-001�
 
 ## Current owner-confirmed requirements
 
-Source: the owner's Phase 1 planning request, publication request, and current documentation-correction request. No additional approval date or performance evidence is inferred. These are owner requirements; technical defaults below remain proposals.
+Source: the owner's Phase 1 planning, publication, documentation-correction and subsequent Phase 2A instructions. D-018/D-020 retain their prior task wording; D-022/D-023 below supersede the role assignment and documentation-only authorization. No prior decision row is deleted. No additional approval date or performance evidence is inferred. These are owner requirements; technical defaults below remain proposals.
 
 | ID | Confirmed requirement | Replaces or clarifies |
 | --- | --- | --- |
@@ -42,22 +42,45 @@ Source: the owner's Phase 1 planning request, publication request, and current d
 | D-020 | Phase 0 is complete and Phase 1 planning is published through merged PR #3 (`b366f76`). Current work is documentation correction on a focused branch. | Replaces D-003/D-013 task-state wording and old pending-merge claims. Publication is not environment readiness, successful detection, or approval of every proposal. No main changes or merge. |
 | D-021 | Functional outputs must be standards-compliant JSON with invalid numbers represented as null plus diagnostics, and display outcome separate from inference outcome. | Corrects the plan's prior nonfinite-retention ambiguity and missing display lifecycle. Persist inference results before viewing and atomically update display outcome; unfinished pending attempts remain explicit. Detailed contract conventions are in the [plan](PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract). |
 
+## Subsequent owner decisions — current Phase 2A authorization
+
+| ID | Confirmed requirement | Replaces or clarifies |
+| --- | --- | --- |
+| D-022 | Codex now owns implementation, replacing Antigravity; the owner states Antigravity made no changes. | Supersedes the role assignment in D-018 and the original Antigravity handoff. No independent Antigravity work is asserted or reverted. |
+| D-023 | Start Phase 2A: local Windows environment setup/readiness, corresponding exactly to implementation-plan Section 4 and Section 8 stages 2–3. | Supersedes D-020's documentation-only current-task boundary. Allows isolated dependency setup, official metadata checks and package/CPU/GPU/native-viewer probes; no detector implementation, model weights/loading or inference. [PHASES.md](PHASES.md) defines completion/stop criteria. |
+
+## Subsequent target evidence — supplied Windows preflight
+
+The owner supplied Command Prompt output reporting Windows 10 build 19045.6466, Git 2.45.1.windows.1, GTX 1660 Ti, NVIDIA driver 472.19 and 6144 MiB total VRAM (5235–5236 MiB free across successful queries). This supersedes the RTX 2080 Super assumption in D-012/D-015 for the current target, while preserving those rows as history. `py` is not recognized in that shell; Python itself is not yet proven absent. These are supplied observations, not a Codex-executed local check, CUDA compatibility result or accepted readiness decision. See [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md) for next checks.
+
+These decisions are sourced from the owner's latest instruction; no additional approval date or local readiness evidence is invented. Initially missing Windows preflight/results were execution prerequisites, not repeated authorization requirements. Subsequent supplied evidence completed Phase 2A checks as recorded below and in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md).
+
 D-001/D-006 and D-009–D-011 remain current: modelling-only trash still images, direct prompts first, mixed categories/multiple candidate regions, and no automatic grouping in the baseline. Category codes are `individual_litter`, `group_of_individual_litter`, and `garbage_pile`. Predictions do not prove membership or physical-object/independent-region counts; unresolved counts remain null. Application modules, APIs, databases, road anomalies, video/cameras, incident consolidation, and hotspots remain outside scope.
+
+## Subsequent supplied preparation progress
+
+After the initial Store-alias failure, owner-supplied WinGet output reports Python 3.11.9 x64 installed from python.org with verified installer hash. A new terminal then reports Python 3.11.9 (AMD64), the real Python311 executable and 64 bits. The owner selected a local Documents/Python/Project Image-object Detection folder; clone output succeeded, followed by `.venv` reporting Python 3.11.9. No ML package, device execution, checkpoint or viewer readiness follows from these observations. Earlier proposed pins remain subject to actual package/device checks.
+
+## Phase 2A technical completion evidence — no new scope approval
+
+Supplied results now complete the preparation checks: dependency consistency/direct imports; CPU and CUDA tensors (2.0); native TkAgg rendering and explicit normal return; checkpoint API/model-card/configuration and same-revision processor metadata; official NVIDIA Table 2 driver minimum; and full 36-package freeze plus local environment record. Revision is `a2bb814dd30d776dcf7e30523b00659f4f141c71`, with Apache-2.0 metadata, non-gated access and safetensors availability. Windows driver 472.19 exceeds the documented CUDA 11.8 minor-compatibility minimum 452.39, and the actual tensor test passed. The toolkit's separate 522.06 listing is not that minimum.
+
+These are technical observations and Codex's preparation assessment, not a new owner decision or automatic approval to implement/run a detector. All prior D-001–D-023 rows remain intact. No model-memory or detection-quality claim is made. [PHASE_2A_ENVIRONMENT_SNAPSHOT.md](PHASE_2A_ENVIRONMENT_SNAPSHOT.md) preserves the exact supplied metadata, processor settings, dependency freeze and evidence provenance; [PHASES.md](PHASES.md) records the stop gate.
 
 ## Technical proposals and pending verification
 
 - P-001: The [architecture](ARCHITECTURE.md) and detailed [plan](PHASE_1_IMPLEMENTATION_PLAN.md) propose the local pipeline and output contract. GroundingDINO-T/Transformers is selected; its checkpoint revision, conditions, and local compatibility are not verified.
 - P-002: The current [test plan](TEST_PLAN.md) applies D-016 functional checks. Earlier P-002's mandatory annotated/held-out protocol is superseded; formal annotated evaluation is optional, separately scoped future work.
-- P-003: Follow [PHASES.md](PHASES.md). Earlier Phase 0-only task state is superseded by D-020; the present correction is still documentation only.
-- P-004: Python 3.11 x64, torch 2.7.1/cu118, torchvision 0.22.1, Transformers 4.51.3, Pillow 11.2.1, Matplotlib 3.10.3 remain proposed pins, supported by prior metadata/source inspection but not locally tested. Resolve exact dependencies and CUDA installation source after authorized local verification.
+- P-003: Follow [PHASES.md](PHASES.md). Earlier Phase 0-only task state was superseded by D-020; current Phase 2A authorization is D-023 and excludes detector implementation/inference.
+- P-004: The proposed baseline is now observed in supplied target results: Python 3.11.9 x64, torch 2.7.1+cu118, torchvision 0.22.1+cu118, Transformers 4.51.3, Pillow 11.2.1 and Matplotlib 3.10.3. Installation/imports and `pip check` passed; CPU/GPU tensors each returned 2.0 with capability (7,5). Full 36-package freeze/source capture, native TkAgg rendering/normal return and pinned checkpoint/processor metadata have subsequently been verified in supplied outputs and preserved in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md); no model compatibility/performance is inferred. Earlier source-only proposal status is retained in Git history.
 - P-005: Starting prompts, `threshold=0.35`, `text_threshold=0.25`, exact aliases, visual grouping boundaries, identical-box/same-phrase collapse, and IoU >=0.8 review flags are unvalidated defaults. No general NMS or spatial grouping algorithm is selected. Routine refinements inside an authorized phase are recorded rather than treated as new owner approval gates.
 
 | Area | Remaining evidence or operational choice | Relevant stage |
 | --- | --- | --- |
-| Checkpoint | Exact source/configuration/conditions/license/safetensors/immutable revision; model and processor at same recorded revision | Later Phase 1 preparation |
-| Windows runtime | Python/driver/GPU memory, proposed package pins and exact resolved dependencies/CUDA source, GPU execution or diagnosed CPU fallback, native viewer | Later Phase 1 preparation |
+| Checkpoint | Source/configuration/license/safetensors and immutable model/processor revision recorded in snapshot; retain those pins for later loading | Phase 2A complete; preserve recorded evidence |
+| Windows runtime | Python/driver/GPU memory, installed versions/full freeze/CUDA source, successful CPU/GPU execution and native viewer recorded in snapshot | Phase 2A complete; preserve recorded evidence |
 | Functional configuration | Prompts/thresholds, preprocessing, visual category boundaries, aliases, duplicate flags, source/output paths and reproducibility metadata | Preparation and routine implementation in authorized phases |
-| Outputs | Implement corrected numeric/status/display lifecycle consistently; keep unmapped/invalid diagnostics and unresolved counts | Later authorized Phase 2 |
+| Outputs | Implement corrected numeric/status/display lifecycle consistently; keep unmapped/invalid diagnostics and unresolved counts | Later authorized detector phase, outside 2A |
 | Later work | Whether actual functional limitations justify grouping/hybrids/alternatives or other modelling improvement | Phase 3 decision; not baseline |
 
 ## Recording future decisions

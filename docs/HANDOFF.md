@@ -1,31 +1,31 @@
-# BANTAI documentation and implementation handoff
+# BANTAI Phase 2A completion handoff
 
-## Current state and Git evidence
+## Result and ownership
 
-Phase 0 is complete. Fetching `main` for this correction confirmed `b366f769f38158675d02fda628c73971d30ed9bb`, the merge of PR #3 containing the Phase 1 planning deliverable. It was still the latest remote `main` at inspection, matching the previously reviewed commit. Earlier PRs #1 and #2 are also merged in its history. Planning publication is not verification of the owner’s hardware/environment, successful detection, or blanket acceptance of technical proposals.
+**Phase 2A technical preparation checks are complete on owner-supplied Windows evidence. Stop here: detector implementation and inference have not begun and remain outside the authorization.** Codex owns implementation, replacing Antigravity; the owner reports Antigravity made no changes. Phase 0 is complete, Phase 1 planning is published, and this preparation corresponds exactly to plan Section 4 and Section 8 stages 2–3.
 
-The current focused branch is `docs/phase-1-contract-corrections`, created from that `main`. Codex owns documentation correction and requested ignore-rule additions only. Antigravity handles later authorized implementation. This task does not implement inference, install dependencies, download weights, run experiments, or merge. This correction’s commit/push/PR outcomes are reported in the task completion message; no merge is claimed.
+Cloud Codex reviewed actual target command outputs, a native-plot screenshot and explicit normal-return confirmation; it did not directly execute Windows commands. The local repository is in the owner's selected Documents/Python/Project Image-object Detection folder with a fresh `.venv`. The final evidence is preserved in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md) and [PHASE_2A_ENVIRONMENT_SNAPSHOT.md](PHASE_2A_ENVIRONMENT_SNAPSHOT.md).
 
-## Corrections and current requirements
+## Verified preparation
 
-README, agent rules, scope, architecture, phases, decisions, test plan, and the [Phase 1 plan](PHASE_1_IMPLEMENTATION_PLAN.md) now distinguish completed Phase 0/published planning from unverified preparation. Current inputs are unannotated team photographs manually downloaded/extracted from Google Drive. Functional visual checks replace the older annotation/benchmark requirements; no annotation work, held-out splits, precision/recall/mAP, or numerical accuracy targets are needed.
+- Windows 10 build 19045.6466; Git 2.45.1.windows.1; Python 3.11.9 x64 installed from python.org via WinGet with installer-hash verification; local clone and venv confirmed.
+- GTX 1660 Ti, 6144 MiB VRAM, driver 472.19, capability (7,5), CUDA build 11.8; CPU and CUDA tensors both returned 2.0. Earlier RTX 2080 Super assumption is superseded, not erased from history.
+- torch 2.7.1+cu118, torchvision 0.22.1+cu118, Transformers 4.51.3, Pillow 11.2.1 and Matplotlib 3.10.3 installed/imported. `pip check` reported no broken requirements. All 36 frozen packages and cu118 installation source are recorded.
+- Native TkAgg synthetic diagonal plot rendered; the owner explicitly confirmed `TkAgg viewer closed normally`. No image export was invoked.
+- Official metadata/config/card/processor reads succeeded for `IDEA-Research/grounding-dino-tiny` at revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`. Reported Apache-2.0 metadata, non-gated access, safetensors file, Tiny-consistent Swin configuration and same-revision processor settings are preserved.
+- NVIDIA CUDA 11.8 Table 2 lists Windows minor-compatibility minimum >=452.39; driver 472.19 exceeds it and the actual CUDA tensor passed. The separate toolkit driver listing 522.06 is not the same minimum. Earlier cloud 403 limitations were resolved for these checks through successful target requests, without claiming cloud policy changed.
+- The owner saved `.venv/phase2a-requirements.txt` and `.venv/phase2a-environment.json`; their supplied dependency/config values are preserved in the committed snapshot. `.gitignore` and historical decision rows remain intact.
 
-The modelling-only baseline remains pretrained Grounding DINO Tiny through Hugging Face Transformers, still images, `individual_litter`, `group_of_individual_litter`, and `garbage_pile`, with multiple candidate regions and mixed categories. Direct prompting comes first. No automatic spatial grouping, DBSCAN, training, fine-tuning, or application modules belong to this baseline.
+## Remaining boundaries and next action
 
-Outputs are in-memory boxes/labels/individual model-score percentages, readable summaries, per-image JSON, and run/environment metadata. Preserve sources; no automatic annotated copies. The [contract](PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract) nulls invalid numeric components with diagnostics, excludes invalid candidates from displayed boxes/valid summaries, and separates inference outcome from `display.status`. Persist inference JSON before opening the viewer, then atomically update display outcome; interrupted pending display remains unfinished.
+No current preparation blocker remains in the supplied evidence. No further installation or repetition of passed checks is needed for the unchanged environment. The owner can review the preparation branch and issue the next phase instruction; this technical completion does not accept a later phase on their behalf and does not authorize a merge.
 
-Exact aliases can leave phrases unmapped. Identical-box/same-phrase collapse does not remove near duplicates; IoU flags are not clustering, membership, or general NMS. Physical-object and independent-region counts remain null when unresolved.
+Pretrained weights were not downloaded/loaded. No detector/application code, inference, team-photo processing, clustering, training/fine-tuning or annotated-image export occurred. Model-memory fit, custom category capability, detection quality and future model-specific driver behavior are intentionally untested. Later failures must be diagnosed from actual evidence; no accuracy or performance result is inferred from preparation.
 
-All existing `.gitignore` rules are preserved; project-local input/results/Hub-cache exclusions are appended. Inspection found no tracked files under `data/input/`, `results/`, or `.cache/huggingface/`; nothing was untracked or moved, and no such directories were created for this task.
+Future authorized model and processor loading must use the same recorded revision. The baseline remains still-image trash detection, three intended categories, direct prompts first and multiple candidate regions; team photos are unannotated and manually supplied. Existing numeric/display contracts and no-automatic-image-export rules remain. Prompt/threshold/alias and grouping-boundary defaults are unvalidated proposals.
 
-## Remaining prerequisites and next intended action
+## Git publication and history
 
-Review this documentation correction. At the agreed phase boundary, authorize Antigravity’s next preparation/implementation phase; do not infer authorization or Phase 1 acceptance from this publication. Routine technical defaults inside an authorized phase do not need extra approval checkpoints.
+Latest fetched main for preparation is `7a776cf`, merging PR #4; PR #3 published the plan at `b366f76`. Work is on `docs/phase-2a-environment-preparation`, never direct main. Final commit/push/PR outcomes are reported in the completion message; no merge is claimed. Earlier PR API attempts returned `Forbidden`; do not claim a PR exists without confirmation.
 
-On the owner’s Windows computer, verify Python, NVIDIA driver, actual RTX 2080 Super identity and memory availability, CUDA wheel/GPU execution or diagnosed CPU fallback, and the native viewer. Verify the exact checkpoint/configuration/conditions/safetensors/immutable revision, load model and processor from that same revision, and record resolved dependency versions plus CUDA installation source and preprocessing/settings. Proposed versions, prompts, thresholds, alias mapping and duplicate policy are not locally tested or automatically accepted.
-
-Prior official-source access limitations remain disclosed in the plan; this correction adds no new compatibility findings. Team photos may arrive later: their absence blocks actual visual checking, not documentation or environment planning. No model has been implemented or evaluated in this work and no performance results exist here.
-
-## Historical context
-
-PR #1 introduced the initial foundation; PR #2 finalized scope; PR #3 published the technical plan. Earlier Phase 0-only authorization, pending PR #2/#3 wording, and mandatory annotation/benchmark prerequisites describe superseded requests. They are not current blockers. [DECISIONS.md](DECISIONS.md) retains the earlier decision IDs and explicit replacement references; Git history retains prior document wording.
+D-001–D-023 preserve prior owner decisions, with D-022/D-023 assigning Codex and limiting this work to preparation. Previous pending/blocked readiness wording is historical and resolved by the supplied evidence above. No new implementation approval or owner acceptance date is invented.
