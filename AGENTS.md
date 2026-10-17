@@ -6,6 +6,14 @@ BANTAI is an academic intelligent-agent project for street-issue detection and h
 
 Phase 0 establishes documentation only. Do not start Phase 1 without explicit authorization. Do not implement detection code, install machine-learning dependencies, download models, or create a frontend or backend during Phase 0.
 
+## Approved modelling direction
+
+This repository owns AI modelling and computer vision only, including future reusable detection outputs; application frontend/backend modules, incident management, central databases, reporting, and hotspot ranking are outside its implementation responsibility.
+
+Start with pretrained **GroundingDINO-T (Swin-T / Tiny configuration)** and direct text-guided detection of **Garbage Pile**, **Individual Litter**, and **Group of Individual Litter**. Preserve multiple independent regions and mixed categories within one image. These outputs are not guaranteed pretrained classes. Evaluate direct prompting before any grouping implementation. DBSCAN, scale-normalized proximity, custom bounding-box grouping, and hybrid methods remain conditional candidates requiring baseline evidence and owner authorization.
+
+Verify exact implementation, checkpoint, runtime, annotation/grouping definitions, prompts, thresholds, and output semantics during a later authorized Phase 1. The owner reports an NVIDIA RTX 2080 Super development GPU; do not treat this as verified local hardware or compatibility. Do not infer successful detection from a selected model or written requirement.
+
 ## Collaboration rules
 
 - ChatGPT supports requirements analysis, explanations, and proposed decisions. Label suggestions as proposals; do not present them as approvals or measured results.
