@@ -235,136 +235,72 @@ def summary(result, mode=None, **overrides):
     return "\n\n".join("\n".join(block) for block in presentation_blocks(result, mode, **options))
 
 
-def native_details(result):
-    """Full readable records in the same window, away from image overlays."""
-    rows=[]
-    for d in passing_candidates(result):
-        rows.append(f"{d['id']} | {d['model_score']*100:.1f}% model score\n"
-                    f"Category: {d['category'] or 'unmapped'}\n"
-                    f"Phrase: {quoted_text(d['raw_phrase'])}\n"
-                    f"Box xyxy (original px):\n{box_text(d['box_xyxy'])}")
-    return "\n\n".join(rows) if rows else "No valid retained queries pass the box threshold.\nOriginal image displayed without boxes."
+def draw_overlays(ax,image,result):
+    from .gui_viewer import draw_overlays as draw
+    return draw(ax,image,result)
 
 
-def draw_overlays(ax, image, result):
-    """Draw the EXIF-oriented source in pixel-edge coordinates, without resizing."""
-    from matplotlib.patches import Rectangle
-    colors={"garbage_pile":"#ffb000", "individual_litter":"#00ff70",
-            "group_of_individual_litter":"#00dfff", None:"#ff66ff"}
-    width,height=image.size
-    ax.imshow(image,origin="upper",extent=(0,width,height,0),interpolation="antialiased")
-    for d in passing_candidates(result):
-        x0,y0,x1,y1=d["box_xyxy"]
-        color=colors[d["category"]]
-        ax.add_patch(Rectangle((x0,y0),x1-x0,y1-y0,fill=False,
-                               edgecolor=color,linewidth=2,zorder=3))
-        label=d["category"] or "unmapped"
-        bottom=y0>height*.8
-        right=x0>width*.6
-        ax.annotate(label,(x1 if right else x0,y1 if bottom else y0),xytext=(-4 if right else 4,4 if bottom else -4),
-                    textcoords="offset points",va="bottom" if bottom else "top",ha="right" if right else "left",
-                    fontsize=10,color="white",clip_on=True,zorder=4,
-                    bbox=dict(boxstyle="round,pad=0.3",facecolor="black",edgecolor=color,alpha=.9))
-    ax.set(xlim=(0,width),ylim=(height,0),xlabel="x (original pixels)",ylabel="y (original pixels)")
-    ax.set_aspect("equal",adjustable="box")
-    ax.set_title("Model scores are not accuracy. Zoom / Pan: toolbar; Home: reset. Close to continue.",fontsize=10)
+class DisplayBatch:
+    """Own in-memory image copies until one batch window closes."""
+    def __init__(self):
+        self.entries=[]
+
+    def add(self,image,result):
+        self.entries.append((image.copy(),result))
+
+    def show(self):
+        if self.entries:
+            from .gui_viewer import open_results_window
+            try:
+                open_results_window(self.entries)
+            except NativeDisplayError:
+                raise
+            except Exception as exc:
+                raise NativeDisplayError(f"Scrollable TkAgg viewer failed ({type(exc).__name__}): {exc}") from exc
+
+    def close(self):
+        for image,_ in self.entries:image.close()
+        self.entries.clear()
 
 
-def open_native_window(figure, title, *, details=None):
-    """Block until normal window closure; propagate Tk callback/render failures."""
-    import tkinter as tk
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-
-    class ViewToolbar(NavigationToolbar2Tk):
-        # Viewer-only navigation: no image save/export or subplot pop-ups.
-        toolitems=tuple(item for item in NavigationToolbar2Tk.toolitems
-                        if item[0] in ("Home","Back","Forward","Pan","Zoom"))
-
-    root=None
+def show_image(image,result,*,batch=None,cache_dir=None,stream=None,input_stream=None):
+    """Queue for a shared tab, or show a single-image tab for direct callers."""
+    if batch is not None:
+        batch.add(image,result)
+        return
+    session=DisplayBatch()
     try:
-        root=tk.Tk()
-        root.title(title)
-        root.geometry(f"{min(1400,int(root.winfo_screenwidth()*.9))}x{min(950,int(root.winfo_screenheight()*.85))}")
-        closed=False
-        failures=[]
-        def close():
-            nonlocal closed
-            closed=True
-            root.quit()
-        def callback_error(kind,error,traceback):
-            failures.append(error)
-            root.quit()
-        root.report_callback_exception=callback_error
-        root.protocol("WM_DELETE_WINDOW",close)
-        image_frame=root
-        if details is not None:
-            from tkinter.scrolledtext import ScrolledText
-            panel=ScrolledText(root,width=48,wrap=tk.WORD,font=("Consolas",11),
-                               background="#171717",foreground="white",padx=12,pady=12)
-            panel.insert("1.0","DETECTION DETAILS\nScores are model outputs, not accuracy.\n\n"+details)
-            panel.configure(state=tk.DISABLED)
-            panel.pack(side=tk.RIGHT,fill=tk.Y)
-            image_frame=tk.Frame(root)
-            image_frame.pack(side=tk.LEFT,fill=tk.BOTH,expand=True)
-        canvas=FigureCanvasTkAgg(figure,master=image_frame)
-        toolbar=ViewToolbar(canvas,image_frame,pack_toolbar=False)
-        toolbar.update()
-        toolbar.pack(side=tk.BOTTOM,fill=tk.X)
-        canvas.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=True)
-        canvas.draw()
-        root.mainloop()
-        if failures:
-            raise NativeDisplayError(f"Native viewer callback failed ({type(failures[0]).__name__})") from failures[0]
-        if not closed:
-            raise NativeDisplayError("Native viewer ended without normal window closure")
+        session.add(image,result)
+        session.show()
     finally:
-        if root is not None:
-            # Figure.clear() updates its toolbar. Detach it before Tk widgets die.
-            figure.canvas.toolbar=None
-            root.destroy()
-
-
-def show_image(image,result,*,cache_dir=None,stream=None,input_stream=None):
-    """Use existing TkAgg dependencies; stdout need not be an interactive terminal."""
-    from matplotlib.figure import Figure
-    stream=sys.stdout if stream is None else stream
-    stream.write(f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}\n")
-    stream.write(summary(result,mode="summary")+"\n")
-    stream.write("Opening native TkAgg viewer; close its window to continue.\n")
-    stream.flush()
-    figure=Figure(figsize=(12,8),dpi=100,layout="constrained")
-    try:
-        draw_overlays(figure.subplots(),image,result)
-        open_native_window(figure,"BANTAI | "+safe_text(result["source"]["image_id"]),details=native_details(result))
-    except NativeDisplayError:
-        raise
-    except Exception as exc:
-        raise NativeDisplayError(f"Native TkAgg viewer failed ({type(exc).__name__}): {exc}") from exc
-    finally:
-        figure.clear()
+        session.close()
 
 
 def show_synthetic(*,stream=None,preview_width=120):
-    """Independent native-window check, without model execution or file writes."""
+    """Three software-only images exercise the complete scrollable tab."""
     from PIL import Image,ImageDraw
-    from matplotlib.figure import Figure
+    from .configuration import load_config
+    from .results import candidate,make_result
     stream=sys.stdout if stream is None else stream
-    stream.write("SYNTHETIC NATIVE VIEWER CHECK: fixture boxes/IDs only; no model inference.\n")
+    stream.write("SYNTHETIC SCROLLABLE TAB: software fixtures only; no model inference.\n")
     stream.flush()
-    result={"inference":{"threshold":.35},"detections":[
-        {"id":"test0","state":"retained","model_score":.86,"numeric_diagnostics":[],
-         "raw_phrase":"synthetic blue circle","category":"individual_litter","box_xyxy":[40,35,145,145]},
-        {"id":"test1","state":"retained","model_score":.91,"numeric_diagnostics":[],
-         "raw_phrase":"synthetic yellow rectangle","category":"garbage_pile","box_xyxy":[175,55,285,155]}]}
-    with Image.new("RGB",(320,180),"#ddddee") as image:
-        draw=ImageDraw.Draw(image)
-        draw.ellipse((50,45,135,135),fill="blue")
-        draw.rectangle((185,65,275,145),fill="yellow")
-        figure=Figure(figsize=(12,8),dpi=100,layout="constrained")
-        try:
-            draw_overlays(figure.subplots(),image,result)
-            open_native_window(figure,"BANTAI | synthetic viewer check",details=native_details(result))
-        finally:
-            figure.clear()
-    stream.write("Native window closed normally. Visual appearance remains unverified unless observed.\n")
+    config=load_config();config.update(threshold=.35,text_threshold=.25)
+    batch=DisplayBatch()
+    try:
+        for index in range(3):
+            with Image.new("RGB",(640,400),"#ddddee") as image:
+                draw=ImageDraw.Draw(image);draw.rectangle((80,100,400,300),fill="blue")
+                ds=[] if index==2 else [candidate("q0","a group" if index==0 else "discarded item with a long incomplete phrase",[80,100,400,300],.86,640,400),
+                    candidate("q1","an individual",[620,0,640,80],.91,640,400)]
+                source=dict(image_id=f"synthetic-{index+1}",sha256="a"*64,width=640,height=400,coordinate_frame="exif_oriented_original")
+                result=make_result("synthetic",source,config,detections=ds,inference_completed=True,library_version="4.51.3",
+                    execution={"actual_device":"cpu","environment_manifest":"synthetic-only","preprocessing_manifest":"synthetic-only"})
+                result["query_diagnostics"]={"tokens":[{"token":"group","position":1,"token_id":123,"special":False}],
+                    "queries":[{"id":d["id"],"threshold_pass":True,"numeric_diagnostics":[],"invalid_token_positions":[],
+                                "model_score":d["model_score"],"token_scores":[.8],"token_threshold_pass":[True]} for d in ds]}
+                batch.add(image,result)
+        batch.show()
+    finally:
+        batch.close()
+    stream.write("Scrollable window closed normally. Visual verification requires observation.\n")
     stream.flush()

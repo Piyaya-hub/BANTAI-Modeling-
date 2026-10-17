@@ -654,6 +654,32 @@ class InferenceTests(unittest.TestCase):
             self.assertEqual(r["display"]["status"],"error")
             self.assertTrue(r["detections"])
 
+    def test_shared_batch_waits_for_all_saved_results_before_display(self):
+        from scripts.viewer import show_image as queue_image
+        files=[self.image_file("batch-a.png"),self.image_file("batch-b.png")]
+        originals=[p.read_bytes() for p in files]
+        def window(entries):
+            self.assertEqual(len(entries),2)
+            folder=next(Path(self.config["paths"]["results"]).iterdir())
+            records=[json.loads(p.read_text()) for p in folder.glob("*.json") if len(p.stem)==64]
+            self.assertEqual([r["display"]["status"] for r in records],["pending","pending"])
+        with patch("scripts.gui_viewer.open_results_window",side_effect=window) as show:
+            code,_,records,_,_=self.run_pipeline(files,self.detector(),queue_image)
+        self.assertEqual(code,0);show.assert_called_once()
+        self.assertEqual([r["display"]["status"] for r in records],["shown","shown"])
+        self.assertEqual([p.read_bytes() for p in files],originals)
+
+    def test_shared_batch_failure_preserves_every_prediction(self):
+        from scripts.viewer import show_image as queue_image
+        files=[self.image_file("batch-a.png"),self.image_file("batch-b.png")]
+        with patch("scripts.gui_viewer.open_results_window",side_effect=RuntimeError("batch fixture failure")):
+            code,_,records,_,_=self.run_pipeline(files,self.detector(),queue_image)
+        self.assertEqual(code,1)
+        for r in records:
+            self.assertEqual(r["status"],"ok")
+            self.assertEqual(r["display"]["status"],"error")
+            self.assertTrue(r["detections"])
+
     def test_pipeline_disabled_display_and_no_detections(self):
         self.config["display"]["enabled"]=False
         code,_,records,_,show=self.run_pipeline([self.image_file()],self.detector([]))

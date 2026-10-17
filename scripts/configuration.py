@@ -78,6 +78,8 @@ def validate_config(value, root=ROOT):
             raise ConfigError("display requires boolean enabled, TkAgg backend, save_annotated=false")
         # Historical terminal configurations migrate to the owner's native viewer.
         d["backend"] = "TkAgg"
+        if d.setdefault("layout","scrollable_tab") != "scrollable_tab":
+            raise ConfigError("display layout must be scrollable_tab")
         if d.setdefault("terminal_mode", "summary") not in ("summary", "full"):
             raise ConfigError("terminal_mode must be summary or full")
         for key, default, maximum in (("summary_below_threshold", 0, 900), ("page_rows", 10, 100)):

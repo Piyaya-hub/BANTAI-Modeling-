@@ -1,6 +1,6 @@
 # Model inference architecture
 
-Current viewer amendment: native in-memory Matplotlib/TkAgg viewing with zoom/pan supersedes ANSI terminal images. Keep passing-only terminal tables, complete raw JSON, source-verified replay and separate atomic display lifecycle. `shown` follows normal window closure; it does not imply detection quality or human observation. See [native viewer contract](NATIVE_VIEWER.md).
+Current viewer amendment: one scrollable Tk/TkAgg tab contains all images, each followed by passing detection/token tables and actual configuration. Use raw decoded phrase labels above boxes and original pixel ticks. Persist all predictions before the shared GUI opens; finalize display after normal closure, with failures separate from inference. See [scrollable viewer contract](SCROLLABLE_VIEWER.md).
 
 Status: Phase 2A readiness and Phase 2B foundation are published. Phase 2C now implements the baseline workflow below under the owner's proceed instruction, with an explicit CLI inference mode and preparation-only default. Software fixtures verify boundaries; actual pretrained loading/inference and target native overlays remain unrun in this cloud environment. See [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md) for provenance and limits.
 

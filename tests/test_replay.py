@@ -58,7 +58,7 @@ class ReplayTests(unittest.TestCase):
 
     def test_replay_persists_before_view_and_never_changes_saved_thresholds(self):
         self.config["threshold"] = .99
-        def viewer(image,result):
+        def viewer(image,result,**kwargs):
             self.assertEqual(self.replay_records()[0]["display"]["status"],"pending")
             self.assertEqual(result["inference"]["threshold"],.35)
             self.assertEqual(image.size,(12,8))
@@ -79,6 +79,34 @@ class ReplayTests(unittest.TestCase):
             run_replay(self.config,self.result_path,other)
         show.assert_not_called()
         self.assertFalse((self.root / "replays").exists())
+        self.assert_originals()
+
+    def test_multi_replay_one_window_numbered_attempts_and_pending_before_show(self):
+        def window(entries):
+            self.assertEqual(len(entries),2)
+            records=self.replay_records()
+            self.assertEqual(len(records),2)
+            self.assertEqual({r["image_number"] for r in records},{1,2})
+            self.assertTrue(all(r["display"]["status"]=="pending" for r in records))
+        with patch("scripts.gui_viewer.open_results_window",side_effect=window) as show,contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(run_replay(self.config,[self.result_path]*2,[self.image_path]*2),0)
+        show.assert_called_once()
+        self.assertTrue(all(r["display"]["status"]=="shown" for r in self.replay_records()))
+        self.assert_originals()
+
+    def test_multi_replay_validates_all_sources_before_persistence(self):
+        other=self.root/"copy.png";other.write_bytes(self.original_photo)
+        with self.assertRaisesRegex(ValueError,"image_id"):
+            run_replay(self.config,[self.result_path]*2,[self.image_path,other])
+        self.assertFalse(self.replay_records())
+        with self.assertRaisesRegex(ValueError,"equal nonzero"):
+            run_replay(self.config,[self.result_path]*2,[self.image_path])
+
+    def test_multi_replay_window_failure_keeps_results_and_distinct_statuses(self):
+        with patch("scripts.gui_viewer.open_results_window",side_effect=RuntimeError("batch display fixture")),contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(run_replay(self.config,[self.result_path]*2,[self.image_path]*2),1)
+        self.assertTrue(all(r["display"]["status"]=="error" for r in self.replay_records()))
+        self.assertTrue(all(not r["inference_executed"] for r in self.replay_records()))
         self.assert_originals()
 
     def test_replay_rejects_changed_hash_and_dimensions(self):

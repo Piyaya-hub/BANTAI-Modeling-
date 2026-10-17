@@ -1,6 +1,6 @@
 # Software and functional detection checks
 
-Native-viewer amendment: verify oriented pixel alignment, full-source image preservation, valid passing overlays, matching IDs/phrases/categories/scores, contrasting labels, empty results, zoom/pan, normal closure and failures, source-verified replay and atomic lifecycle. Agg drawing and mock Tk checks are software evidence; record actual Windows observations separately. Keep complete raw scores and unchanged filtering. See [native viewer evidence](NATIVE_VIEWER.md).
+Scrollable-tab amendment: test exact repeated section order, raw/incomplete phrases, bounded readable labels above narrow/edge boxes, coordinate alignment, passing-only selectable tables, actual saved configuration, wheel/horizontal scrolling, multi-image replay, normal closure and batch failures. Keep synthetic/Agg/mock evidence separate from actual Windows visual observations. See [current GUI evidence](SCROLLABLE_VIEWER.md).
 
 ## Current scope and evidence
 

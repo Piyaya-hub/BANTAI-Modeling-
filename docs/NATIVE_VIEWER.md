@@ -1,3 +1,7 @@
+# Historical per-image native viewer
+
+The latest owner instruction supersedes separate windows/side panels with [one scrollable results tab](SCROLLABLE_VIEWER.md). Commands and evidence below describe the earlier layout; use the linked current contract.
+
 # Native image viewer and saved-result replay
 
 The owner's latest instruction restores a native Matplotlib/TkAgg window, superseding terminal-only/no-pop-up requirements. Use the existing Windows `.venv`; no dependency reinstall is needed. Model inference, checkpoint revision, prompts, thresholds, source photos and saved raw diagnostics are unchanged.

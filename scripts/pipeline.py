@@ -10,7 +10,7 @@ from .inputs import load_image
 from .persistence import atomic_json, create_run
 from .postprocessing import DUPLICATE_POLICY, MAPPING_VERSION, apply_policies
 from .results import make_result, prepare_result, save_display_outcome, save_result
-from .viewer import NativeDisplayError, safe_text, show_image, summary
+from .viewer import DisplayBatch, NativeDisplayError, safe_text, show_image, summary
 
 
 def run_inference(config, files, *, local_files_only=False):
@@ -23,6 +23,8 @@ def run_inference(config, files, *, local_files_only=False):
     detector = None
     announced_fallbacks = 0
     startup_error = None
+    batch=DisplayBatch()
+    pending=[]
     environment = {"python": platform.python_version(), "platform": platform.platform(),
                    "packages": package_snapshot(), "model_loaded": False, "inference_attempted": False,
                    "inference_completed_images": 0}
@@ -77,7 +79,7 @@ def run_inference(config, files, *, local_files_only=False):
                     result["timing"] = timing
                 if completed and isinstance(getattr(detector, "query_diagnostics", None), dict):
                     result["query_diagnostics"] = copy.deepcopy(detector.query_diagnostics)
-                result["display"].update({key: config["display"][key] for key in ("backend", "terminal_mode", "summary_below_threshold", "page_rows", "include_special_tokens", "preview_width", "paginate")})
+                result["display"].update({key: config["display"][key] for key in ("backend", "layout", "terminal_mode", "summary_below_threshold", "page_rows", "include_special_tokens", "preview_width", "paginate")})
                 result["display"].update(console_policy="passing_only" if config["display"]["enabled"] or config["display"]["terminal_mode"]=="summary" else "full_raw", visual_verification="pending")
                 result["review"]["flags"] = flags
                 result = prepare_result(result)
@@ -90,7 +92,7 @@ def run_inference(config, files, *, local_files_only=False):
                 atomic_json(folder / "run.json", manifest, replace=True)
                 if result["display"]["status"] == "pending":
                     try:
-                        show_image(image, result, cache_dir=config["paths"]["cache"])
+                        show_image(image, result, batch=batch, cache_dir=config["paths"]["cache"])
                     except Exception as exc:
                         display_error = {"stage": "display", "code": "viewer_failed",
                                          "message": str(exc) if isinstance(exc, NativeDisplayError) else f"Native viewing/write failed ({type(exc).__name__}); inference results remain saved"}
@@ -99,12 +101,28 @@ def run_inference(config, files, *, local_files_only=False):
                         print(f"Display failed: {safe_text(path.name)}; {display_error['message']}; inference JSON preserved", file=sys.stderr)
                         print(summary(result, mode="summary"))
                     else:
-                        save_display_outcome(result_path, "shown")
+                        pending.append(result_path)
                 else:
                     print(summary(result, mode=config["display"].get("terminal_mode", "summary")))
             finally:
                 if image is not None:
                     image.close()
+        # All predictions are already persisted before the shared window opens.
+        # Release model resources before retaining a GUI event loop.
+        if detector is not None:
+            detector.close()
+            detector=None
+        if pending:
+            try:
+                batch.show()
+            except Exception as exc:
+                display_error={"stage":"display","code":"viewer_failed","message":str(exc)}
+                for result_path in pending:
+                    save_display_outcome(result_path,"error",error=display_error)
+                    manifest["display_errors"]+=1
+                print(f"Batch display failed; predictions remain saved: {safe_text(str(exc))}",file=sys.stderr)
+            else:
+                for result_path in pending:save_display_outcome(result_path,"shown")
         manifest["status"] = "completed_with_errors" if manifest["processing_errors"] or manifest["display_errors"] else "completed"
         atomic_json(folder / "run.json", manifest, replace=True)
     except (OSError, ValueError) as exc:
@@ -117,6 +135,7 @@ def run_inference(config, files, *, local_files_only=False):
         print(f"Interrupted; saved pending display outcomes remain unfinished: {folder}", file=sys.stderr)
         return 130
     finally:
+        batch.close()
         if detector is not None:
             detector.close()
     print(f"Inference run JSON: {folder}")

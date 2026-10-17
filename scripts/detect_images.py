@@ -14,22 +14,22 @@ from scripts.persistence import atomic_json, create_run, source_key
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="BANTAI: preparation by default; explicit inference and native TkAgg viewing")
+    parser = argparse.ArgumentParser(description="BANTAI: preparation by default; explicit inference and one scrollable TkAgg results tab")
     parser.add_argument("--mode", choices=("prepare", "infer", "replay", "display-check"), default="prepare")
     parser.add_argument("--config", default="config/detection.json")
     parser.add_argument("--input", help="override input directory; relative to repository root")
     parser.add_argument("--results", help="override JSON output directory; relative to repository root")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), help="override requested device")
-    parser.add_argument("--no-display", action="store_true", help="disable the native image window; print tables only")
+    parser.add_argument("--no-display", action="store_true", help="disable the GUI tab; print tables only")
     parser.add_argument("--local-files-only", action="store_true", help="inference may use cached files only; never contact the Hub")
     parser.add_argument("--terminal-mode", choices=("summary", "full"), help="with --no-display: summary passing-only or full raw diagnostics; native viewing always uses passing-only tables")
     parser.add_argument("--summary-below-threshold", type=int, help="legacy option, ignored by passing-only console output")
     parser.add_argument("--page-rows", type=int, help="maximum physical data lines per table page (1..100; default 10)")
     parser.add_argument("--include-special-tokens", action="store_true", help="full mode: include active special-token diagnostics")
     parser.add_argument("--preview-width", type=int, help="legacy terminal option; ignored by the native image viewer")
-    parser.add_argument("--paginate", action=argparse.BooleanOptionalAction, default=None, help="legacy option; native viewer closure controls continuation")
-    parser.add_argument("--result", help="replay: existing functional result JSON (no model execution)")
-    parser.add_argument("--image", help="replay: matching unchanged original JPEG/PNG")
+    parser.add_argument("--paginate", action=argparse.BooleanOptionalAction, default=None, help="legacy option; shared-tab closure finalizes display")
+    parser.add_argument("--result", action="append", help="replay: saved result JSON; repeat for multiple images, paired with --image in order")
+    parser.add_argument("--image", action="append", help="replay: matching original; repeat once per --result")
     args = parser.parse_args(argv)
     try:
         config = load_config(args.config, overrides={"input": args.input, "results": args.results})

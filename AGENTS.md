@@ -1,6 +1,6 @@
 # BANTAI agent instructions
 
-Latest owner viewer policy: native Matplotlib/TkAgg windows replace terminal image rendering, superseding terminal-only/no-pop-up requirements. Keep passing-only terminal tables, source-verified replay, original oriented pixel coordinates, zoom/pan, in-memory overlays and atomic separate display status. Preserve complete JSON diagnostics and model behavior. See [current native viewer contract](docs/NATIVE_VIEWER.md). Earlier terminal-only decisions are history.
+Latest owner viewer policy: one scrollable local Tk/TkAgg results tab repeats Image #N, Detection Summary, Text-Token Details and Configuration for the complete batch. Raw decoded phrase labels replace category-only labels; keep original pixel ticks, bounded readable labels above boxes, zoom/pan, passing-only selectable GUI tables and actual saved configuration. Preserve source-verified multi-image replay, complete JSON diagnostics, in-memory rendering and atomic separate display status. This supersedes terminal-only and separate per-image/side-panel layouts. See [current scrollable viewer contract](docs/SCROLLABLE_VIEWER.md).
 
 ## Project boundary
 
