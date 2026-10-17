@@ -1,6 +1,6 @@
 # Model inference architecture
 
-Status: proposed detector workflow for later phase authorization under Codex ownership. Phase 0 is complete and Phase 1 planning is published; Phase 2A environment/package/device/viewer readiness is verified to its preparation scope in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md), while model execution, memory fit and successful detection remain unverified. Phase 2A currently authorizes local Windows environment setup/readiness only; the detector workflow below is not authorized for execution.
+Status: Phase 2A readiness is recorded in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Phase 2B implements configuration, in-memory image preparation, result validation and atomic persistence only. The CLI uses a separate preparation schema and never claims inference. The complete detector workflow below remains the proposed later design; model execution, mapping/duplicate selection, overlap computation and viewer implementation are deferred beyond 2B. No successful detection or model-memory fit is established.
 
 ## Intended functional-check path
 

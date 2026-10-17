@@ -1,0 +1,5 @@
+# Transcribed from docs/PHASE_2A_ENVIRONMENT_SNAPSHOT.md (owner-supplied Windows Python 3.11.9 x64).
+# Point-in-time pins, no artifact hashes; a fresh installation was NOT tested in 2B.
+--index-url https://download.pytorch.org/whl/cu118
+torch==2.7.1+cu118
+torchvision==0.22.1+cu118

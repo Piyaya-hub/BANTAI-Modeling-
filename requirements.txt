@@ -1,0 +1,6 @@
+# Transcribed from docs/PHASE_2A_ENVIRONMENT_SNAPSHOT.md (owner-supplied Windows Python 3.11.9 x64).
+# Point-in-time pins, no artifact hashes; a fresh installation was NOT tested in 2B.
+# Direct supporting dependencies. CUDA installation is separate (see README).
+transformers==4.51.3
+Pillow==11.2.1
+matplotlib==3.10.3

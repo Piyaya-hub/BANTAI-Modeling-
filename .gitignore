@@ -223,3 +223,6 @@ __marimo__/
 /data/input/
 /results/
 /.cache/huggingface/
+
+# Local implementation scratch and synthetic test artifacts
+/work/
