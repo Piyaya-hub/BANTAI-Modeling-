@@ -23,11 +23,22 @@ def main(argv=None):
     parser.add_argument("--no-display", action="store_true", help="deliberately disable terminal image rendering for inference")
     parser.add_argument("--local-files-only", action="store_true", help="inference may use cached files only; never contact the Hub")
     parser.add_argument("--terminal-mode", choices=("summary", "full"), help="summary or every raw query/token score; complete diagnostics always saved")
+    parser.add_argument("--summary-below-threshold", type=int, help="summary: show this many highest-scoring valid below-threshold queries (0..900; default 1)")
+    parser.add_argument("--page-rows", type=int, help="maximum physical data lines per table page (1..100; default 10)")
+    parser.add_argument("--include-special-tokens", action="store_true", help="full mode: explicitly include active special tokens in the readable table")
     args = parser.parse_args(argv)
     try:
         config = load_config(args.config, overrides={"input": args.input, "results": args.results})
         if args.terminal_mode:
             config["display"]["terminal_mode"] = args.terminal_mode
+        for key in ("summary_below_threshold", "page_rows"):
+            value = getattr(args,key)
+            if value is not None:
+                config["display"][key] = value
+        if args.include_special_tokens:
+            config["display"]["include_special_tokens"] = True
+        from scripts.configuration import validate_config
+        config = validate_config(config)
         if args.device:
             config["device"] = args.device
         if args.no_display:

@@ -108,3 +108,7 @@ Codex interprets this phase instruction using the published 2B next-phase descri
 ## Terminal viewer owner instruction - 2026-10-17
 
 D-026: The owner explicitly requested replacing TkAgg with ANSI/Unicode rendering in the VS Code terminal, results beneath each image, all raw query/non-padding token sigmoid scores, summary/full modes, complete JSON diagnostics, unchanged filtering and pinned model, tests/docs, and a dedicated branch commit without merging. This supersedes the prior native-window display requirement only. No grouping, training or web modules are authorized. PASS/FAIL denotes retention or strict threshold decisions, never measured correctness. See [terminal contract](TERMINAL_VIEWER.md).
+
+## Terminal presentation correction owner instruction - 2026-10-17
+
+D-027: Continue `feat/terminal-viewer-diagnostics`/PR #9; diagnose missing inline output, require IMAGE-first actual terminal rendering and aligned decimal-score tables, compact configurable summary selection, bounded full output, explicit special-token inclusion, separate threshold/policy states, and honest unsupported-terminal outcomes. Preserve raw precision, inference, thresholds, pinned checkpoint, originals and atomic display lifecycle. No new branch or merge. See [presentation contract and evidence](TERMINAL_VIEWER.md).
