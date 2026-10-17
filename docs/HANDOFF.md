@@ -1,4 +1,16 @@
-# BANTAI Phase 2A completion handoff
+# BANTAI Phase 2B foundation handoff
+
+## Current result and next boundary
+
+The owner explicitly authorized Phase 2B, superseding the previous 2A-only stop boundary. Configuration, image preparation, result-contract utilities and atomic strict-JSON persistence are implemented for review on `feat/phase-2b-io-foundation` from current published main `dde98cf` (PR #5). No model loading, weight downloads, inference, viewer implementation or Phase 2C work occurred. No package was installed or reinstalled. The historical 2A handoff below remains preparation evidence, not the current authorization boundary.
+
+Files: `config/detection.json`; `scripts/{configuration,inputs,results,persistence,detect_images}.py`; `tests/test_foundation.py`; three requirements files transcribed from the 2A snapshot; current-state docs and additive `/work/` ignore rule. CLI output is explicitly preparation-only, using separate schemas and `prepared` rather than functional inference success/no detections. Originals are read only and transformed solely in memory. Only JSON is persisted.
+
+Actual checks: 22 synthetic software tests passed via `/usr/bin/python3 -m unittest discover -s tests -v`; CLI help, compilation and diff whitespace checks passed. Cloud Python 3.13.5/Pillow 11.1.0 were already installed; the verified Windows Python 3.11.9/Pillow 11.2.1 target was not directly accessible. New target software tests remain unrun. No fresh-install or GPU/model/viewer result is inferred. Full command/results, failure-injection coverage, persistence assumptions and limitations are in [PHASE_2B_CHECKS.md](PHASE_2B_CHECKS.md).
+
+P-001 now distinguishes verified 2A metadata/basic runtime from untested model behavior; D-024 records the owner's bounded authorization, preserving D-001–D-023. Mapping/duplicate selection/overlap interpretation, model-memory fit, real-photo behavior and native overlays remain later work. The foundation is ready for review and eventual authorized 2C integration; run the new software checks in the unchanged target environment before claiming target validation. Commit/publication outcomes are reported in the completion message; no merge is authorized or claimed.
+
+## Historical Phase 2A handoff — prior stop boundary superseded by D-024
 
 ## Result and ownership
 

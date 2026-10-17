@@ -1,0 +1,17 @@
+{
+  "paths": {"input": "data/input", "results": "results", "cache": ".cache/huggingface"},
+  "model": {
+    "id": "IDEA-Research/grounding-dino-tiny",
+    "revision": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+    "processor_revision": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+    "use_safetensors": true,
+    "disable_custom_kernels": true
+  },
+  "prompt": "a garbage pile. an individual discarded item. a group of individual litter.",
+  "threshold": 0.35,
+  "text_threshold": 0.25,
+  "settings_status": "proposed_unvalidated",
+  "device": "auto",
+  "dtype": "float32",
+  "display": {"enabled": true, "backend": "TkAgg", "save_annotated": false}
+}

@@ -69,9 +69,9 @@ These are technical observations and Codex's preparation assessment, not a new o
 
 ## Technical proposals and pending verification
 
-- P-001: The [architecture](ARCHITECTURE.md) and detailed [plan](PHASE_1_IMPLEMENTATION_PLAN.md) propose the local pipeline and output contract. GroundingDINO-T/Transformers is selected; its checkpoint revision, conditions, and local compatibility are not verified.
+- P-001: The [architecture](ARCHITECTURE.md) and [plan](PHASE_1_IMPLEMENTATION_PLAN.md) retain the proposed detector workflow. Checkpoint/processor revision, configuration, license/access metadata, exact dependencies/source and basic Windows package/device/viewer readiness are now verified to the limited 2A scope in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Prior unverified wording is historical. Model loading, memory fit, prompt/category quality and inference remain untested; 2B software fixtures do not establish them.
 - P-002: The current [test plan](TEST_PLAN.md) applies D-016 functional checks. Earlier P-002's mandatory annotated/held-out protocol is superseded; formal annotated evaluation is optional, separately scoped future work.
-- P-003: Follow [PHASES.md](PHASES.md). Earlier Phase 0-only task state was superseded by D-020; current Phase 2A authorization is D-023 and excludes detector implementation/inference.
+- P-003: Follow [PHASES.md](PHASES.md). Earlier Phase 0-only task state was superseded by D-020; current Phase 2B authorization is D-024 below; it excludes model/inference/viewer work.
 - P-004: The proposed baseline is now observed in supplied target results: Python 3.11.9 x64, torch 2.7.1+cu118, torchvision 0.22.1+cu118, Transformers 4.51.3, Pillow 11.2.1 and Matplotlib 3.10.3. Installation/imports and `pip check` passed; CPU/GPU tensors each returned 2.0 with capability (7,5). Full 36-package freeze/source capture, native TkAgg rendering/normal return and pinned checkpoint/processor metadata have subsequently been verified in supplied outputs and preserved in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md); no model compatibility/performance is inferred. Earlier source-only proposal status is retained in Git history.
 - P-005: Starting prompts, `threshold=0.35`, `text_threshold=0.25`, exact aliases, visual grouping boundaries, identical-box/same-phrase collapse, and IoU >=0.8 review flags are unvalidated defaults. No general NMS or spatial grouping algorithm is selected. Routine refinements inside an authorized phase are recorded rather than treated as new owner approval gates.
 
@@ -86,3 +86,13 @@ These are technical observations and Codex's preparation assessment, not a new o
 ## Recording future decisions
 
 For each approval, record the decision, approving owner, rationale, evidence links, affected scope/phase, and the actual approval date only when known; never invent one. A tool suggestion is not an approval. Move a proposal to approved status only after explicit owner approval; preserve superseded decisions with their replacement reference. No training or evaluation results exist in this documentation deliverable.
+
+## Phase 2B owner authorization and implementation choices — 2026-10-17
+
+| ID | Owner instruction | Effect |
+| --- | --- | --- |
+| D-024 | Implement Phase 2B — Input and Output Foundation: configuration, image loading, result-contract utilities and persistence only; synthetic predictions in tests only; preserve verified dependencies; commit/publish PR if possible, no merge. | Supersedes D-023's 2A-only stop boundary for this bounded foundation. No model loading/download/inference, viewer implementation, grouping, training, web/application modules or Phase 2C. Prior decisions/evidence remain historical records. |
+
+Routine implementation choices: separate `bantai.preparation.v1` and `bantai.preparation-run.v1` schemas prevent decoding from being mislabeled functional success. The functional contract adds an explicit `inference.completed` guard. UUID run directories are reserved exclusively; source filenames use a SHA-256 of full source identity plus source-byte digest. External inputs use an absolute image ID because no repository-relative path exists; project inputs use relative IDs. Initial JSON uses atomic hard-link publication without overwrite; final display updates use same-directory `os.replace`. Filesystems lacking hard links fail visibly. Single writer per functional result is required; power-loss directory durability is not claimed. These are software choices, not measured model capability or new owner approval of prompt hypotheses.
+
+The complete 36-package requirements snapshot is transcribed from supplied 2A evidence with the CUDA source retained. No package reinstall/fresh-install verification occurred. Actual 2B cloud software checks and target-version limitations are recorded separately in [PHASE_2B_CHECKS.md](PHASE_2B_CHECKS.md). Historical 2A readiness/snapshot stop wording applies to that earlier task and is superseded by D-024 for the foundation only.

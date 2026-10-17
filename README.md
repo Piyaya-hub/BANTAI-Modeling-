@@ -12,7 +12,7 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-Phase 0 is complete. The Phase 1 planning deliverable is published and merged through PR #3 at `b366f76`. Phase 2A technical preparation checks are complete on owner-supplied Windows evidence; detection remains unimplemented and unverified; publication is not acceptance of every technical proposal. Codex now owns implementation, replacing Antigravity, which the owner reports made no changes. Phase 2A is authorized for local Windows environment setup and readiness verification only (plan Section 4 and Section 8 stages 2–3); detector implementation and inference remain outside this authorization.
+Phase 0/Phase 1 planning and Phase 2A preparation are published (2A merged through PR #5). Codex has implemented **Phase 2B — Input and Output Foundation** for review: configuration, image preparation, result-contract utilities and strict atomic JSON persistence. The owner explicitly superseded the prior 2A-only stop boundary. No model loading, inference or viewer is implemented. Software fixtures are not model evidence; no detection quality or model-memory result exists.
 
 The owner supplies unannotated team photographs, manually downloaded/extracted from Google Drive into a configurable project folder (proposed `data/input/`). The planned detection activity is functional checking and visual inspection, with no required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets.
 
@@ -31,6 +31,24 @@ The planned outputs are an in-memory display of original photographs with predic
 - [Phase 2A Windows preparation and readiness record](docs/PHASE_2A_READINESS.md)
 - [Verified Phase 2A environment snapshot](docs/PHASE_2A_ENVIRONMENT_SNAPSHOT.md)
 
+## Preparation-only usage
+
+Use the existing verified Windows `.venv`; no reinstall is needed:
+
+```bat
+.venv\Scripts\python.exe scripts\detect_images.py --help
+.venv\Scripts\python.exe scripts\detect_images.py --input data/input --results results
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+`--config`, `--input` and `--results` accept absolute paths or paths relative to the repository root, regardless of shell working directory. Configuration is [config/detection.json](config/detection.json). Missing/empty inputs return 2; image read/decode errors return 1 after continuing the batch; unsupported-only input returns 2 with skips recorded; completed preparation returns 0. Configuration/persistence failures return 2. Generated output is JSON only under an ignored run directory. `prepared` means decoded/oriented/RGB-converted in memory, with inference explicitly unrun. No predictions are generated. Default display intent is enabled, but preparation records always say `not_attempted`.
+
+Reusable helpers live in [scripts/](scripts/): `configuration.py`, `inputs.py`, `results.py` and `persistence.py`. Section 7 functional-result construction requires explicit inference completion/provenance; synthetic predictions appear only in [tests/test_foundation.py](tests/test_foundation.py). Mapping, duplicate selection and overlap computation are deferred.
+
+## Dependency reproduction reference
+
+[requirements.txt](requirements.txt) contains direct supporting pins; [requirements-cuda.txt](requirements-cuda.txt) selects the original cu118 source for torch/torchvision. [requirements-windows.lock.txt](requirements-windows.lock.txt) transcribes all 36 observed packages, including bootstrap tools, with the cu118 supplementary index. It is a version snapshot without artifact hashes. No fresh installation was tested in 2B. For a future clean Windows Python 3.11 x64 environment only, the complete snapshot can be applied with `python -m pip install -r requirements-windows.lock.txt`; the original two-source route uses `requirements-cuda.txt` followed by `requirements.txt`. Revalidate affected readiness on a rebuilt environment. Preserve the existing target environment.
+
 ## Next step
 
-Review the completed [Phase 2A readiness record](docs/PHASE_2A_READINESS.md) and [exact environment snapshot](docs/PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Local Windows commands were owner-run and their outputs reviewed by Codex from the separate cloud checkout. Stop after preparation: detector implementation, weight downloads/loading and inference require a later phase authorization. No further setup command is needed for the unchanged verified environment.
+Review [2B checks and limitations](docs/PHASE_2B_CHECKS.md) and [handoff](docs/HANDOFF.md). Phase 2C/model loading/inference/viewer implementation remains outside this task; no merge is authorized. The 2A records remain supplied Windows preparation evidence, while 2B checks are cloud-executed software fixtures.
