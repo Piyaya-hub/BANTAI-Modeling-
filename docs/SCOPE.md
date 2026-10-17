@@ -11,10 +11,10 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 ## Approved initial direction
 
 - Detect trash in still images.
-- Evaluate pretrained GroundingDINO-T (Swin-T / Tiny configuration) through direct text prompts before considering spatial grouping, training, alternative models, or integration.
+- Functionally check pretrained GroundingDINO-T (Swin-T / Tiny configuration) through Hugging Face Transformers and direct text prompts. Automatic grouping, training, fine-tuning, and alternative models are outside this baseline.
 - Establish documentation and verifiable phase gates before model work.
 
-Phase 0 authorizes documentation only. The initial direction does not authorize immediate execution of later phases.
+Phase 0 is complete and Phase 1 planning is published. Environment preparation is unverified. Current work is documentation correction only; Antigravity performs later authorized implementation under [PHASES.md](PHASES.md).
 
 ## Initial exclusions
 
@@ -24,11 +24,11 @@ No pothole or road-surface damage detection, video or real-time processing, inci
 
 | Category | Intended meaning | Example |
 | --- | --- | --- |
-| Garbage Pile | Concentrated accumulation of discarded waste, typically overlapping, stacked, or densely collected | A substantial roadside heap of mixed garbage |
-| Individual Litter | A single separately identifiable discarded object not assigned to a group | An isolated discarded bottle, wrapper, aluminum can, or bag |
-| Group of Individual Litter | Multiple separately distinguishable discarded objects that are spatially associated without necessarily forming a dense pile | Several bottles, wrappers, and cans scattered close together |
+| `garbage_pile` (Garbage Pile) | Concentrated accumulation of discarded waste, typically overlapping, stacked, or densely collected | A substantial roadside heap of mixed garbage |
+| `individual_litter` (Individual Litter) | A single separately identifiable discarded object not assigned to a group | An isolated discarded bottle, wrapper, aluminum can, or bag |
+| `group_of_individual_litter` (Group of Individual Litter) | Multiple separately distinguishable discarded objects that are spatially associated without necessarily forming a dense pile | Several bottles, wrappers, and cans scattered close together |
 
-These are required project outputs, not guaranteed pretrained model classes. Operational definitions, annotation policy, minimum grouping criteria, ambiguity, membership, and overlap rules must be finalized before evaluation. Nearby litter is not automatically a pile, and a pile is not automatically a group of individual litter.
+These are required project outputs, not guaranteed pretrained model classes. Category boundaries, a proposed minimum of two visually distinct items for a group, ambiguity, membership, and overlap rules are visual-review guidance and operational proposals, not required annotation work. Mark uncertain cases rather than force a classification. Nearby litter is not automatically a pile, and a pile is not automatically a group of individual litter.
 
 One image can contain multiple independent regions and any mixture of all three categories. Preserve object-level detections separately from group-level regions. A group region and its members must not be double-counted as independent trash regions. Physical object counts must not be inferred from a group box when members cannot be resolved.
 
@@ -36,9 +36,13 @@ Illustrative requirement only: one isolated bottle plus four distinguishable lit
 
 Direct prompts must be evaluated first. They may produce individual object boxes without a group box, or confuse a group with a pile. Whether GroundingDINO-T can meet these requirements directly remains experimental. Spatial grouping is a conditional later option, not a required Phase 1 implementation.
 
-## Unresolved boundaries
+## Current inputs, outputs, and unresolved boundaries
 
-The operational definition of trash, treatment of ambiguous objects, image sources and usage rights, annotation policy, dataset composition, and evaluation success thresholds require decisions before the relevant experiments. Do not assume that all roadside objects are trash or that a detection is an incident.
+The owner supplies team photographs with no annotations or ground-truth boxes, downloads/extracts them manually from Google Drive, and places them in a configurable project-relative folder (proposed `data/input/`). Preserve originals. No dataset collection, Drive integration, required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets belong to this functional check.
+
+Plan an in-memory display of photographs with predicted boxes, labels, and individual model-score percentages, a readable summary, per-image JSON, and run/environment metadata. No automatic annotated-image copies or source overwrites. Scores are not measured accuracy, calibrated correctness probabilities, or image-area percentages. Inference and display statuses are distinct; invalid numeric values become null with diagnostics, and invalid candidates are excluded from displayed boxes/valid summaries under the [contract](PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract).
+
+Execution is on the owner’s Windows computer with an owner-reported RTX 2080 Super; local Python, driver, memory availability, and compatibility are unverified. Checkpoint details, prompts, thresholds, and conservative mapping/duplicate policies remain technical proposals or prerequisites. Do not assume all roadside objects are discarded trash or that a detection is an incident. Confirm the supplied photos may be processed without turning this task into data collection or required annotation.
 
 A still-image detection alone does not establish location, repeated observations, incident identity, or hotspot frequency. Any future hotspot work belongs to the broader system and will need an approved data and aggregation policy outside this repository.
 

@@ -1,21 +1,16 @@
 # BANTAI Phase 1 implementation handoff for Antigravity
 
-Prepared 2026-10-17. Status: proposal for review, not implementation authorization or Phase 1 acceptance. Codex performed repository inspection and source research only. No dependencies, model weights, datasets, or detector code were installed, downloaded, or created.
+Originally prepared 2026-10-17; published through merged PR #3. Status: planning deliverable with technical proposals and pending verification, not implementation authorization or Phase 1 acceptance. Current work is documentation correction only by Codex; Antigravity handles later authorized implementation. No dependencies, model weights, datasets, or detector code are installed, downloaded, or created by this work.
 
-## 1. Inspected repository and requirement precedence
+## 1. Repository state and requirement precedence
 
-Repository: `Piyaya-hub/BANTAI-Modeling-`. Fetched `origin/main` is `8baf785` (merge of PR #2); PR #1 was previously merged at `0a9c738`. At initial inspection, the checkout was the prior documentation branch, `docs/finalize-phase-0-detection-scope`; its tracked contents matched latest `main`, and its working tree was clean. The owner subsequently requested publication of this plan to GitHub. It is now recorded on `docs/phase-1-implementation-plan` for review; this does not authorize implementation.
+Repository: `Piyaya-hub/BANTAI-Modeling-`. The correction fetched `origin/main` at `b366f769f38158675d02fda628c73971d30ed9bb`, the merge of PR #3; it was still the latest main at inspection. PRs #1–#2 had already merged. The clean checkout was inspected before creating `docs/phase-1-contract-corrections` from that main. This branch is for documentation and requested ignore-rule corrections only, not direct main changes or merge.
 
-Inspected `AGENTS.md`, `README.md`, `.gitignore`, and `docs/SCOPE.md`, `docs/ARCHITECTURE.md`, `docs/PHASES.md`, `docs/DECISIONS.md`, `docs/TEST_PLAN.md`, `docs/HANDOFF.md`. These provide eight foundation Markdown files and a Python-oriented ignore file. There is no application source, dependency manifest/lock, detector configuration, or image collection in the tracked tree. Existing ignored remote Python state supplies no evidence about the user's Windows computer.
+Read `AGENTS.md`, `README.md`, `.gitignore`, and all tracked `docs/` Markdown files. The tracked tree contains foundation/planning documentation and the ignore file, with no detector, dependency manifest/lock, inference configuration, or tracked photos/results/model cache. Ignored remote Python state is not evidence about the owner's Windows computer.
 
-Phase 0 is complete per the owner and merged history. Preserve its modelling-only, still-image, three-category, multi-region, prompt-first decisions. Conflicts with the latest request:
+Phase 0 is complete and Phase 1 planning is published. The latest owner requirements select Transformers and **functional visual checks on manually supplied unannotated team photographs**. Older mandatory annotations, held-out benchmarks, formal accuracy metrics, Phase 0-only task state, and pending PR #2/#3 language are superseded; history is retained in [DECISIONS.md](DECISIONS.md). The related scope, architecture, phase gates, test plan, README and agent/handoff guidance are corrected alongside this plan.
 
-- `docs/TEST_PLAN.md` requires annotations, held-out evaluation, precision/recall/AP and success thresholds; `docs/PHASES.md` Phases 1–2 and `docs/ARCHITECTURE.md` step 10 depend on annotated references. **For the present activity, replace those requirements with a functional detection check on unannotated team photographs.** No required annotations, benchmark split, dataset collection, or accuracy measurement.
-- `README.md`, `AGENTS.md`, `docs/PHASES.md`, and `docs/HANDOFF.md` still describe Phase 0-only work or Phase 1 as not authorized. The latest instruction authorizes this planning task only. It does not authorize installation, inference implementation, experiments, or acceptance on the owner's behalf.
-- `docs/HANDOFF.md` says the final Phase 0 revision is pending merge; fetched history now confirms PR #2 merged. Update that historical status during a later authorized documentation change.
-- `docs/DECISIONS.md` leaves the inference implementation unresolved; the owner now specifies Hugging Face Transformers. Keep earlier decisions as history and record the new requirement rather than silently rewriting it.
-
-This plan identifies these changes without rewriting the accepted scope, architecture, phases, decisions, or test plan. README navigation and the handoff status are updated to point to this planning deliverable. Antigravity should align the affected documents on a new task branch from then-current `main` when implementation is authorized. Preserve `.gitignore` rules; append only the necessary local-data/output/cache exclusions.
+Publication is not proof of local environment preparation, successful detection, or owner acceptance of every technical proposal. Setup, implementation and inference remain future authorized work under the agreed phase boundaries. Routine defaults inside an authorized phase do not require extra approval checkpoints. No annotation work, benchmark split, precision/recall/mAP, or numeric accuracy targets are required for this activity.
 
 ## 2. Confirmed scope and evidence
 
@@ -23,7 +18,7 @@ Confirmed by owner: pretrained Grounding DINO Tiny, Hugging Face Transformers, W
 
 ### Official source findings
 
-Source checks below were made during this planning task; no official example or published result is a BANTAI experiment.
+The findings below preserve official-source checks from the original planning task; they were not reverified or expanded during this correction; no official example or published result is a BANTAI experiment.
 
 | Finding | Evidence and verification limit |
 | --- | --- |
@@ -38,7 +33,7 @@ Source checks below were made during this planning task; no official example or 
 
 ### Outstanding official-source verification
 
-The proxy returned `403 Forbidden` for Hugging Face, pytorch.org, developer.nvidia.com, and docs.nvidia.com. Their pages were not inspected. These are access limitations in this cloud session, not evidence that the user's computer lacks access.
+The proxy returned `403 Forbidden` for Hugging Face, pytorch.org, developer.nvidia.com, and docs.nvidia.com. Their pages were not inspected. These were access limitations during the original planning session, not evidence that the user's computer lacks access.
 
 Before downloading weights later, Antigravity must open the exact [model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny), configuration and files; confirm the Swin-T/Tiny configuration, publisher/conversion provenance, model-specific license/usage conditions and any access terms, availability of safetensors, and immutable Hub commit. Pin processor and weights to the same verified revision. Do not infer checkpoint licensing solely from the original code license. Do not use `trust_remote_code=True` or download an alternative checkpoint silently.
 
@@ -48,10 +43,10 @@ CUDA 11.8 is a conservative proposed wheel choice for this GPU, not an assertion
 
 ## 3. Minimal proposed repository layout
 
-The following files/folders are proposals; none was created in the repository:
+The following implementation files/folders remain proposals; none is created by this correction:
 
 ```text
-AGENTS.md, README.md, docs/       existing foundation; align conflicting guidance
+AGENTS.md, README.md, docs/       existing foundation/planning; current guidance aligned
 requirements.txt                 proposed direct dependency pins
 requirements-windows.lock.txt    exact resolved environment after local verification
 config/detection.json            prompts, thresholds, paths, device and display options
@@ -68,7 +63,7 @@ Keep one small script initially; split modules only if complexity warrants it. U
 
 Resolve configured paths relative to the repository root, not the shell's working directory. Defaults: `data/input`, `results`, `.cache/huggingface`. Allow explicit overrides. Input originals are read-only to the tool. Process JPEG/PNG initially, one image at a time, sorted and nonrecursive by default. Preserve unsupported files and report skips; decode failures are errors. Missing/empty folders produce actionable messages, not a model-quality failure. No photos are required to finish this plan or implement non-model checks.
 
-Later append ignore rules `/data/input/`, `/results/`, `/.cache/huggingface/` while preserving existing entries. Check `git status` before committing; `.gitignore` does not untrack photos already committed. Never stage real photos, caches, local absolute paths, or generated results. Optional exported annotated images must also go under ignored results.
+This correction appends missing ignore rules `/data/input/`, `/results/`, `/.cache/huggingface/` while preserving existing entries; no directories are created and nothing is untracked. Inspection found no tracked files in those paths. Check `git status` before committing; `.gitignore` does not untrack photos already committed. Never stage real photos, caches, local absolute paths, or generated results. Optional exported annotated images must also go under ignored results.
 
 ## 4. Windows environment verification and proposed setup
 
@@ -95,7 +90,7 @@ Record Windows version/architecture, Python architecture, driver, GPU identity, 
 
 ### Proposed version baseline after authorization
 
-Use Python 3.11 x64, `torch==2.7.1` with CUDA 11.8, `torchvision==0.22.1`, `transformers==4.51.3`, `Pillow==11.2.1`, and `matplotlib==3.10.3`. This is a reproducible source-checked baseline, not a claim to be latest or locally tested. Let Transformers resolve its required tokenizers, safetensors, Hub client, and other dependencies within its declared ranges, then freeze the exact verified environment. Review current package advisories before locking; if a required fix changes this baseline, recheck the pinned API and record the reason. No torchaudio or accelerate is required for single-device `.to(device)` inference.
+Proposed baseline: Python 3.11 x64, `torch==2.7.1` with CUDA 11.8, `torchvision==0.22.1`, `transformers==4.51.3`, `Pillow==11.2.1`, and `matplotlib==3.10.3`. This is a reproducible source-checked baseline, not a claim to be latest or locally tested. Let Transformers resolve its required tokenizers, safetensors, Hub client, and other dependencies within its declared ranges, then freeze the exact verified environment. Review current package advisories before locking; if a required fix changes this baseline, recheck the pinned API and record the reason. No torchaudio or accelerate is required for single-device `.to(device)` inference.
 
 Proposed commands, to run only when implementation/setup is authorized and preflight is satisfactory:
 
@@ -129,14 +124,14 @@ After implementation authorization:
 2. Load the verified processor and pretrained model once at the pinned Hub revision. Use safetensors if available, model evaluation mode, inference-only execution, and the recorded device/custom-kernel setting. Do not train or download data automatically.
 3. Decode one image; normalize EXIF orientation in memory, convert to RGB, and record dimensions of the orientation-corrected original display. Coordinates refer to this displayed original pixel frame, before model resizing; document this EXIF convention explicitly. Never save the transformed source.
 4. Submit the selected period-separated text prompt and image through the processor. Use the pinned grounded postprocessor with `threshold`, `text_threshold`, and original display `(height,width)`.
-5. Retain every above-threshold candidate's raw phrase, original model score, raw pixel box and proposed category mapping. Validate finite scores and boxes; clip displayed boxes to image bounds and record both raw and clipped boxes. Degenerate/nonfinite boxes are flagged, retained diagnostically, and excluded from valid summaries.
-6. Apply the conservative duplicate/overlap proposal below; preserve raw candidates and decisions. Do not build clusters or group boxes from member detections.
-7. Print a readable per-image list: candidate ID, mapped category or `unmapped`, raw phrase, score as a percentage, and overlap/duplicate warnings. Category tallies count retained candidate predictions, not verified physical objects or independent regions. Do not invent an overall image accuracy or definite region count when memberships are unresolved.
-8. Save one JSON result per image/run using a relative path plus content digest to avoid basename collisions; avoid overwriting prior runs. Write atomically. Continue a batch after an individual image error; return a nonzero exit status if errors occurred.
-9. Display the oriented original with boxes, category labels, IDs, and model-score percentages via Matplotlib's native TkAgg window. The overlay and image stay in memory; close the figure and release image resources before the next image. No browser, server, or annotated-image temporary file is needed. If the display cannot open, report that fact and retain JSON/console output; do not claim display acceptance.
-10. Annotated image export is an optional future `save_annotated=false` setting, disabled by default and written only to an explicitly chosen ignored output path. The default run creates JSON only. No source overwrites, implicit exports, or persistent viewer temp files.
+5. Retain candidate raw phrases, finite raw scores/coordinates, and proposed mappings. Check numeric validity before invalid values could silently disappear through threshold comparisons. Replace each nonfinite raw coordinate or invalid score with null plus diagnostics; any invalid coordinate makes the entire clipped/display box null. Invalid candidates are not displayed or counted as valid detections. Apply the precise numeric rules in section 7; never serialize NaN/Infinity.
+6. Apply the conservative duplicate/overlap proposal below and preserve candidate decisions. Do not build clusters, derive group boxes, select general NMS, or infer membership/counts.
+7. Print readable category/score summaries for valid retained predictions, including valid unmapped predictions; list invalid candidates separately with reasons and no invented percentages. Category tallies count valid retained candidate predictions, not physical objects or independent regions. Unresolved physical-object/independent-region counts remain null.
+8. Atomically write per-image JSON and appropriate run/environment metadata before opening any viewer. Use run IDs plus source relative path/content digest to avoid basename collisions or overwriting earlier runs. Record processing `status` independently from `display.status`. Successful processing with viewing planned starts with display `pending`; deliberate disablement records `disabled`; failed/skipped processing records `not_attempted`.
+9. With viewing enabled by default, attempt native Matplotlib TkAgg in-memory display of the oriented original, valid retained boxes, category/unmapped labels, candidate IDs and individual model-score percentages. Atomically update JSON to display `shown` after rendering and viewer return, or display `error` with its error details if viewing fails. A process stopping before that update leaves `pending` as unfinished, even if a window may have appeared. Display failure preserves inference detections/status; no unverified display success is claimed. Exclude viewer waiting from inference timing, close each figure and release resources. No browser/server or temp-image file is needed.
+10. Continue a batch after an image error and return nonzero for processing errors, enabled-display failures, or result persistence errors; keep their distinct causes in metadata/console output. A final JSON update failure leaves the prior result intact (possibly pending) and must be reported. Annotated export remains an optional future `save_annotated=false` action, disabled by default and confined to an explicit ignored path. No source overwrites or automatic annotated copies. Default image-derived outputs are JSON/metadata, never extra image files.
 
-A model score of 0.72 displays as `72.0% model score`. It is not accuracy, a calibrated probability of correctness, or percentage of image area. Preserve the unrounded 0–1 score in JSON.
+A model score of 0.72 displays as `72.0% model score`. It is not accuracy, a calibrated probability of correctness, or percentage of image area. Preserve valid unrounded 0–1 scores in JSON; invalid scores are null with diagnostics and never displayed as percentages.
 
 ## 6. Prompt, mapping, and visual-review proposals
 
@@ -169,13 +164,13 @@ These are reviewer guidance, not annotation work, automatic grouping logic, or m
 - `individual_litter`: one separately identifiable apparently discarded item; it is not confirmed independent merely because its prompt mapped to that category. If it appears inside a plausible group/pile region, mark membership unresolved.
 - `group_of_individual_litter`: at least two visually distinct, apparently discarded items form a local arrangement, with visible separation rather than an accumulated heap. Two is a proposed review minimum, not an implemented distance algorithm; proximity and boundary judgments remain qualitative. A direct group prediction should have one box enclosing that arrangement.
 - `garbage_pile`: accumulated/stacked/overlapping waste appears as a heap rather than merely several nearby items. Do not relabel every nearby collection as a pile, or assume every pile has individually countable members.
-- Ambiguous ownership/discard status, occlusion, scale, group boundaries or pile-vs-group appearance: mark `uncertain` with a short review note rather than forcing a category. No annotation files or boxes are required from the team.
+- Ambiguous ownership/discard status, occlusion, scale, group boundaries or pile-vs-group appearance: mark `uncertain` with a short review note rather than forcing a category. No annotation files or boxes are required from the team; these rules do not become a dataset labelling prerequisite.
 
 Preserve individual model boxes and directly predicted group/pile boxes as separate candidate records with `level=object` or `level=region`. A group box does not establish member count. Do not synthesize a group box when the model returns only items: record missing group localization as a limitation.
 
-Duplicate proposal: retain all raw candidates; by default collapse only numerically identical boxes with the same normalized phrase into one displayed/summary record, retaining the highest score and duplicate links. Flag substantial same-category overlap (starting review heuristic IoU >=0.8) without deleting candidates automatically. Cross-category overlap and object-within-region containment are review flags, not proof of duplication or membership. Keep conflicting categories visible and mark resolution pending. This avoids silently deleting legitimate overlapping objects or imposing a clustering algorithm.
+Duplicate proposal: retain all raw candidates; by default collapse only numerically identical boxes with the same normalized phrase into one displayed/summary record, retaining the highest score and duplicate links. Flag substantial same-category overlap (starting review heuristic IoU >=0.8) without deleting candidates automatically. Cross-category overlap and object-within-region containment are review flags, not proof of duplication or membership. Keep conflicting categories visible and mark resolution pending. Identical-box/same-phrase collapse does not remove near duplicates. IoU flags are review heuristics only; no general non-maximum suppression algorithm or automatic clustering is selected.
 
-The UI must distinguish object candidate count from region candidate count. Do not sum a group box and its members as independent regions. With unresolved membership, report independent-region/physical-object counts as unknown. The five-object/two-region example from Phase 0 remains desired behavior, not a baseline guarantee or output to fabricate.
+The UI must distinguish object candidate count from region candidate count. Do not sum a group box and its members as independent regions. With unresolved membership, keep `independent_region_count` and `physical_object_count` null in JSON and report them as unknown. The five-object/two-region example from Phase 0 remains desired behavior, not a baseline guarantee or output to fabricate.
 
 If later authorized spatial grouping creates a region, use `origin=derived_spatial_group`, explicit member IDs and method/parameters, and `model_score=null` for the derived region. Member scores remain on member model predictions. Do not average or invent a new model confidence. No such module is part of this implementation baseline.
 
@@ -196,20 +191,43 @@ Schema version `bantai.functional.v1`, one object per source image/run. UTF-8 JS
 | `schema_version`, `run_id` | Strings identifying contract and experiment |
 | `source` | `image_id` as project-relative path, `sha256` for source identity, `width`, `height`, `coordinate_frame` (EXIF-oriented original display); dimensions may be null on decode failure |
 | `model` | `id`, immutable `revision`, `library`, `library_version`; successful runs must record the resolved checkpoint revision |
-| `inference` | Requested/actual device, dtype, package/driver details or manifest reference, custom-kernel setting, exact prompt, `threshold`, `text_threshold`, mapping version, duplicate policy, fallback details |
-| `status` | `ok`, `no_detections`, `error`, or `skipped_unsupported` |
+| `inference` | Requested/actual device, dtype, package/driver details or manifest reference, processor/preprocessing settings, custom-kernel setting, exact prompt, `threshold`, `text_threshold`, mapping version, duplicate policy, fallback details |
+| `status` | Processing/inference outcome only: `ok`, `no_detections`, `error`, or `skipped_unsupported`; independent of display outcome |
+| `display` | `enabled` boolean, `status` (`pending`, `shown`, `disabled`, `error`, `not_attempted`), and separate `error` object or null; lifecycle below |
 | `score_definition` | Model score range `[0,1]`; UI percentage is score ×100, not accuracy |
-| `box_format` | `xyxy`, floating original-display pixel edges, origin top-left, x right/y down; raw coordinates retained; clipped valid box obeys `0 <= x0 < x1 <= width`, `0 <= y0 < y1 <= height` |
-| `detections` | All above-threshold candidates: ID, origin, raw phrase, mapped category or null, mapping reason, level (`object`, `region`, `unknown`), score (0–1 for model; null for future derived), raw/clipped box, retained/duplicate/invalid state and references |
+| `box_format` | `xyxy`, floating original-display pixel edges, origin top-left, x right/y down; `raw_box_xyxy` preserves finite components and replaces each nonfinite component with null; `box_xyxy` is wholly null for any invalid coordinate or invalid geometry, otherwise a valid clipped box obeying `0 <= x0 < x1 <= width`, `0 <= y0 < y1 <= height` |
+| `detections` | Above-threshold candidates plus invalid candidates encountered during extraction: ID, origin, raw phrase, category or null, mapping reason, level (`object`, `region`, `unknown`), `model_score` (valid 0–1 or null with diagnostics; future derived groups have null), raw/clipped box, state (`retained`, `duplicate`, `invalid`), duplicate reference, and `numeric_diagnostics` list |
 | `review` | Overlap/containment flags, unresolved membership, optional qualitative notes; not ground truth. Counts of physical objects/independent regions default null |
 | `timing` | Scope plus observed milliseconds or null; no fabricated measurements |
-| `error` | Null unless failure; otherwise stage/code/message, no secret or credential values |
+| `error` | Processing/inference failure only: null or stage/code/message. Display errors go in `display.error`; neither contains secrets |
 
-`no_detections` means inference and postprocessing succeeded with zero candidates above configured thresholds, not that the image contains no trash. Nonempty unmapped results have `status=ok`. On `error`, detections is empty for that failed image and error is populated; never relabel failure as `no_detections`. Unsupported files are a separate skip. A display failure is recorded separately from successful inference and means the display requirement remains unmet.
+`no_detections` means inference/postprocessing succeeded with zero above-threshold candidates and no invalid prediction diagnostics, not that the photograph contains no trash. `ok` requires at least one valid candidate, mapped or unmapped; mixed invalid/valid candidates retain diagnostics without erasing the valid ones. If every extracted candidate is invalid, use processing `status=error`, `error.code=invalid_predictions`, preserve the diagnostic candidate records, and use display `not_attempted`. Other pre-inference/decode failures have empty detections and useful error information. Unsupported files use `skipped_unsupported`, not inference failure or no detections.
+
+### Invalid numeric values and candidate validity
+
+- Numeric diagnostics use `field`, `reason`, and optionally `index` for a coordinate. Before strict serialization, sanitize all numeric fields, including timings/settings, so no NaN/Infinity is emitted. Use standards-compliant JSON serialization with `allow_nan=False` or an equivalent rejecting mode after sanitation. Invalid required numeric settings are configuration errors; do not execute inference with null thresholds. Missing/invalid metadata numbers are null with a diagnostic, never fabricated measurements.
+- `raw_box_xyxy` is a four-element list. Preserve each finite raw coordinate; replace each nonfinite component with null and an indexed reason. The **entire** `box_xyxy` becomes null if any raw component is invalid. Do not partially draw an invalid box or guess a replacement coordinate.
+- A fully finite box with reversed/degenerate geometry, or one that is empty after clipping, is invalid: preserve its finite raw list, set the whole `box_xyxy` null, and record the reason. A valid box partly outside image bounds preserves raw values and records a correctly clipped display box.
+- `model_score` must be finite in [0,1]. A nonfinite or out-of-range model score becomes null with a reason; if an out-of-range value was finite, preserve it in the diagnostic's `finite_raw_value`. Other valid finite numeric values are retained. Invalid model scores do not represent low-confidence predictions and are never formatted as percentages. Future derived-group null scores are a separate provenance rule, not a model score to fabricate.
+- Any invalid score or box makes candidate `state=invalid`, excludes it from displayed boxes and valid-detection summaries, and preserves its raw phrase/mapping/remaining finite raw values for inspection. A valid finite score on an invalid box may remain in diagnostic JSON, but the candidate is not a displayed valid detection. Software fixtures for invalid values test handling only, not real model performance.
+
+### Display states and atomic output lifecycle
+
+Default `display.enabled=true`. Display has its own status/error, separate from top-level processing status/error:
+
+| `display.status` | Meaning |
+| --- | --- |
+| `pending` | Successful processing persisted and display planned, but no final outcome recorded. If interrupted before the final atomic update, this is an unfinished attempt, never inferred success. |
+| `shown` | The enabled native viewer rendered the image/overlays and returned normally; the final outcome was atomically saved. Merely starting a process/window is insufficient. |
+| `disabled` | Viewer deliberately disabled by configuration on a successfully processed image; records intent, not verification that viewing works. |
+| `error` | Viewer attempt failed; `display.error` supplies stage/code/message and inference status/detections remain unchanged. |
+| `not_attempted` | Processing failed or was skipped, so no viewer attempt was planned, regardless of enabled setting. |
+
+Lifecycle: (1) atomically write inference JSON **before** viewer startup, with pending/disabled/not_attempted as applicable; (2) attempt enabled display for successful processing, including a successful no-detection image; (3) atomically update the existing result to shown/error plus `display.error` after the attempt. Write temporary JSON beside the result, flush/close it, and replace atomically; this does not create a temporary annotated image. Initial persistence failure prevents viewer startup and is reported; a failed final update preserves the earlier JSON and is an observable persistence error, not a fabricated final display state. Display waiting never belongs in inference timing. Display failure does not erase successful detections or turn `ok`/`no_detections` into inference `error`.
 
 ### Fictional detection example
 
-Every prediction, score, dimension, revision, hash and ID below is illustrative, not an executed experiment. The repeated hex strings are placeholders, not verified checkpoint/source hashes. Implementation must write real metadata and complete configured settings.
+Every prediction, score, dimension, revision, hash and ID below is illustrative, not an executed experiment. The repeated hex strings are placeholders, not verified checkpoint/source hashes. Implementation must write real metadata and complete configured settings. These examples depict fictional final `display.status=shown` records; the initial saved record would be pending. No viewer or model actually ran here.
 
 ```json
 {
@@ -239,10 +257,17 @@ Every prediction, score, dimension, revision, hash and ID below is illustrative,
     "text_threshold": 0.25,
     "mapping_version": "aliases-v1",
     "duplicate_policy": "exact-box-same-phrase-only",
-    "fallback": null
+    "fallback": null,
+    "preprocessing_manifest": "fictional-run/preprocessing.json"
   },
   "status": "ok",
-  "score_definition": {"range": [0, 1], "meaning": "model score; not accuracy"},
+  "score_definition": {
+    "range": [
+      0,
+      1
+    ],
+    "meaning": "model score; not accuracy"
+  },
   "box_format": "xyxy_original_display_pixel_edges",
   "detections": [
     {
@@ -253,10 +278,21 @@ Every prediction, score, dimension, revision, hash and ID below is illustrative,
       "mapping_reason": "exact_alias",
       "level": "object",
       "model_score": 0.72,
-      "raw_box_xyxy": [80.5, 400.0, 130.0, 510.0],
-      "box_xyxy": [80.5, 400.0, 130.0, 510.0],
+      "raw_box_xyxy": [
+        80.5,
+        400.0,
+        130.0,
+        510.0
+      ],
+      "box_xyxy": [
+        80.5,
+        400.0,
+        130.0,
+        510.0
+      ],
       "state": "retained",
-      "duplicate_of": null
+      "duplicate_of": null,
+      "numeric_diagnostics": []
     },
     {
       "id": "d2",
@@ -266,10 +302,21 @@ Every prediction, score, dimension, revision, hash and ID below is illustrative,
       "mapping_reason": "exact_alias",
       "level": "region",
       "model_score": 0.61,
-      "raw_box_xyxy": [450.0, 330.0, 780.0, 600.0],
-      "box_xyxy": [450.0, 330.0, 780.0, 600.0],
+      "raw_box_xyxy": [
+        450.0,
+        330.0,
+        780.0,
+        600.0
+      ],
+      "box_xyxy": [
+        450.0,
+        330.0,
+        780.0,
+        600.0
+      ],
       "state": "retained",
-      "duplicate_of": null
+      "duplicate_of": null,
+      "numeric_diagnostics": []
     },
     {
       "id": "d3",
@@ -278,11 +325,22 @@ Every prediction, score, dimension, revision, hash and ID below is illustrative,
       "category": null,
       "mapping_reason": "no_exact_alias",
       "level": "unknown",
-      "model_score": 0.40,
-      "raw_box_xyxy": [900.0, 300.0, 960.0, 420.0],
-      "box_xyxy": [900.0, 300.0, 960.0, 420.0],
+      "model_score": 0.4,
+      "raw_box_xyxy": [
+        900.0,
+        300.0,
+        960.0,
+        420.0
+      ],
+      "box_xyxy": [
+        900.0,
+        300.0,
+        960.0,
+        420.0
+      ],
       "state": "retained",
-      "duplicate_of": null
+      "duplicate_of": null,
+      "numeric_diagnostics": []
     }
   ],
   "review": {
@@ -292,8 +350,16 @@ Every prediction, score, dimension, revision, hash and ID below is illustrative,
     "independent_region_count": null,
     "notes": "Fictional predictions; category and membership are unverified."
   },
-  "timing": {"scope": "not_run", "inference_ms": null},
-  "error": null
+  "timing": {
+    "scope": "not_run",
+    "inference_ms": null
+  },
+  "error": null,
+  "display": {
+    "enabled": true,
+    "status": "shown",
+    "error": null
+  }
 }
 ```
 
@@ -329,10 +395,17 @@ Also fictional; it demonstrates successful inference with zero above-threshold c
     "text_threshold": 0.25,
     "mapping_version": "aliases-v1",
     "duplicate_policy": "exact-box-same-phrase-only",
-    "fallback": null
+    "fallback": null,
+    "preprocessing_manifest": "fictional-run/preprocessing.json"
   },
   "status": "no_detections",
-  "score_definition": {"range": [0, 1], "meaning": "model score; not accuracy"},
+  "score_definition": {
+    "range": [
+      0,
+      1
+    ],
+    "meaning": "model score; not accuracy"
+  },
   "box_format": "xyxy_original_display_pixel_edges",
   "detections": [],
   "review": {
@@ -342,25 +415,77 @@ Also fictional; it demonstrates successful inference with zero above-threshold c
     "independent_region_count": null,
     "notes": "No detections above configured thresholds; not proof of no trash."
   },
-  "timing": {"scope": "not_run", "inference_ms": null},
-  "error": null
+  "timing": {
+    "scope": "not_run",
+    "inference_ms": null
+  },
+  "error": null,
+  "display": {
+    "enabled": true,
+    "status": "shown",
+    "error": null
+  }
 }
 ```
 
-For a decode error, use `status=error`, null dimensions where unavailable, empty detections, and an error such as `{ "stage": "decode", "code": "unreadable_image", "message": "Image could not be decoded" }`. Do not invent confidence or timing for failed stages.
+### Fictional invalid-number diagnostic example
+
+This is a partial candidate record illustrating sanitation, not a standalone per-image result and not a model observation. A nonfinite first raw coordinate and model score have been replaced with null. The other finite raw coordinates remain; the entire display box is null. If this were the only candidate, processing would be `error` with code `invalid_predictions`, and display would be `not_attempted`.
+
+```json
+{
+  "id": "fictional-invalid-candidate",
+  "origin": "model_prediction",
+  "raw_phrase": "garbage pile",
+  "category": "garbage_pile",
+  "mapping_reason": "exact_alias",
+  "level": "region",
+  "model_score": null,
+  "raw_box_xyxy": [null, 40.0, 200.0, 160.0],
+  "box_xyxy": null,
+  "state": "invalid",
+  "duplicate_of": null,
+  "numeric_diagnostics": [
+    {"field": "raw_box_xyxy", "index": 0, "reason": "nonfinite_coordinate"},
+    {"field": "model_score", "reason": "nonfinite_score"}
+  ]
+}
+```
+
+### Fictional display-error lifecycle example
+
+This is a partial final-outcome excerpt, not a standalone result. It shows successful inference preserved after a failed viewer attempt; earlier JSON was saved with display pending. Placeholder error text describes a fictional failure, not one observed here.
+
+```json
+{
+  "status": "ok",
+  "error": null,
+  "display": {
+    "enabled": true,
+    "status": "error",
+    "error": {
+      "stage": "display",
+      "code": "viewer_unavailable",
+      "message": "Fictional native viewer failure; inference detections remain saved"
+    }
+  }
+}
+```
+
+For a decode error, use processing `status=error`, null dimensions where unavailable, empty detections, processing error stage/code/message, and `display.status=not_attempted` with `display.error=null`. Never invent confidence/timing for failed stages or relabel failure as no detections. A processing error is distinct from the display-only failure above.
 
 ## 8. Ordered implementation checklist and acceptance gates
 
-All stages below are future work for Antigravity after plan review and explicit implementation authorization; Phase 1 is not declared accepted here. The foundation's Phase 2 inference gate still requires owner authorization. Stages 4–7 describe that future implementation/check activity, not permission to execute it during preparation.
+All stages below are future work for Antigravity after plan review and explicit implementation authorization; Phase 1 is not declared accepted here. The Phase 2 inference gate still requires owner authorization; routine technical defaults within an authorized phase do not add new approval checkpoints. Stages 4–7 describe that future implementation/check activity, not permission to execute it during preparation.
 
 | Stage | Action | Concrete acceptance evidence |
 | --- | --- | --- |
-| 1 | Start a focused branch from current `main`; read instructions; align conflicting documentation with this request. | Existing changes preserved; reviewed docs state Transformers + unannotated functional checking; no benchmark/annotation requirement introduced; no unrelated or direct-main changes. |
+| 1 | Start a focused branch from current `main`; read instructions; confirm the corrected current guidance and preserve decision history. | Existing changes preserved; reviewed docs state Transformers + unannotated functional checking; no benchmark/annotation requirement introduced; no unrelated or direct-main changes. |
 | 2 | Run Windows preflight; verify official checkpoint metadata/conditions and driver compatibility; finalize environment proposal. | Local Python/driver/memory/package outputs recorded; exact Hub revision/config/license verified; CUDA choice justified or CPU fallback selected; no remote-machine assumptions. Missing facts remain explicit. |
 | 3 | After setup authorization, create isolated environment and lock compatible packages; verify native viewer and CPU/GPU tensor operations. | `pip check` passes; versions/device/build recorded; CPU path works; GPU either works or has a diagnosed fallback; Tk window opens/closes. No model detection claim from these checks. Owner reviews preparation evidence before the inference phase. |
 | 4 | After inference implementation authorization, add minimal configuration/input/results contract handling. | Paths configurable and project-relative; empty/missing folders actionable; unsupported/decode errors distinct; originals unchanged; JSON written atomically; no source photos/cache/results tracked. Non-model checks exercise actual boundary behavior. |
 | 5 | Add pinned pretrained Transformers inference, exact mapping and conservative duplicate flags. | Processor/model use same verified revision; no training; grounded postprocessor uses verified API and original pixel sizes; raw phrases and scores preserved; unmapped outputs survive; no automatic clustering or fabricated group counts. |
-| 6 | Add native in-memory display, readable summaries and per-image JSON. | Visible boxes/labels/score percentages match JSON; no overall accuracy; windows release memory; default output creates no annotated images; no image overwrites; `ok`, `no_detections`, `error` distinguished. Result-contract checks cover coordinates, mapping, duplicates and errors using fixtures without claiming model performance. |
+| 6 | Add native in-memory display, readable summaries and per-image JSON. | Visible boxes/labels/score percentages match JSON; no overall accuracy; windows release memory; default output creates no annotated images; no image overwrites; `ok`, `no_detections`, `error` distinguished independently of display states. Strict JSON sanitizes invalid values to null with diagnostics, invalid candidates are excluded from displayed/valid summaries, and initial inference JSON plus final display outcome are persisted atomically. Fixtures cover orientation/coordinates, numeric nulls, mapping/unmapped phrases, duplicate limits, source preservation, persistence interruption/failure and all display outcomes without claiming model performance. |
 | 7 | When team photos become available, run the functional checks and prompt comparisons. | Actual output/visual observations saved; multiple regions, no-detection path and invalid-input behavior checked; coverage gaps marked unrun; object-vs-region ambiguity and baseline limitations reported; timings have device/warm-up scope. No precision/recall/mAP/accuracy claim or automatic Phase 1 acceptance. |
 | 8 | Prepare review handoff. | Focused diff, relevant non-model checks and actual functional results reported separately; exclusions respected; unresolved model limitations documented; owner decides acceptance/next phase. Grouping requires a new evidence-based decision and authorization. |
 
@@ -370,4 +495,4 @@ No additional user preference is needed to complete this plan. Proposed defaults
 
 Before setup/model execution: Antigravity must obtain local Windows preflight results and verify checkpoint card/revision/conditions plus driver compatibility through the official sources blocked in this session. These are concrete prerequisite checks, not requests for the user to pick technical versions or supply secret values. CPU fallback can unblock GPU-specific issues, but it cannot establish GPU acceptance.
 
-Owner review and explicit implementation/phase authorization remain necessary before the future actions above. The proposed category boundaries, mapping, overlap policy, and JSON contract await that review. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.
+Owner review and explicit implementation/phase authorization remain necessary before the future actions above. Category boundaries, exact aliases, overlap defaults and package pins remain technical proposals; apply the corrected numeric/display requirements consistently. Publication alone does not accept every proposal. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.

@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# BANTAI local photographs, results, and model cache
+/data/input/
+/results/
+/.cache/huggingface/

@@ -1,45 +1,50 @@
-# Validation and evaluation plan
+# Software and functional detection checks
 
-## Phase 0 documentation checks
+## Current scope and evidence
 
-Verify that `AGENTS.md`, `README.md`, and the six required `docs/` files exist. Check relative Markdown links, consistent trash-only AI modelling scope, three-category/multi-region requirements, GroundingDINO-T selection, prompt-first strategy with grouping conditional, explicit unresolved decisions, approval boundaries, phase acceptance criteria, and absence of unsupported model or benchmark claims. Inspect the Git diff for documentation-only changes and confirm `.gitignore` is unchanged. Do not run or invent model tests during this phase.
+Phase 0 is complete and Phase 1 planning is published. Current work is documentation correction only; no software implementation or inference runs occur here. Antigravity will run the checks below during later authorized preparation/implementation.
 
-## Proposed future evaluation protocol
+The owner manually downloads/extracts unannotated team photographs from Google Drive into a project folder. Current model checking is functional visual inspection, not formal ground-truth evaluation. No annotation work, benchmark split, precision/recall/mAP, or numerical accuracy target is required. Software fixtures verify program behavior and are not ground-truth evaluation of the model.
 
-This section is a proposal, not executed testing. Resolve and approve its concrete choices in Phase 1 before Phase 2 evaluation.
+## Documentation checks for this correction
 
-- Establish a permitted, annotated still-image collection with a written trash definition and rules for ambiguous instances. Include negative images and varied relevant conditions; do not claim coverage without examining the collection.
-- Separate exploratory prompt/threshold selection from held-out evaluation. Record dataset identities and any overlap or leakage limitations.
-- Define bounding-box coordinate conventions, annotation matching rules, overlap threshold, score filtering, and handling of duplicate predictions before measuring results.
-- Choose suitable detection metrics, such as precision, recall, and an agreed average-precision formulation where annotations support it. Define owner-approved numeric success criteria before evaluation; no target values are assumed here.
-- Record per-image predictions, false positives, missed objects, and representative failure cases. Measure latency and resource use only under a documented device and timing procedure.
-- Retain enough non-sensitive metadata and instructions to repeat the experiment, including the model revision and configuration.
+Check all tracked Markdown references, parse every fenced JSON example strictly, and review current-state/category/phase/output/status consistency. Confirm original ignore rules remain intact and only `/data/input/`, `/results/`, and `/.cache/huggingface/` exclusions are appended if missing. Inspect for already tracked photos/results/caches without silently untracking them. Ensure the diff contains only requested documentation and ignore rules.
 
-## Required future coverage
+## Planned software checks
 
-Evaluate direct GroundingDINO-T predictions for Garbage Pile, isolated Individual Litter, Group of Individual Litter, mixed-category scenes (including all three categories), and images with no relevant trash. Use suitable reference annotations and consistent definitions; do not assume prompt phrases establish category membership.
+| Area | Expected behavior to check with fixtures or controlled inputs |
+| --- | --- |
+| Input handling | Configurable project-relative paths; missing/empty folders actionable; unsupported skips distinct from unreadable-image errors; batch continues and reports errors honestly. |
+| Orientation and coordinates | EXIF orientation is applied in memory; original-display dimensions and xyxy pixel-edge convention match viewer and JSON; finite raw values preserved; valid clipped boxes stay inside bounds; invalid geometry never drawn. |
+| Invalid numbers | Each nonfinite raw coordinate becomes null with indexed diagnostics; any such coordinate makes the whole display box null. Invalid score becomes null with a reason. Invalid candidates are not displayed or counted as valid detections. Preserve other finite raw components; never emit NaN/Infinity. An all-invalid candidate result is diagnosed, not `no_detections`. See the [numeric contract](PHASE_1_IMPLEMENTATION_PLAN.md#invalid-numeric-values-and-candidate-validity). |
+| Mapping | Exact normalized aliases only; partial/combined/unmatched phrases remain null-category, visible as unmapped, with raw phrase and valid model score retained. Mapping does not prove visual category identity. |
+| Duplicates and overlaps | Identical-box/same-phrase proposal collapses display/summary only and retains duplicate records/links. Near duplicates remain; IoU/containment flags do not implement clustering, membership, or general NMS. Conflicting categories remain inspectable. Unresolved physical-object/independent-region counts stay null. |
+| Processing status | Distinguish `ok`, `no_detections`, `error`, and `skipped_unsupported`. `no_detections` requires successful inference with zero above-threshold candidates; empty valid summaries after invalid predictions are not proof of no trash. Processing errors and display errors have separate fields. |
+| Display lifecycle | Atomically persist inference result first with `display.status=pending` when viewing is planned, then attempt display, then atomically update `shown` or `error`. Simulated interruption leaves pending as unfinished. Intentional disablement records `disabled`; processing failures/skips use `not_attempted`. Display failure preserves successful detections/status and records `display.error`. Default viewing is enabled; viewer waiting is excluded from inference timing. |
+| Output consistency | Boxes, categories/unmapped labels and individual model-score percentages agree with JSON; percentages are score ×100, never image accuracy. Readable summaries exclude invalid/duplicate candidates as specified; JSON and appropriate run/environment metadata are standards compliant. |
+| Source and export protection | Original byte hashes unchanged; no source overwrites, automatic annotated copies, or viewer temp-image files. Default output is JSON/metadata only; optional image export is off. No real photos, results, caches, or secrets enter Git. |
 
-Include these spatial cases:
+These checks can validate output boundaries without team photos or model downloads. A fake prediction fixture is explicitly software test data, never an observed model result.
 
-- Isolated litter far from a nearby group.
-- Multiple separate groups within one photograph.
-- Small or distant litter objects.
-- Overlapping and partially obscured objects.
-- Garbage piles near individual litter.
-- A garbage pile and a scattered group in the same image.
+## Planned visual functional checks
 
-Evaluate localization, category identification/phrase matching, false positives, missed detections, absent group-region boxes, incorrect group assignments, and duplicate/overlapping predictions. Evaluate direct object-level detections separately from region-level or grouping performance. Check independent-region counting and membership handling, including the illustrative five-object/two-region requirement in [SCOPE.md](SCOPE.md); it is not an observed result.
+When photos exist and inference is authorized, inspect `individual_litter`, `group_of_individual_litter`, and `garbage_pile`, mixed-category scenes, and images with no relevant trash. Include, where available:
 
-Compare separate prompts against combined descriptions using a documented exploratory protocol. Keep prompt/threshold experimentation separate from final held-out evaluation. Record inference time, resource use, and reproducibility. Do not invent numeric targets during Phase 0.
+- Isolated litter far from a group and multiple separate groups in one image.
+- Small/distant, overlapping, and partially occluded objects.
+- A pile near individual litter, or a pile and scattered group together.
+- Missed visible trash, plausible false detections, wrong categories, unmapped phrases, duplicate boxes, missed group-region boxes, and pile/group confusion.
 
-If the baseline cannot reliably meet the three-category or multi-region requirement, report that limitation. DBSCAN, scale-normalized proximity, custom bounding-box grouping, hybrid methods, alternative models, and fine-tuning may be evaluated only in a later separately authorized phase. No grouping algorithm is a mandatory Phase 1 implementation.
+Compare separate and combined prompt runs on unchanged photos with settings and run IDs recorded. No held-out split is required. Keep direct model object predictions separate from region predictions, do not invent memberships/counts, and retain uncertain visual judgments as qualitative notes. The five-object/two-region example in [SCOPE.md](SCOPE.md) is illustrative desired behavior, not a result or guarantee.
 
-## Future functional checks
+Check that native in-memory viewing works with boxes, labels, and individual model-score percentages; match them against per-image JSON. A failed viewer does not erase inference results but leaves the display requirement unmet. A deliberately disabled viewer is not evidence that display works. Check no-detection and malformed/unsupported input paths without claiming those fixtures test detection quality.
 
-After implementation is authorized, exercise valid images, images without trash, unreadable or unsupported inputs, and varied dimensions. Verify that boxes map to original image bounds and that labels and scores follow the chosen model's documented semantics. Distinguish a successful run with no detections from a failed run. Confirm the selected checkpoint is used for inference without training updates.
+Record model load time separately; timed observations specify device/GPU/driver/packages, preprocessing/image dimensions, warm-up and repetitions, precision and timing scope. Synchronize GPU timing and exclude human viewer waiting. No score or timing observation establishes precision, recall, mAP, or accuracy.
 
-## Reporting rules
+## Reporting and future scope
 
-Keep passed, failed, skipped, and unrun checks separate. Record actual commands, environment, artifacts, and outcomes. A successful import, process start, or zero-test run does not validate detection quality. Report measured results even when they fail the agreed success criteria; do not adjust criteria retrospectively to manufacture success.
+Keep passed, failed, skipped, and unrun outcomes separate. Record actual commands/settings, fixtures versus real-photo observations, artifact provenance, resource/timing scope, and disclosed limitations. Mark unavailable visual scenarios unrun. A successful import, zero-test run, published plan, or open viewer does not demonstrate successful detection.
 
-Current status: no model evaluation or application tests have been run as part of Phase 0. See [PHASES.md](PHASES.md) for gates and [HANDOFF.md](HANDOFF.md) for the repository handoff.
+If direct prompting cannot distinguish groups and piles or localize group regions, report the limitation. Grouping, training, fine-tuning, or alternative-model work requires a later evidence-based decision and authorization. Formal annotated evaluation may be separately scoped in the future; its annotations, benchmark splits and accuracy metrics are not current prerequisites.
+
+See [PHASES.md](PHASES.md) for phase gates and [HANDOFF.md](HANDOFF.md) for actual state and remaining verification work.
