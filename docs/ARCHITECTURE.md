@@ -1,6 +1,6 @@
 # Model inference architecture
 
-Status: proposed detector workflow for later phase authorization under Codex ownership. Phase 0 is complete and Phase 1 planning is published; hardware/environment/model compatibility and successful detection remain unverified. Phase 2A currently authorizes local Windows environment setup/readiness only; the detector workflow below is not authorized for execution.
+Status: proposed detector workflow for later phase authorization under Codex ownership. Phase 0 is complete and Phase 1 planning is published; Phase 2A environment/package/device/viewer readiness is verified to its preparation scope in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md), while model execution, memory fit and successful detection remain unverified. Phase 2A currently authorizes local Windows environment setup/readiness only; the detector workflow below is not authorized for execution.
 
 ## Intended functional-check path
 

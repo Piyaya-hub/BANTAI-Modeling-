@@ -4,26 +4,34 @@
 
 The owner authorizes Codex to perform **local Windows environment setup/readiness only**, corresponding to [PHASE_1_IMPLEMENTATION_PLAN.md](PHASE_1_IMPLEMENTATION_PLAN.md) Section 4 and Section 8 stages 2–3. Codex replaces Antigravity; the owner states Antigravity made no changes. See the [phase definition](PHASES.md#phase-2a--local-windows-environment-setup-and-readiness-verification) and D-022/D-023 in [DECISIONS.md](DECISIONS.md).
 
-**Partially prepared, not yet ready: Python 3.11.9 x64, local cloning and venv creation are confirmed by supplied outputs; direct package installation/imports, dependency consistency and CPU/GPU tensor probes also passed in supplied outputs; viewer, checkpoint metadata and final reproducibility capture remain outstanding.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are instructions; only the owner-supplied command results explicitly recorded below have been observed. Codex has not executed on the target. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
+**Phase 2A technical preparation checks are complete based on supplied Windows evidence.** Python/venv, dependencies/imports, CPU/CUDA execution, native rendering/normal return, checkpoint/processor metadata, official driver reference, and exact environment capture are verified to the limited preparation scope. No detector or inference result is implied. The owner retains acceptance/next-phase authority; no further implementation is started.
 
-Owner-supplied target outputs confirm dependency installation/imports, `pip check`, and CPU/GPU tensor probes. Native viewer operation, checkpoint metadata verification, model download/loading and inference are not claimed. Do not install ML packages in the cloud as a substitute. No photographs, annotations or detector implementation are needed for these readiness checks.
+Codex can execute only in a separate Linux cloud checkout. Target results below came from owner-run Windows commands, a supplied screenshot and explicit viewer confirmation, not direct cloud Windows execution. No cloud ML installation was used as a substitute. Local `.venv` evidence files were saved, and the supplied values are committed in the [environment snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). No weights, photographs or inference were needed.
 
 ## Evidence ledger
 
-| Check | Actual outcome in this task | Required next evidence |
+| Check | Actual outcome in this task | Assessment / limitation |
 | --- | --- | --- |
 | Repository baseline | Fetched latest `main`: `7a776cf`, merge of PR #4; started from a clean checkout | Preserve local Windows checkout/user changes when inspecting it |
 | Windows/Git/Python | Supplied CMD output: Windows 10 version 10.0.19045.6466; Git 2.45.1.windows.1; WinGet installed Python 3.11.9 x64 with verified hash; new-terminal Python probe returned 3.11.9/AMD64/64 bits and real Python311 executable | Use the verified interpreter and target venv; do not confuse earlier Store alias with the installed interpreter |
 | GPU/driver/memory | Supplied successful `nvidia-smi` query: NVIDIA GeForce GTX 1660 Ti; driver 472.19; 6144 MiB total, 5235–5236 MiB free at query time | Actual supplied CUDA tensor test passed on this driver/build; model-memory fit remains untested |
-| Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Direct library imports and `pip check` now passed in supplied output; full exact dependency manifest remains to capture |
+| Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Imports and `pip check` passed; full 36-package freeze captured in local files and committed snapshot |
 | Proposed CUDA wheel | Official cu118 index lists torch 2.7.1 CPython 3.11 Windows x64 wheel | Supplied target reports build 11.8, CUDA available, capability (7,5), successful GPU tensor |
-| Checkpoint/configuration/conditions/revision/safetensors | Metadata-only request to Hugging Face API blocked by cloud proxy: tunnel `403 Forbidden` | Inspect official model metadata/card/files on accessible target; record immutable commit and conditions; do not fetch weights |
-| NVIDIA driver reference | Official CUDA 11.8 release-notes request blocked by cloud proxy: tunnel `403 Forbidden` | Compare target driver to official NVIDIA compatibility/release guidance; no guessed minimum asserted |
-| Local checkout/environment | Supplied clone succeeded at the owner-selected Documents/Python/Project Image-object Detection folder on this preparation branch; `.venv` creation/verification returned Python 3.11.9 | Direct packages installed and imports/dependency check passed; capture full exact dependency manifest and CUDA index |
+| Checkpoint/configuration/license/revision/safetensors | Supplied official target HTTP output: IDEA-Research/grounding-dino-tiny; revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`; Apache-2.0 metadata; gated False; `model.safetensors` listed; model type grounding-dino; Swin depths [2,2,6,2] | Pinned processor config read at the same revision; no weights downloaded or model loaded |
+| NVIDIA driver reference | Target successfully read official CUDA 11.8 notes: Table 2 minimum Windows driver >=452.39; toolkit distribution separately lists driver 522.06 | Reported 472.19 meets minor-compatibility minimum; successful CUDA tensor supports basic runtime readiness, not all model operations |
+| Local checkout/environment | Supplied clone succeeded at the owner-selected Documents/Python/Project Image-object Detection folder on this preparation branch; `.venv` creation/verification returned Python 3.11.9 | Full freeze and environment JSON saved inside ignored `.venv`; complete supplied dependency/config values preserved in snapshot |
 | CPU/GPU probes | Supplied results: torch 2.7.1+cu118; CUDA build 11.8; CPU result 2.0; CUDA available True; GTX 1660 Ti; capability (7,5); GPU result 2.0 | Passed basic CPU/CUDA execution only; no model-memory/performance inference |
-| Native Tk/Matplotlib viewer | Unrun | Visible synthetic window, successful drawing/normal return and resource closure; no saved images |
+| Native Tk/Matplotlib viewer | Supplied screenshot shows expected native synthetic diagonal-line plot with the Phase 2A title | Owner explicitly confirmed `TkAgg viewer closed normally`; rendering and normal return passed, no image export invoked |
 
 Official references rechecked for metadata only: [Transformers metadata](https://pypi.org/pypi/transformers/4.51.3/json), [torchvision metadata](https://pypi.org/pypi/torchvision/0.22.1/json), [CUDA 11.8 wheel listing](https://download.pytorch.org/whl/cu118/torch/). Metadata verification does not establish Windows/GPU compatibility or acceptance of all proposed pins. Earlier source findings and limits remain in the plan; they are not upgraded to local evidence.
+
+## Pinned checkpoint and supplied model-card evidence
+
+The target successfully queried the official Hugging Face API and `config.json` at revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`. It reports model `IDEA-Research/grounding-dino-tiny`, license metadata `apache-2.0`, `gated=False`, and a `model.safetensors` file. The configuration reports `model_type=grounding-dino` and a Swin backbone with depths [2,2,6,2], attention heads [3,6,12,24], and stage2/stage3/stage4 outputs, consistent with the selected Tiny direction.
+
+The supplied model-card excerpt describes zero-shot detection without labelled data, links the original Grounding DINO paper and shows lower-case period-separated prompts. This documentation example was printed, not executed. It does not establish custom trash-category support or accuracy. License metadata identifies Apache-2.0; preserve upstream notices/conditions in any later authorized distribution. The shown excerpt adds no special application restriction, and no private/gated access was reported.
+
+Later authorized loading must pin both model and processor to this same immutable revision; weight loading remains outside Phase 2A. Processor metadata was subsequently read at the same revision and saved with the full exact freeze and installation source; see the snapshot. The prior cloud Hugging Face 403 is no longer a target checkpoint-access blocker: target-side HTTP metadata succeeded.
 
 ## Supplied Command Prompt evidence and completed interpreter setup
 
@@ -40,7 +48,7 @@ winget --version
 
 If `python --version` launches Microsoft Store, close it and record that an app-execution alias was encountered; do not treat it as an installed interpreter. If Python is found, inspect its version/architecture before creating a venv. `winget` availability informs the installation route if Python must be installed; no installation command is issued until discovery is resolved. This historical version-only uncertainty was subsequently narrowed by a successful supplied CUDA tensor probe on driver 472.19/cu118; official driver-reference access from the cloud remains blocked, and no model compatibility is inferred. No CUDA toolkit or model download is needed for discovery.
 
-## 1. Windows preflight and local repository copy
+## 1. Windows preflight and local repository copy — completed; reproduction reference
 
 A **checkout** means the local folder containing a cloned GitHub repository. The cloud copy used in this chat is not on the owner's PC. A local clone is now confirmed by supplied output. The owner selected `%USERPROFILE%\Documents\Python\Project Image-object Detection`, and `.venv` in that folder reports Python 3.11.9. The cloud repository is a separate checkout. Do not clone again or recreate the environment.
 
@@ -83,13 +91,13 @@ If `.venv` exists, inspect without overwriting it:
 
 If Python 3.11 x64 or `nvidia-smi` is absent, record the actual failure and diagnose it. Do not replace global Python or a driver blindly. A missing GPU tool does not prove the GPU is absent; CPU preparation can proceed with its GPU limitation recorded. Local outputs may be supplied back to Codex in this chat or verified by Codex operating in the Windows checkout. Cloud tools cannot perform these local actions.
 
-## 2. Metadata and wheel choice — no model downloads
+## 2. Metadata and wheel choice — completed; reproduction reference
 
 Inspect the [official model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny), [model metadata API](https://huggingface.co/api/models/IDEA-Research/grounding-dino-tiny), and repository configuration/file listing. Confirm Tiny/Swin-T configuration, source/provenance, license and conditions, safetensors availability and exact immutable commit. Record these facts in this ledger or a referenced non-secret local record. Do not follow weight-file links, call model/processor `from_pretrained`, instantiate a detector, or download weights. Later model/processor loading must use the same recorded revision.
 
 Check the real driver against [CUDA 11.8 release notes](https://docs.nvidia.com/cuda/archive/11.8.0/cuda-toolkit-release-notes/index.html) and [NVIDIA compatibility guidance](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html). The proposed cu118 wheel is a candidate until the target facts and device probes support it; do not treat `nvidia-smi`'s CUDA version as the wheel runtime. Do not install a separate CUDA toolkit or compile custom kernels merely to use prebuilt PyTorch. Do not download a detector to diagnose package readiness.
 
-Keep the existing proposed baseline unless a diagnosed compatibility issue or applicable package advisory requires a documented change: Python 3.11 x64, torch 2.7.1/cu118, torchvision 0.22.1, Transformers 4.51.3, Pillow 11.2.1, Matplotlib 3.10.3. These are not locally tested pins. Recheck affected APIs if any version changes; no silent upgrade or altered checksum/TLS verification.
+Keep the existing proposed baseline unless a diagnosed compatibility issue or applicable package advisory requires a documented change: Python 3.11 x64, torch 2.7.1/cu118, torchvision 0.22.1, Transformers 4.51.3, Pillow 11.2.1, Matplotlib 3.10.3. These direct versions were subsequently installed/imported and exercised to the limited Phase 2A scope on the supplied target; fresh environments still need their own affected checks. Recheck affected APIs if any version changes; no silent upgrade or altered checksum/TLS verification.
 
 ## Completed package/device checks and next steps
 
@@ -108,7 +116,7 @@ The CUDA torch/torchvision install command used `https://download.pytorch.org/wh
 
 The CPU tensor produced 2.0. CUDA was available, identified GTX 1660 Ti/capability (7,5), and its GPU tensor also produced 2.0 without a reported error. No driver update is justified by an imagined failed check: this tested package/device route works on the reported driver 472.19. Model-memory fit, checkpoint loading and inference are deliberately untested. Do not repeat passing probes without a change/failure/concern.
 
-Next: confirm native TkAgg synthetic viewing, inspect official checkpoint metadata/conditions/revision without downloading weights, and capture the full exact dependency/install-source preparation manifest. No detector implementation or inference is authorized.
+Completed: the owner confirmed normal viewer return, saved the exact freeze/environment manifest and supplied pinned processor settings. Target NVIDIA documentation output verified the driver-table distinction. No preparation check remains pending; do not reinstall or repeat passing checks on the unchanged target. No detector implementation or inference is authorized.
 
 ## 3. Authorized isolated setup — reproduction only
 
@@ -132,7 +140,7 @@ Use the CUDA index only after driver/build selection is justified. If CPU-only i
 
 Record a non-secret local preparation manifest beside the venv, including selected interpreter, exact commands/package versions, CUDA/CPU index, device/driver, verification outcomes, date and any fallback diagnosis. `pip freeze` plus `pip check` provides dependency evidence but does not by itself preserve the CUDA installation source. Do not commit an unexecuted freeze as a verified lock. No raw credentials or broad process-environment dump belongs in evidence.
 
-## 4. Package, CPU and GPU readiness — no detector
+## 4. Package, CPU and GPU readiness — completed; reproduction reference
 
 If reusing an existing inspected environment, set `$BantaiPython` to its `Scripts\python.exe`. Probe commands below do not load a model or an image.
 
@@ -150,7 +158,7 @@ Record command exits; an import failure or failed CPU operation is a readiness f
 
 A printed CUDA-available flag alone is not a passed GPU check. Record the actual tensor outcome, compiled architectures/capability and memory observation. On failure diagnose driver/wheel/support/memory before retrying; alternatively record a justified CPU-only route and leave GPU as failed/unrun, not passed. These basic tensor probes do not establish model-memory fit, speed or detection correctness.
 
-## 5. Native viewer readiness — synthetic display only
+## 5. Native viewer readiness — completed; reproduction reference
 
 On the interactive Windows desktop, run each command, visibly confirm rendering, close the window normally, and record exit status. No team image, overlay export, temporary image file or model is involved.
 
@@ -163,6 +171,6 @@ Tk alone is not proof the chosen Matplotlib backend renders; both checks matter.
 
 ## Completion and stop boundary
 
-Update the ledger with actual target outputs/outcomes, selected environment path, exact resolved dependencies and install source, checkpoint metadata verification and native viewer confirmation. Keep passed, failed and unrun distinct. If a diagnosed CPU fallback is the usable route, state CPU-ready with GPU limitations explicitly. Required unresolved metadata, target package failures or viewer failures prevent full readiness.
+The ledger and [environment snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md) now contain the supplied target outputs, selected `.venv`, exact dependencies/source, pinned metadata and native viewer confirmation. CPU and GPU probes both passed, so no CPU-only fallback is claimed. No required preparation blocker remains; detector/model-memory/quality work remains deliberately unrun and outside 2A. This is a technical preparation result, not owner acceptance of a later phase.
 
 Stop after these checks. Do not implement the detector or its input/output pipeline, download/load pretrained weights, process photos, run inference, select clustering, train/fine-tune or start application modules. Detector implementation/inference needs later authorization. Existing JSON numeric/display contract and fictional examples are preserved, not executed here.

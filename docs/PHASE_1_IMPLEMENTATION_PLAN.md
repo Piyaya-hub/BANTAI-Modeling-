@@ -1,12 +1,12 @@
 # BANTAI Phase 1 implementation plan — Codex ownership
 
-Originally prepared 2026-10-17; published through merged PR #3. Status: published planning deliverable with technical proposals and pending verification; current Phase 2A preparation authorization does not accept Phase 1 or authorize detector implementation. The owner now assigns implementation to Codex and reports Antigravity made no changes. Phase 2A is authorized for Section 4 and Section 8 stages 2–3 only: local Windows setup/readiness. Detector implementation, model-weight downloads/loading and inference remain unauthorized. Local execution evidence is recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md); do not equate authorization or this plan with completed setup.
+Originally prepared 2026-10-17; published through merged PR #3. Status: published planning deliverable with detector proposals still unvalidated; current Phase 2A preparation authorization does not accept Phase 1 or authorize detector implementation. The owner now assigns implementation to Codex and reports Antigravity made no changes. Phase 2A is authorized for Section 4 and Section 8 stages 2–3 only: local Windows setup/readiness. Detector implementation, model-weight downloads/loading and inference remain unauthorized. Phase 2A technical preparation has since completed on owner-supplied Windows outputs/screenshots/confirmation, recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md) and the [exact snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Publication/authorization alone was not its evidence; detector execution remains unauthorized.
 
 ## 1. Repository state and requirement precedence
 
 Repository: `Piyaya-hub/BANTAI-Modeling-`. Current Phase 2A inspection fetched `origin/main` at `7a776cf`, the merge of PR #4 containing the contract corrections. PR #3 previously published this plan at `b366f76`. A clean checkout was used to create `docs/phase-2a-environment-preparation`; no direct main edits or merge are authorized. Earlier inspection details remain in Git history and the decision register.
 
-Read `AGENTS.md`, `README.md`, `.gitignore`, and all tracked `docs/` Markdown files. The tracked tree contains foundation/planning documentation and the ignore file, with no detector, dependency manifest/lock, inference configuration, or tracked photos/results/model cache. Ignored remote Python state is not evidence about the owner's Windows computer.
+Read `AGENTS.md`, `README.md`, `.gitignore`, and all tracked `docs/` Markdown files. The tracked tree contains foundation/planning/preparation documentation and the ignore file, with the verified dependency snapshot preserved in documentation; no detector, executable dependency manifest/lock, inference configuration, photos/results/model cache is tracked. Ignored remote Python state is not evidence about the owner's Windows computer.
 
 Phase 0 is complete and Phase 1 planning is published. The latest owner requirements select Transformers and **functional visual checks on manually supplied unannotated team photographs**. Older mandatory annotations, held-out benchmarks, formal accuracy metrics, Phase 0-only task state, and pending PR #2/#3 language are superseded; history is retained in [DECISIONS.md](DECISIONS.md). The related scope, architecture, phase gates, test plan, README and agent/handoff guidance are corrected alongside this plan.
 
@@ -18,7 +18,7 @@ Confirmed by owner: pretrained Grounding DINO Tiny, Hugging Face Transformers, W
 
 ### Official source findings
 
-The findings below preserve official-source checks from the original planning task. Current Phase 2A package/wheel metadata rechecks and continuing source-access limits are recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md); they do not establish local compatibility. No official example or published result is a BANTAI experiment.
+The findings below preserve official-source checks from the original planning task. Subsequent package/wheel metadata rechecks and target-side Windows readiness evidence are recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md); see the snapshot for the limited local operations actually verified. No official example or published result is a BANTAI experiment.
 
 | Finding | Evidence and verification limit |
 | --- | --- |
@@ -88,9 +88,9 @@ If a project environment already exists, inspect it without modifying global pac
 
 Record Windows version/architecture, Python architecture, driver, GPU identity, total/free memory, and installed packages. If Python 3.11 x64 is absent, recommend installing a supported 3.11 x64 interpreter alongside existing Python; do not replace system Python. If `.venv` is unrelated, preserve it and use a separately named project environment.
 
-### Proposed version baseline after authorization
+### Recorded Phase 2A version baseline and reproduction
 
-Proposed baseline: Python 3.11 x64, `torch==2.7.1` with CUDA 11.8, `torchvision==0.22.1`, `transformers==4.51.3`, `Pillow==11.2.1`, and `matplotlib==3.10.3`. This is a reproducible source-checked baseline, not a claim to be latest or locally tested. Let Transformers resolve its required tokenizers, safetensors, Hub client, and other dependencies within its declared ranges, then freeze the exact verified environment. Review current package advisories before locking; if a required fix changes this baseline, recheck the pinned API and record the reason. No torchaudio or accelerate is required for single-device `.to(device)` inference.
+Originally proposed and now installed/checked on the supplied Windows target: Python 3.11.9 x64, `torch==2.7.1` with CUDA 11.8, `torchvision==0.22.1`, `transformers==4.51.3`, `Pillow==11.2.1`, and `matplotlib==3.10.3`. The limited Phase 2A import/dependency/CPU/GPU/viewer checks passed on that target. This is not a latest-version or model-execution claim; see the exact snapshot for evidence and reproduction limits. Let Transformers resolve its required tokenizers, safetensors, Hub client, and other dependencies within its declared ranges, then freeze the exact verified environment. Review current package advisories before locking; if a required fix changes this baseline, recheck the pinned API and record the reason. No torchaudio or accelerate is required for single-device `.to(device)` inference.
 
 Setup is authorized by Phase 2A; run these proposed commands after checking actual Windows preflight and preserving any existing environment. No separate approval is needed for routine authorized setup, but missing target facts/access cannot be assumed:
 
@@ -227,7 +227,7 @@ Lifecycle: (1) atomically write inference JSON **before** viewer startup, with p
 
 ### Fictional detection example
 
-Every prediction, score, dimension, revision, hash and ID below is illustrative, not an executed experiment. The repeated hex strings are placeholders, not verified checkpoint/source hashes. Implementation must write real metadata and complete configured settings. These examples depict fictional final `display.status=shown` records; the initial saved record would be pending. No viewer or model actually ran here.
+Every prediction, score, dimension, revision, hash and ID below is illustrative, not an executed experiment. The repeated hex strings are placeholders, not verified checkpoint/source hashes. Implementation must write real metadata and complete configured settings. These examples depict fictional final `display.status=shown` records; the initial saved record would be pending. These fictional JSON examples were not produced by a detector or viewer run. The separately recorded real Phase 2A synthetic-plot check did not perform inference.
 
 ```json
 {
@@ -493,6 +493,6 @@ Codex owns these stages. Section 4 and stages 2–3 are now explicitly authorize
 
 No additional user preference is needed to complete this plan. Proposed defaults resolve routine file layout, versions, folders, display, prompt mapping, and initial thresholds.
 
-Before setup/model execution: Codex must obtain local Windows preflight results and verify checkpoint card/revision/conditions plus driver compatibility through the official sources blocked in this session. These are concrete prerequisite checks, not requests for the user to pick technical versions or supply secret values. CPU fallback can unblock GPU-specific issues, but it cannot establish GPU acceptance.
+Phase 2A setup/readiness is complete: the owner supplied local preflight/package/device/viewer outputs, checkpoint/card/config/processor metadata and the official NVIDIA driver-table excerpt. Earlier cloud source-access gaps were resolved through target-side requests; the exact evidence is in the snapshot. Before later authorized model execution, Codex must retain those pins and evidence rather than inventing model results. Those preparation checks no longer block the next phase; they do not authorize it or measure detection quality. CPU fallback can unblock GPU-specific issues, but it cannot establish GPU acceptance.
 
-Phase 2A setup/readiness is authorized; missing target evidence/access is the current prerequisite. Only later detector/inference phases require further phase authorization. Category boundaries, exact aliases, overlap defaults and package pins remain technical proposals; apply the corrected numeric/display requirements consistently. Publication alone does not accept every proposal. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.
+Phase 2A technical preparation checks are complete based on supplied target evidence; no setup blocker remains. Only later detector/inference phases require further phase authorization. Category boundaries, exact aliases, prompts/thresholds and overlap defaults remain technical proposals; the installed package versions have only the limited preparation verification in the snapshot; apply the corrected numeric/display requirements consistently. Publication alone does not accept every proposal. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.
