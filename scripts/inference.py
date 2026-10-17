@@ -43,6 +43,27 @@ def package_snapshot():
                        if d.metadata.get("Name")))
 
 
+def active_text_tokens(inputs):
+    """Match the pinned model's attention-mask semantics before logit auditing.
+
+    GroundingDinoContrastiveEmbedding fills masked positions and the tail up to
+    max_text_len with -inf deliberately. Only those positions may use that
+    sentinel; active tokens must still be finite. The model defaults a missing
+    attention mask to ones_like(input_ids).
+    """
+    ids = inputs["input_ids"].detach().cpu().tolist()
+    if len(ids) != 1 or not isinstance(ids[0], list) or not ids[0]:
+        raise InferenceError("postprocessing", "invalid_text_mask", "Expected one nonempty input-token sequence")
+    mask_tensor = inputs.get("attention_mask")
+    if mask_tensor is None:
+        return [True] * len(ids[0])
+    mask = mask_tensor.detach().cpu().tolist()
+    if (len(mask) != 1 or not isinstance(mask[0], list) or len(mask[0]) != len(ids[0])
+            or any(v not in (0, 1) for v in mask[0])):
+        raise InferenceError("postprocessing", "invalid_text_mask", "Attention mask must match input tokens with 0/1 values")
+    return [bool(v) for v in mask[0]]
+
+
 def extract_candidates(outputs, inputs, processor, config, width, height, torch):
     """Audit raw queries before upstream threshold comparisons can hide invalids.
 
@@ -62,6 +83,9 @@ def extract_candidates(outputs, inputs, processor, config, width, height, torch)
     rows, boxes, query_scores = logits[0], normalized[0], scores[0]
     if not (len(rows) == len(boxes) == len(query_scores)):
         raise InferenceError("postprocessing", "invalid_output_shape", "Inconsistent query counts")
+    active = active_text_tokens(inputs)
+    if rows and not any(active[:len(rows[0])]):
+        raise InferenceError("postprocessing", "invalid_text_mask", "No active text token in the model's output frame")
     selected = [i for i, retained in enumerate(keep[0]) if retained]
     grounded = processor.post_process_grounded_object_detection(
         outputs, input_ids=inputs["input_ids"], threshold=config["threshold"],
@@ -79,8 +103,11 @@ def extract_candidates(outputs, inputs, processor, config, width, height, torch)
     for i, (tokens, box, score) in enumerate(zip(rows, boxes, query_scores)):
         if not isinstance(tokens, list) or not tokens or not isinstance(box, list) or len(box) != 4:
             raise InferenceError("postprocessing", "invalid_output_shape", "Malformed logits or normalized box")
-        bad_logits = any(not finite_number(v) for v in tokens)
-        # Infinities in logits can sigmoid to finite 0/1; retain their invalid provenance.
+        bad_logits = any(not finite_number(v) and not (
+            v == float("-inf") and (j >= len(active) or not active[j]))
+            for j, v in enumerate(tokens))
+        # -inf is expected only in known masked/tail padding slots. NaN/+inf
+        # anywhere and -inf on active tokens remain invalid, even after sigmoid.
         phrase = ""
         if i in by_query:
             phrase, pixel_box, score = by_query[i]
@@ -147,7 +174,8 @@ class GroundingDinoDetector:
             self._synchronize()
             self.preprocessing = {"processor_revision": REVISION, "exif_orientation": "in_memory_before_processor",
                                   "color_mode": "RGB", "coordinate_frame": "exif_oriented_original",
-                                  "target_sizes_order": "height,width", "image_processor": self.processor.image_processor.to_dict()}
+                                  "target_sizes_order": "height,width", "image_processor": self.processor.image_processor.to_dict(),
+                                  "logit_audit": "finite active tokens; -inf allowed only at masked/text-tail padding positions"}
         except InferenceError:
             self.close()
             raise
