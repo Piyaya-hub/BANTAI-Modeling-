@@ -21,8 +21,8 @@ from scripts.inference import (GroundingDinoDetector, InferenceError, DIRECT_VER
 from scripts.pipeline import run_inference
 from scripts.postprocessing import apply_policies, map_phrase, normalize_phrase
 from scripts.results import candidate, make_result, prepare_result, save_result, validate_result
-from scripts.viewer import candidate_label, show_image, summary, terminal_image_lines, TerminalDisplayError, terminal_capabilities, selected_queries, presentation_blocks, decision, passing_candidates, float32_pass
-from scripts.viewer import detection_fields, preview_dimensions, preview_description, table_pages
+from scripts.viewer import candidate_label, show_image, summary, selected_queries, presentation_blocks, decision, passing_candidates, float32_pass
+from scripts.viewer import detection_fields, table_pages
 
 
 class SyntheticTensor:
@@ -61,6 +61,7 @@ class InferenceTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config = load_config(overrides={"input": str(self.root / "photos"), "results": str(self.root / "results")})
+        self.config.update(threshold=.35,text_threshold=.25)  # Stable software-fixture boundaries.
         self.config["paths"]["cache"] = str(self.root / "cache")
         self.source = {"image_id": "synthetic-fixture.png", "sha256": "a"*64, "width": 6, "height": 4,
                        "coordinate_frame": "exif_oriented_original"}
@@ -409,32 +410,6 @@ class InferenceTests(unittest.TestCase):
         self.assertFalse(raw["queries"][0]["threshold_pass"])
         self.assertEqual(raw["queries"][0]["token_threshold_pass"], [False]*2)
 
-    def test_terminal_image_no_exports_no_gui_and_results_below_image(self):
-        result = self.functional()
-        stream = io.StringIO()
-        with Image.new("RGB", (60,40), "black") as image:
-            before = image.tobytes()
-            with patch("PIL.Image.Image.save", side_effect=AssertionError("export forbidden")), \
-                    patch("PIL.Image.Image.show", side_effect=AssertionError("GUI forbidden")):
-                with patch("scripts.viewer.terminal_capabilities", return_value=os.terminal_size((80,24))):
-                    show_image(image, result, stream=stream, input_stream=SimpleNamespace(isatty=lambda:True, readline=lambda:"\n"))
-                lines = list(terminal_image_lines(image, result, columns=20, rows=8))
-                empty = list(terminal_image_lines(image, self.functional([]), columns=20, rows=8))
-            self.assertEqual(image.tobytes(), before)
-        self.assertNotEqual(lines, empty)
-        self.assertLessEqual(len(lines), 8)
-        self.assertIn("\x1b[38;2;", stream.getvalue())
-        self.assertLess(stream.getvalue().index("\u2580"), stream.getvalue().index("DETECTION SUMMARY"))
-        self.assertTrue(stream.getvalue().endswith("\x1b[0m\n"))
-
-    def test_terminal_controls_escaped_and_write_errors_propagate(self):
-        result = self.functional()
-        result["source"]["image_id"] = "bad\x1b[2J\nname"
-        self.assertNotIn("\x1b", summary(result))
-        stream = MagicMock()
-        stream.write.side_effect = OSError("synthetic broken pipe")
-        with Image.new("RGB",(6,4)) as image, self.assertRaises(OSError):
-            show_image(image, result, stream=stream)
 
     def test_pipeline_persists_complete_diagnostics_even_without_display(self):
         torch, outputs, inputs, processor = self.raw_fixture()
@@ -450,7 +425,7 @@ class InferenceTests(unittest.TestCase):
 
     def test_legacy_backend_migrates_and_invalid_terminal_mode_rejected(self):
         self.config["display"]["backend"] = "TkAgg"
-        self.assertEqual(validate_config(self.config)["display"]["backend"], "terminal")
+        self.assertEqual(validate_config(self.config)["display"]["backend"], "TkAgg")
         self.config["display"]["terminal_mode"] = "invalid"
         with self.assertRaises(ConfigError):
             validate_config(self.config)
@@ -510,11 +485,6 @@ class InferenceTests(unittest.TestCase):
         self.assertIn("No valid retained queries pass",text)
         self.assertIn("No ordinary text tokens pass",text)
         self.assertEqual(passing_candidates(result),[])
-        with Image.new("RGB",(60,40),"blue") as image:
-            lines=list(terminal_image_lines(image,result,columns=30,rows=10))
-            expected=list(terminal_image_lines(image,self.functional([]),columns=30,rows=10))
-        self.assertEqual(lines,expected)
-        self.assertTrue(any("\u2580" in line for line in lines))
 
     def test_legacy_float32_boundary_without_model_import(self):
         self.assertFalse(float32_pass(.35,.35))
@@ -547,86 +517,6 @@ class InferenceTests(unittest.TestCase):
         tables = [b for b in blocks if b[0] in ("DETECTION SUMMARY","TEXT-TOKEN SCORE DETAILS")]
         self.assertGreaterEqual(len(tables),2)
         self.assertTrue(all(len(b)<=6 for b in tables))
-
-    def test_terminal_layout_groups_tables_without_any_default_pauses(self):
-        import re
-        result = self.presentation_fixture()
-        out = io.StringIO()
-        reader = MagicMock()
-        reader.isatty.return_value = True
-        reader.readline.return_value = "\n"
-        with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((80,24))):
-            show_image(image,result,stream=out,input_stream=reader)
-        text = out.getvalue()
-        self.assertTrue(text.startswith("IMAGE: synthetic-fixture.png\n"))
-        markers = [text.index(m) for m in ("IMAGE:","\u2580","DETECTION SUMMARY","TEXT-TOKEN SCORE DETAILS","CONFIGURATION")]
-        self.assertEqual(markers,sorted(markers))
-        image_text = text.split("DETECTION SUMMARY")[0]
-        image_text = re.sub(r"\x1b\[[0-9;]*m","",image_text)
-        self.assertIn("q0",image_text)
-        self.assertNotIn("q1",image_text)  # below threshold is table-only
-        reader.readline.assert_not_called()
-        self.assertNotIn("Enter: continue;",text)
-        narrow = io.StringIO()
-        with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((50,12))):
-            show_image(image,result,stream=narrow,input_stream=reader)
-        plain = re.sub(r"\x1b\[[0-9;]*m","",narrow.getvalue())
-        self.assertTrue(all(len(line)<=49 for line in plain.splitlines()))
-
-        self.assertTrue(all(len(line)<=79 for line in image_text.splitlines()))
-
-    def test_unsupported_stream_has_no_escape_bytes_or_shown_claim(self):
-        out = io.StringIO()
-        with Image.new("RGB",(6,4)) as image, self.assertRaisesRegex(TerminalDisplayError,"noninteractive"):
-            show_image(image,self.functional(),stream=out)
-        self.assertTrue(out.getvalue().startswith("IMAGE:"))
-        self.assertNotIn("\x1b",out.getvalue())
-        code,_,records,_,_=self.run_pipeline([self.image_file()],self.detector(),TerminalDisplayError("stdout is redirected"))
-        self.assertEqual(code,1)
-        self.assertEqual(records[0]["display"]["status"],"error")
-        self.assertEqual(records[0]["display"]["error"]["code"],"unsupported_terminal")
-        self.assertTrue(records[0]["inference"]["completed"])
-
-    def test_capability_unicode_color_and_small_terminal_diagnostics(self):
-        stream = SimpleNamespace(isatty=lambda:True,encoding="utf-8")
-        with patch.dict(os.environ,{"TERM":"dumb","TERM_PROGRAM":"","COLORTERM":"","WT_SESSION":""}), \
-                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,24))):
-            with self.assertRaisesRegex(TerminalDisplayError,"truecolor"):
-                terminal_capabilities(stream)
-        with patch.dict(os.environ,{"TERM":"xterm-256color","TERM_PROGRAM":"vscode"}), \
-                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,24))):
-            stream.encoding="ascii"
-            with self.assertRaisesRegex(TerminalDisplayError,"encoding"):
-                terminal_capabilities(stream)
-            stream.encoding="utf-8"
-            with patch("scripts.viewer.terminal_size",return_value=os.terminal_size((40,10))), self.assertRaisesRegex(TerminalDisplayError,"too small"):
-                terminal_capabilities(stream)
-
-    def test_renderer_failure_and_closed_pager_propagate(self):
-        result = self.functional()
-        reader = SimpleNamespace(isatty=lambda:True,readline=lambda:"")
-        with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((80,24))):
-            with patch("scripts.viewer.terminal_image_lines",side_effect=RuntimeError("synthetic render failure")), self.assertRaises(RuntimeError):
-                show_image(image,result,stream=io.StringIO(),input_stream=reader)
-            result["display"].update(terminal_mode="full",paginate=True)
-            with patch("scripts.viewer.presentation_blocks",return_value=iter([["line"]*100,["next"]])), self.assertRaisesRegex(TerminalDisplayError,"input closed"):
-                show_image(image,result,stream=io.StringIO(),input_stream=reader)
-
-    def test_preview_uses_width_and_scrolls_instead_of_shrinking_to_height(self):
-        import re
-        strip=lambda line: re.sub(r"\x1b\[[0-9;]*m","",line)
-        result=self.functional([])
-        result["display"]["preview_width"]=60
-        with Image.new("RGB",(300,600),"blue") as image, patch("scripts.viewer.terminal_size",return_value=os.terminal_size((100,12))):
-            normal=list(terminal_image_lines(image,result))
-            wide=list(terminal_image_lines(image,result,columns=90,rows=2))
-        self.assertEqual(len(normal),60)
-        self.assertTrue(all(len(strip(line))==60 for line in normal))
-        self.assertEqual(len(wide),90)
-        self.assertTrue(all(len(strip(line))==90 for line in wide))
-        with patch.dict(os.environ,{"TERM_PROGRAM":"vscode"}), patch("scripts.viewer.enable_windows_vt",return_value=False), \
-                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,2))):
-            self.assertEqual(terminal_capabilities(SimpleNamespace(isatty=lambda:True,encoding="utf-8")).lines,2)
 
 
     def test_token_groups_and_unwrapped_status_header(self):
@@ -683,20 +573,6 @@ class InferenceTests(unittest.TestCase):
                     if "|" in line:
                         self.assertEqual([i for i,c in enumerate(line) if c=="|"],separators)
 
-    def test_preview_never_upscales_and_preserves_odd_source_edge(self):
-        result=self.functional([])
-        with Image.new("RGB",(3,5),(10,20,30)) as image:
-            original=image.tobytes()
-            self.assertEqual(preview_dimensions(image,result,columns=120),(3,5))
-            lines=list(terminal_image_lines(image,result,columns=120))
-            self.assertEqual(len(lines),3)
-            self.assertIn("\x1b[49m",lines[-1])
-            self.assertNotIn("\x1b[49m",lines[0])
-            caption=" ".join(preview_description(image,result,columns=120))
-            self.assertIn("3x5 sampled px",caption)
-            self.assertIn("no upscaling",caption)
-            self.assertIn("Small details can disappear",caption)
-            self.assertEqual(image.tobytes(),original)
 
     def bare_detector(self, requested="auto", actual="cuda"):
         d=GroundingDinoDetector.__new__(GroundingDinoDetector)
@@ -778,6 +654,32 @@ class InferenceTests(unittest.TestCase):
             self.assertEqual(r["display"]["status"],"error")
             self.assertTrue(r["detections"])
 
+    def test_shared_batch_waits_for_all_saved_results_before_display(self):
+        from scripts.viewer import show_image as queue_image
+        files=[self.image_file("batch-a.png"),self.image_file("batch-b.png")]
+        originals=[p.read_bytes() for p in files]
+        def window(entries):
+            self.assertEqual(len(entries),2)
+            folder=next(Path(self.config["paths"]["results"]).iterdir())
+            records=[json.loads(p.read_text()) for p in folder.glob("*.json") if len(p.stem)==64]
+            self.assertEqual([r["display"]["status"] for r in records],["pending","pending"])
+        with patch("scripts.gui_viewer.open_results_window",side_effect=window) as show:
+            code,_,records,_,_=self.run_pipeline(files,self.detector(),queue_image)
+        self.assertEqual(code,0);show.assert_called_once()
+        self.assertEqual([r["display"]["status"] for r in records],["shown","shown"])
+        self.assertEqual([p.read_bytes() for p in files],originals)
+
+    def test_shared_batch_failure_preserves_every_prediction(self):
+        from scripts.viewer import show_image as queue_image
+        files=[self.image_file("batch-a.png"),self.image_file("batch-b.png")]
+        with patch("scripts.gui_viewer.open_results_window",side_effect=RuntimeError("batch fixture failure")):
+            code,_,records,_,_=self.run_pipeline(files,self.detector(),queue_image)
+        self.assertEqual(code,1)
+        for r in records:
+            self.assertEqual(r["status"],"ok")
+            self.assertEqual(r["display"]["status"],"error")
+            self.assertTrue(r["detections"])
+
     def test_pipeline_disabled_display_and_no_detections(self):
         self.config["display"]["enabled"]=False
         code,_,records,_,show=self.run_pipeline([self.image_file()],self.detector([]))
@@ -854,7 +756,6 @@ class InferenceTests(unittest.TestCase):
         show.assert_called_once()
         self.assertEqual(records[0]["display"]["status"],"pending")
         self.assertEqual(records[0]["status"],"ok")
-
 
 
 if __name__ == "__main__":

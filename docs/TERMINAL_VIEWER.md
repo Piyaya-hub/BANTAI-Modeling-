@@ -1,3 +1,7 @@
+# Historical terminal viewer documentation
+
+The latest owner instruction replaces ANSI image previews with native TkAgg windows. See [current usage, replay commands and evidence](NATIVE_VIEWER.md). The terminal-only requirements and evidence below are historical; model diagnostics and source-preservation constraints remain.
+
 # Scrollable terminal previews, grouped scores and replay
 
 The current viewer renders a larger width-driven image and streams its tables together without Enter prompts by default. **Summary remains passing-only. Explicit full mode restores all saved raw queries and ordinary token scores, including below-threshold values.** This supersedes the earlier policy that forced both modes to passing-only. Original photos/results, model inference, thresholds and checkpoint remain unchanged.

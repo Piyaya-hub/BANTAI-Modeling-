@@ -17,7 +17,7 @@ from scripts.inputs import load_image
 from scripts.persistence import atomic_json
 from scripts.replay import run_replay
 from scripts.results import candidate, make_result, save_result
-from scripts.viewer import TerminalDisplayError, show_synthetic, terminal_capabilities
+from scripts.viewer import NativeDisplayError, show_synthetic
 
 
 class ReplayTests(unittest.TestCase):
@@ -27,6 +27,7 @@ class ReplayTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config = load_config(overrides={"input": str(self.root / "unused-input"), "results": str(self.root / "replays")})
+        self.config.update(threshold=.35,text_threshold=.25)  # Saved fixture, independent of owner edits.
         self.image_path = self.root / "original.png"
         with Image.new("RGB", (12,8), "blue") as image:
             image.save(self.image_path)
@@ -57,7 +58,7 @@ class ReplayTests(unittest.TestCase):
 
     def test_replay_persists_before_view_and_never_changes_saved_thresholds(self):
         self.config["threshold"] = .99
-        def viewer(image,result):
+        def viewer(image,result,**kwargs):
             self.assertEqual(self.replay_records()[0]["display"]["status"],"pending")
             self.assertEqual(result["inference"]["threshold"],.35)
             self.assertEqual(image.size,(12,8))
@@ -80,6 +81,34 @@ class ReplayTests(unittest.TestCase):
         self.assertFalse((self.root / "replays").exists())
         self.assert_originals()
 
+    def test_multi_replay_one_window_numbered_attempts_and_pending_before_show(self):
+        def window(entries):
+            self.assertEqual(len(entries),2)
+            records=self.replay_records()
+            self.assertEqual(len(records),2)
+            self.assertEqual({r["image_number"] for r in records},{1,2})
+            self.assertTrue(all(r["display"]["status"]=="pending" for r in records))
+        with patch("scripts.gui_viewer.open_results_window",side_effect=window) as show,contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(run_replay(self.config,[self.result_path]*2,[self.image_path]*2),0)
+        show.assert_called_once()
+        self.assertTrue(all(r["display"]["status"]=="shown" for r in self.replay_records()))
+        self.assert_originals()
+
+    def test_multi_replay_validates_all_sources_before_persistence(self):
+        other=self.root/"copy.png";other.write_bytes(self.original_photo)
+        with self.assertRaisesRegex(ValueError,"image_id"):
+            run_replay(self.config,[self.result_path]*2,[self.image_path,other])
+        self.assertFalse(self.replay_records())
+        with self.assertRaisesRegex(ValueError,"equal nonzero"):
+            run_replay(self.config,[self.result_path]*2,[self.image_path])
+
+    def test_multi_replay_window_failure_keeps_results_and_distinct_statuses(self):
+        with patch("scripts.gui_viewer.open_results_window",side_effect=RuntimeError("batch display fixture")),contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(run_replay(self.config,[self.result_path]*2,[self.image_path]*2),1)
+        self.assertTrue(all(r["display"]["status"]=="error" for r in self.replay_records()))
+        self.assertTrue(all(not r["inference_executed"] for r in self.replay_records()))
+        self.assert_originals()
+
     def test_replay_rejects_changed_hash_and_dimensions(self):
         for field, value in (("sha256","0"*64),("width",13),("height",9)):
             altered=copy.deepcopy(self.result)
@@ -91,7 +120,7 @@ class ReplayTests(unittest.TestCase):
         self.assertFalse((self.root / "replays").exists())
 
     def test_replay_renderer_failure_and_interrupt_keep_originals(self):
-        with patch("scripts.replay.show_image",side_effect=TerminalDisplayError("unsupported fixture stream")):
+        with patch("scripts.replay.show_image",side_effect=NativeDisplayError("unsupported fixture stream")):
             self.assertEqual(self.invoke(),1)
         self.assertEqual(self.replay_records()[0]["display"]["status"],"error")
         with patch("scripts.replay.show_image",side_effect=KeyboardInterrupt()):
@@ -124,22 +153,6 @@ class ReplayTests(unittest.TestCase):
         show.assert_not_called()
         self.assertEqual(self.replay_records()[0]["display"]["status"],"disabled")
         self.assert_originals()
-
-    def test_synthetic_renderer_rejects_redirected_output_without_escape_bytes(self):
-        out=io.StringIO()
-        with self.assertRaises(TerminalDisplayError), patch("PIL.Image.Image.save",side_effect=AssertionError("No image files")):
-            show_synthetic(stream=out)
-        self.assertNotIn("\x1b",out.getvalue())
-        self.assertIn("SYNTHETIC",out.getvalue())
-
-    def test_known_native_windows_vt_is_not_rejected_by_inherited_dumb_term(self):
-        import os
-        from types import SimpleNamespace
-        stream=SimpleNamespace(isatty=lambda:True,encoding="utf-8")
-        with patch.dict(os.environ,{"TERM":"dumb","TERM_PROGRAM":"","COLORTERM":"","WT_SESSION":""}), \
-                patch("scripts.viewer.enable_windows_vt",return_value=True), \
-                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,24))):
-            self.assertEqual(terminal_capabilities(stream).columns,80)
 
 
 if __name__ == "__main__":

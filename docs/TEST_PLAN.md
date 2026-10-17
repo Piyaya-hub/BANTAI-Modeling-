@@ -1,6 +1,6 @@
 # Software and functional detection checks
 
-Terminal-viewer amendment: test actual sigmoid tensor operations on synthetic logits, strict threshold boundaries, padding exclusion/token alignment, complete JSON in both modes, unchanged candidate filtering, ANSI output order, source preservation, no export/GUI, and display failure/persistence lifecycle. Record actual model execution separately and do not infer VS Code visual readability from captured output. See [terminal evidence](TERMINAL_VIEWER.md).
+Scrollable-tab amendment: test exact repeated section order, raw/incomplete phrases, bounded readable labels above narrow/edge boxes, coordinate alignment, passing-only selectable tables, actual saved configuration, wheel/horizontal scrolling, multi-image replay, normal closure and batch failures. Keep synthetic/Agg/mock evidence separate from actual Windows visual observations. See [current GUI evidence](SCROLLABLE_VIEWER.md).
 
 ## Current scope and evidence
 

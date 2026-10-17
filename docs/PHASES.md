@@ -1,6 +1,6 @@
 # Development phases
 
-Owner-authorized viewer amendment: replace native TkAgg viewing with terminal ANSI/Unicode rendering and add unfiltered query/token diagnostics, summary/full modes, tests and documentation. Acceptance criterion 5 now uses terminal writes/flush instead of window closure; retain persist-before-display and separate display failure. See [terminal contract](TERMINAL_VIEWER.md). No broader phase transition is implied.
+Latest owner viewer amendment requires one scrollable tab with repeated Image / Detection Summary / Text-Token Details / Configuration sections, raw phrase labels and passing-only GUI tables. Acceptance criterion 5 uses shared-window normal closure after all results persist, preserving separate display failures. This supersedes earlier per-image/terminal layouts without a phase transition. See [scrollable viewer contract](SCROLLABLE_VIEWER.md).
 
 Phase 0 is complete; the Phase 1 planning deliverable is published through merged PR #3. Publication does not establish environment preparation, successful detection, or owner acceptance of every proposal. Codex now owns implementation, replacing Antigravity (owner reports no Antigravity changes). Phase 2A is complete on supplied evidence; the owner now authorizes Phase 2C baseline inference and native display; routine defaults within an authorized phase do not introduce extra approval checkpoints.
 

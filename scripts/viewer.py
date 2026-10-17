@@ -1,4 +1,4 @@
-"""Interactive ANSI/Unicode previews and bounded tables, with honest capability errors."""
+"""Native in-memory TkAgg viewing and bounded diagnostic terminal tables."""
 
 import json
 import os
@@ -13,8 +13,8 @@ from .configuration import finite_number
 from .results import valid_candidates
 
 
-class TerminalDisplayError(RuntimeError):
-    """The current output cannot display an inline ANSI/Unicode image."""
+class NativeDisplayError(RuntimeError):
+    """Native display failed; saved predictions remain independent."""
 
 
 def safe_text(value):
@@ -40,56 +40,6 @@ def terminal_size(stream=None):
         return os.get_terminal_size((stream or sys.stdout).fileno())
     except (AttributeError, OSError, ValueError):
         return shutil.get_terminal_size(fallback=(80, 24))
-
-
-def terminal_facts(stream=None, input_stream=None):
-    stream = sys.stdout if stream is None else stream
-    input_stream = sys.stdin if input_stream is None else input_stream
-    size = terminal_size(stream)
-    return {"stdout_isatty": bool(stream.isatty()), "stdin_isatty": bool(input_stream.isatty()),
-            "encoding": getattr(stream,"encoding",None), "columns": size.columns, "rows": size.lines,
-            "TERM": os.environ.get("TERM",""), "COLORTERM": os.environ.get("COLORTERM",""),
-            "TERM_PROGRAM": os.environ.get("TERM_PROGRAM",""), "windows_terminal": bool(os.environ.get("WT_SESSION"))}
-
-
-def enable_windows_vt(stream):
-    if os.name != "nt":
-        return False
-    import ctypes
-    import msvcrt
-    try:
-        handle = ctypes.c_void_p(msvcrt.get_osfhandle(stream.fileno()))
-    except (AttributeError, OSError, ValueError):
-        return False
-    mode = ctypes.c_ulong()
-    kernel = ctypes.windll.kernel32
-    if not kernel.GetConsoleMode(handle, ctypes.byref(mode)):
-        return False  # ConPTY may advertise capability through its environment.
-    if not kernel.SetConsoleMode(handle, mode.value | 4):
-        raise TerminalDisplayError("Inline image unavailable: Windows virtual-terminal processing could not be enabled.")
-    return True
-
-
-def terminal_capabilities(stream):
-    size = terminal_size(stream)
-    facts = json.dumps(terminal_facts(stream),ensure_ascii=True)
-    if not stream.isatty():
-        raise TerminalDisplayError(f"Inline image unavailable: stdout is noninteractive/redirected ({facts}). Run in the VS Code integrated terminal; use --no-display for text/JSON only.")
-    term = os.environ.get("TERM", "")
-    color = os.environ.get("COLORTERM", "").lower()
-    known = os.environ.get("TERM_PROGRAM", "").lower() in ("vscode", "wezterm", "iterm.app") or bool(os.environ.get("WT_SESSION"))
-    # Windows consoles often leave TERM unset or inherited as dumb. A successful
-    # native VT enablement or a known terminal is stronger evidence than TERM.
-    native_vt = enable_windows_vt(stream)
-    if not (native_vt or known or color in ("truecolor", "24bit") or "direct" in term):
-        raise TerminalDisplayError(f"Inline image unavailable: ANSI truecolor support is unconfirmed ({facts}). Use a truecolor VS Code terminal.")
-    try:
-        "\u2580".encode(stream.encoding or "utf-8")
-    except (LookupError, UnicodeError):
-        raise TerminalDisplayError(f"Inline image unavailable: output encoding cannot represent Unicode half blocks ({facts}). Use UTF-8.") from None
-    if size.columns < 50 or size.lines < 1:
-        raise TerminalDisplayError(f"Inline image unavailable: terminal too small ({facts}); resize to at least 50 columns with a positive height.")
-    return size
 
 
 def float32_pass(score, threshold):
@@ -285,134 +235,72 @@ def summary(result, mode=None, **overrides):
     return "\n\n".join("\n".join(block) for block in presentation_blocks(result, mode, **options))
 
 
-def preview_dimensions(image, result, *, columns=None):
-    desired=result.get("display",{}).get("preview_width",120)
-    available=columns if columns is not None else min(desired,terminal_size().columns-1)
-    width=min(image.width,max(1,min(400,available)))
-    return width,max(1,round(image.height*width/image.width))
+def draw_overlays(ax,image,result):
+    from .gui_viewer import draw_overlays as draw
+    return draw(ax,image,result)
 
 
-def preview_description(image,result,*,columns=None):
-    width,height=preview_dimensions(image,result,columns=columns)
-    lines=[f"Preview: source {image.width}x{image.height} px -> {width}x{height} sampled px / {(height+1)//2} terminal rows.",
-           "Truecolor half-block grid; Lanczos downsampling, no upscaling. Small details can disappear; terminal size limits resolution."]
-    if any(len(d["id"])>width for d in passing_candidates(result)):
-        lines.append("This source-sized grid is too narrow for some full query ID labels; see the detection records.")
-    return lines
+class DisplayBatch:
+    """Own in-memory image copies until one batch window closes."""
+    def __init__(self):
+        self.entries=[]
+
+    def add(self,image,result):
+        self.entries.append((image.copy(),result))
+
+    def show(self):
+        if self.entries:
+            from .gui_viewer import open_results_window
+            try:
+                open_results_window(self.entries)
+            except NativeDisplayError:
+                raise
+            except Exception as exc:
+                raise NativeDisplayError(f"Scrollable TkAgg viewer failed ({type(exc).__name__}): {exc}") from exc
+
+    def close(self):
+        for image,_ in self.entries:image.close()
+        self.entries.clear()
 
 
-def terminal_image_lines(image, result, *, columns=None, rows=None):
-    """Width-driven square pixels; vertical scrolling is intentional.
-
-    rows remains an accepted legacy argument but no longer limits image height.
-    """
-    from PIL import Image, ImageDraw
-    width,height=preview_dimensions(image,result,columns=columns)
-    colors = {"garbage_pile": (255,165,0), "individual_litter": (0,255,0), "group_of_individual_litter": (0,255,255), None: (255,0,255)}
-    labels = {}
-    with image.resize((width,height), Image.Resampling.LANCZOS).convert("RGB") as preview:
-        draw = ImageDraw.Draw(preview)
-        for d in passing_candidates(result):
-            x0,y0,x1,y1 = d["box_xyxy"]
-            box = (min(width-1,x0*width/image.width),min(height-1,y0*height/image.height),
-                   min(width-1,x1*width/image.width),min(height-1,y1*height/image.height))
-            color = colors[d["category"]]
-            draw.rectangle(box,outline=color,width=1)
-            ident = d["id"]
-            if len(ident)>width:
-                continue  # Never print a misleading, clipped query ID.
-            lx = max(0,min(int(box[0]),width-len(ident)))
-            preferred = min((height-1)//2,int(box[1])//2)
-            candidates = sorted(range((height+1)//2), key=lambda y: abs(y-preferred))
-            for ly in candidates:
-                if all((lx+j,ly) not in labels for j in range(len(ident))):
-                    for j,char in enumerate(ident):
-                        labels[lx+j,ly] = (char,color)
-                    break
-        pixels = preview.load()
-        for y in range(0,height,2):
-            line = []
-            for x in range(width):
-                if (x,y//2) in labels:
-                    char,(r,g,b) = labels[x,y//2]
-                    line.append(f"\x1b[38;2;0;0;0m\x1b[48;2;{r};{g};{b}m{char}")
-                else:
-                    r,g,b = pixels[x,y]
-                    background="\x1b[49m"
-                    if y+1<height:
-                        br,bg,bb=pixels[x,y+1]
-                        background=f"\x1b[48;2;{br};{bg};{bb}m"
-                    line.append(f"\x1b[38;2;{r};{g};{b}m{background}\u2580")
-            yield "".join(line)+"\x1b[0m"
-
-
-def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None):
-    stream = sys.stdout if stream is None else stream
-    input_stream = sys.stdin if input_stream is None else input_stream
-    # No escape bytes are emitted until capabilities have been checked.
-    heading=f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}"
-    stream.write("\n".join(textwrap.wrap(heading,width=max(24,terminal_size(stream).columns-1)))+"\n")
-    stream.flush()
-    size = terminal_capabilities(stream)
-    settings=result.get("display",{})
-    mode=settings.get("terminal_mode","summary")
-    paginate=mode=="full" and settings.get("paginate",False)
-    if paginate and not input_stream.isatty():
-        raise TerminalDisplayError("Opt-in full-mode pagination requires interactive stdin; omit --paginate to scroll normally.")
-    width=size.columns-1
-    def write(lines):
-        stream.write("\n".join(lines)+"\n")
-        stream.flush()
-    def pause():
-        write(textwrap.wrap("Enter: continue; Ctrl+C: stop (JSON already saved).",width=width))
-        if input_stream.readline()=="":
-            raise TerminalDisplayError("Terminal input closed during paging; display unfinished.")
+def show_image(image,result,*,batch=None,cache_dir=None,stream=None,input_stream=None):
+    """Queue for a shared tab, or show a single-image tab for direct callers."""
+    if batch is not None:
+        batch.add(image,result)
+        return
+    session=DisplayBatch()
     try:
-        image_width=min(width,settings.get("preview_width",120))
-        write([line for text in preview_description(image,result,columns=image_width) for line in textwrap.wrap(text,width=width)])
-        for line in terminal_image_lines(image,result,columns=image_width):
-            write([line])
-        # Summary streams together with no Enter prompts. Full-mode paging is
-        # opt-in and uses larger chunks, never terminal-height micro-pauses.
-        used=0
-        for block in presentation_blocks(result,mode,width=width,page_rows=settings.get("page_rows",10),
-                                          include_special=settings.get("include_special_tokens",False)):
-            if paginate and used>=max(50,4*size.lines):
-                pause()
-                used=0
-            write([""]+block)
-            used+=len(block)+1
-
+        session.add(image,result)
+        session.show()
     finally:
-        stream.write("\x1b[0m\n")
-        stream.flush()
+        session.close()
 
 
-def show_synthetic(*, stream=None, preview_width=120):
-    """Independent renderer exercise: all pixels/boxes are software fixtures."""
-    from PIL import Image, ImageDraw
-    stream = sys.stdout if stream is None else stream
-    stream.write("SYNTHETIC RENDERER CHECK: fixture boxes/IDs only; no model inference.\n")
-    stream.write(json.dumps(terminal_facts(stream),ensure_ascii=True)+"\n")
-    stream.write("IMAGE: synthetic-renderer-check\n")
+def show_synthetic(*,stream=None,preview_width=120):
+    """Three software-only images exercise the complete scrollable tab."""
+    from PIL import Image,ImageDraw
+    from .configuration import load_config
+    from .results import candidate,make_result
+    stream=sys.stdout if stream is None else stream
+    stream.write("SYNTHETIC SCROLLABLE TAB: software fixtures only; no model inference.\n")
     stream.flush()
-    size = terminal_capabilities(stream)
-    fixture = {"inference": {"threshold": .35}, "detections": [
-        {"id": "test0", "state": "retained", "model_score": 1.0, "numeric_diagnostics": [],
-         "box_xyxy": [40,35,145,145], "category": "individual_litter"},
-        {"id": "test1", "state": "retained", "model_score": 1.0, "numeric_diagnostics": [],
-         "box_xyxy": [175,55,285,155], "category": "garbage_pile"}]}
-    with Image.new("RGB",(320,180)) as image:
-        image.putdata([(x*255//319,y*255//179,120) for y in range(180) for x in range(320)])
-        draw = ImageDraw.Draw(image)
-        draw.ellipse((50,45,135,135),fill=(40,70,220))
-        draw.rectangle((185,65,275,145),fill=(240,220,60))
-        try:
-            for line in terminal_image_lines(image,fixture,columns=min(size.columns-1,preview_width)):
-                stream.write(line+"\n")
-            stream.flush()
-        finally:
-            stream.write("\x1b[0m\n")
-            stream.flush()
-    stream.write("Renderer output returned. Visual verification remains pending until the image, boxes and test0/test1 IDs are actually inspected.\n")
+    config=load_config();config.update(threshold=.35,text_threshold=.25)
+    batch=DisplayBatch()
+    try:
+        for index in range(3):
+            with Image.new("RGB",(640,400),"#ddddee") as image:
+                draw=ImageDraw.Draw(image);draw.rectangle((80,100,400,300),fill="blue")
+                ds=[] if index==2 else [candidate("q0","a group" if index==0 else "discarded item with a long incomplete phrase",[80,100,400,300],.86,640,400),
+                    candidate("q1","an individual",[620,0,640,80],.91,640,400)]
+                source=dict(image_id=f"synthetic-{index+1}",sha256="a"*64,width=640,height=400,coordinate_frame="exif_oriented_original")
+                result=make_result("synthetic",source,config,detections=ds,inference_completed=True,library_version="4.51.3",
+                    execution={"actual_device":"cpu","environment_manifest":"synthetic-only","preprocessing_manifest":"synthetic-only"})
+                result["query_diagnostics"]={"tokens":[{"token":"group","position":1,"token_id":123,"special":False}],
+                    "queries":[{"id":d["id"],"threshold_pass":True,"numeric_diagnostics":[],"invalid_token_positions":[],
+                                "model_score":d["model_score"],"token_scores":[.8],"token_threshold_pass":[True]} for d in ds]}
+                batch.add(image,result)
+        batch.show()
+    finally:
+        batch.close()
+    stream.write("Scrollable window closed normally. Visual verification requires observation.\n")
     stream.flush()

@@ -1,8 +1,6 @@
 # BANTAI agent instructions
 
-Latest owner viewer policy: summary stays passing-only; explicit full mode includes saved below-threshold query/token diagnostics. Use configurable width-driven ANSI previews with vertical scrolling, grouped aligned token tables and no default Enter pauses. Synthetic display-check and source-verified replay are authorized without inference. Owner VS Code visual verification stays pending unless actually observed. This supersedes the previous all-console passing-only restriction; see [current terminal contract](docs/TERMINAL_VIEWER.md).
-
-The owner subsequently authorized replacing the native TkAgg pop-up with an in-memory ANSI/Unicode terminal viewer and adding complete pre-filter query/token score diagnostics in summary/full modes. This supersedes native-window requirements only; normal filtering, pinned dependencies, strict JSON, originals and all other scope boundaries remain. See [terminal viewer contract](docs/TERMINAL_VIEWER.md).
+Latest owner viewer policy: one scrollable local Tk/TkAgg results tab repeats Image #N, Detection Summary, Text-Token Details and Configuration for the complete batch. Raw decoded phrase labels replace category-only labels; keep original pixel ticks, bounded readable labels above boxes, zoom/pan, passing-only selectable GUI tables and actual saved configuration. Preserve source-verified multi-image replay, complete JSON diagnostics, in-memory rendering and atomic separate display status. This supersedes terminal-only and separate per-image/side-panel layouts. See [current scrollable viewer contract](docs/SCROLLABLE_VIEWER.md).
 
 ## Project boundary
 
