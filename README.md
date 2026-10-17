@@ -12,7 +12,7 @@ Execution is intended for the owner’s Windows computer with an owner-reported 
 
 ## Current state
 
-Phase 0 is complete. The Phase 1 planning deliverable is published and merged through PR #3 at `b366f76`. Environment preparation and detection remain unverified; publication is not acceptance of every technical proposal. Current work is documentation correction only: Codex handles the corrections, and Antigravity will handle later authorized implementation.
+Phase 0 is complete. The Phase 1 planning deliverable is published and merged through PR #3 at `b366f76`. Environment preparation and detection remain unverified; publication is not acceptance of every technical proposal. Codex now owns implementation, replacing Antigravity, which the owner reports made no changes. Phase 2A is authorized for local Windows environment setup and readiness verification only (plan Section 4 and Section 8 stages 2–3); detector implementation and inference remain outside this authorization.
 
 The owner supplies unannotated team photographs, manually downloaded/extracted from Google Drive into a configurable project folder (proposed `data/input/`). The planned detection activity is functional checking and visual inspection, with no required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets.
 
@@ -27,8 +27,9 @@ The planned outputs are an in-memory display of original photographs with predic
 - [Approved decisions, proposals, and unresolved choices](docs/DECISIONS.md)
 - [Validation and evaluation plan](docs/TEST_PLAN.md)
 - [Current state and handoff](docs/HANDOFF.md)
-- [Phase 1 implementation plan for review](docs/PHASE_1_IMPLEMENTATION_PLAN.md)
+- [Phase 1 implementation plan](docs/PHASE_1_IMPLEMENTATION_PLAN.md)
+- [Phase 2A Windows preparation and readiness record](docs/PHASE_2A_READINESS.md)
 
 ## Next step
 
-Phase 0 is complete. Review the [Phase 1 implementation plan](docs/PHASE_1_IMPLEMENTATION_PLAN.md) for Antigravity. The current task authorizes documentation correction only. The planning deliverable describes functional visual checks on unannotated team photos. Implementation, installation, and inference still require explicit authorization. There are no implemented application startup or model evaluation commands at this stage.
+Complete [Phase 2A Windows preparation](docs/PHASE_2A_READINESS.md) under Codex ownership, following the [Phase 1 implementation plan](docs/PHASE_1_IMPLEMENTATION_PLAN.md). Local environment setup is authorized; local preflight evidence and access are required before selecting/installing the appropriate wheel. This cloud session cannot verify the owner’s computer. Stop after readiness checks; detector implementation, weight downloads/loading and inference require a later phase authorization.

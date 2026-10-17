@@ -1,0 +1,134 @@
+# Phase 2A — Windows environment preparation and readiness record
+
+## Authorization and actual status
+
+The owner authorizes Codex to perform **local Windows environment setup/readiness only**, corresponding to [PHASE_1_IMPLEMENTATION_PLAN.md](PHASE_1_IMPLEMENTATION_PLAN.md) Section 4 and Section 8 stages 2–3. Codex replaces Antigravity; the owner states Antigravity made no changes. See the [phase definition](PHASES.md#phase-2a--local-windows-environment-setup-and-readiness-verification) and D-022/D-023 in [DECISIONS.md](DECISIONS.md).
+
+**Not yet ready: target access/preflight and the existence of a local checkout are unconfirmed.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are prepared instructions, not claimed executions. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
+
+No dependency installation, GPU/CPU package probe, native viewer operation, model download/loading or inference on the target is claimed. Do not install ML packages in the cloud as a substitute. No photographs, annotations or detector implementation are needed for these readiness checks.
+
+## Evidence ledger
+
+| Check | Actual outcome in this task | Required next evidence |
+| --- | --- | --- |
+| Repository baseline | Fetched latest `main`: `7a776cf`, merge of PR #4; started from a clean checkout | Preserve local Windows checkout/user changes when inspecting it |
+| Windows/Python | Unrun: target unavailable | Windows version/architecture, available Python interpreters and chosen Python 3.11 x64, existing environment inspection |
+| GPU/driver/memory | Owner reports RTX 2080 Super; no local measurement | `nvidia-smi` identity/driver/total and free memory, actual CUDA tensor execution or diagnosed CPU fallback |
+| Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Actual Windows imports, `pip check`, exact resolved packages; metadata alone is not runtime verification |
+| Proposed CUDA wheel | Official cu118 index lists torch 2.7.1 CPython 3.11 Windows x64 wheel | Driver/build/capability check and actual tensor operation on target |
+| Checkpoint/configuration/conditions/revision/safetensors | Metadata-only request to Hugging Face API blocked by cloud proxy: tunnel `403 Forbidden` | Inspect official model metadata/card/files on accessible target; record immutable commit and conditions; do not fetch weights |
+| NVIDIA driver reference | Official CUDA 11.8 release-notes request blocked by cloud proxy: tunnel `403 Forbidden` | Compare target driver to official NVIDIA compatibility/release guidance; no guessed minimum asserted |
+| Isolated environment/lock | Unrun: local preflight unavailable | Preserve existing environment; create/reuse an inspected isolated environment, exact package list plus CUDA/CPU index |
+| CPU/GPU probes | Unrun | Actual package/device operations below; GPU unavailable may produce diagnosed CPU readiness only |
+| Native Tk/Matplotlib viewer | Unrun | Visible synthetic window, successful drawing/normal return and resource closure; no saved images |
+
+Official references rechecked for metadata only: [Transformers metadata](https://pypi.org/pypi/transformers/4.51.3/json), [torchvision metadata](https://pypi.org/pypi/torchvision/0.22.1/json), [CUDA 11.8 wheel listing](https://download.pytorch.org/whl/cu118/torch/). Metadata verification does not establish Windows/GPU compatibility or acceptance of all proposed pins. Earlier source findings and limits remain in the plan; they are not upgraded to local evidence.
+
+## 1. Windows preflight and local repository copy
+
+A **checkout** means the local folder containing a cloned GitHub repository. The cloud copy used in this chat is not on the owner's PC. The owner asked what the Windows checkout meant, so no local clone or existing `.venv` is assumed.
+
+Start in any PowerShell window on the owner's Windows PC with `git --version`, `py -0p`, and the `nvidia-smi` query below. These hardware/tool checks do not require a repository folder. If Git is absent, install Git for Windows from its official distribution before cloning; diagnose missing Python/GPU tools separately. Do not request a token merely because a command has not been run.
+
+If there is no existing local copy and Git works, create one without overwriting a directory. After this preparation branch is pushed, it can be cloned directly:
+
+```powershell
+$BantaiCheckout = Join-Path $env:USERPROFILE 'source\BANTAI-Modeling-'
+if (Test-Path $BantaiCheckout) { throw 'A folder already exists here; inspect it instead of overwriting or duplicating it.' }
+git clone --branch docs/phase-2a-environment-preparation https://github.com/Piyaya-hub/BANTAI-Modeling-.git $BantaiCheckout
+if ($LASTEXITCODE -ne 0) { throw 'Clone failed; preserve the output and diagnose Git/network/authentication access.' }
+Set-Location $BantaiCheckout
+```
+
+A clone downloads repository documentation, not pretrained weights or datasets. If a local copy already exists, locate and inspect it instead; do not reset/switch over user changes blindly. This cloud chat has no direct access to that folder. User-run outputs or a Codex session connected to the Windows PC are needed for actual local setup evidence.
+
+### Read-only preflight
+
+These are PowerShell commands for the owner’s Windows computer. Do not dump environment variables or credential files. They do not download weights or run inference.
+
+```powershell
+Get-Location
+git status --short
+git branch --show-current
+Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture
+py -0p
+py -3.11 --version
+py -3.11 -c "import sys,struct; print(sys.executable); print('Python:',sys.version); print('bits:',struct.calcsize('P')*8)"
+nvidia-smi --query-gpu=name,driver_version,memory.total,memory.free --format=csv
+Test-Path .\.venv
+```
+
+If `.venv` exists, inspect without overwriting it:
+
+```powershell
+.\.venv\Scripts\python.exe --version
+.\.venv\Scripts\python.exe -m pip show torch torchvision transformers pillow matplotlib
+```
+
+If Python 3.11 x64 or `nvidia-smi` is absent, record the actual failure and diagnose it. Do not replace global Python or a driver blindly. A missing GPU tool does not prove the GPU is absent; CPU preparation can proceed with its GPU limitation recorded. Local outputs may be supplied back to Codex in this chat or verified by Codex operating in the Windows checkout. Cloud tools cannot perform these local actions.
+
+## 2. Metadata and wheel choice — no model downloads
+
+Inspect the [official model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny), [model metadata API](https://huggingface.co/api/models/IDEA-Research/grounding-dino-tiny), and repository configuration/file listing. Confirm Tiny/Swin-T configuration, source/provenance, license and conditions, safetensors availability and exact immutable commit. Record these facts in this ledger or a referenced non-secret local record. Do not follow weight-file links, call model/processor `from_pretrained`, instantiate a detector, or download weights. Later model/processor loading must use the same recorded revision.
+
+Check the real driver against [CUDA 11.8 release notes](https://docs.nvidia.com/cuda/archive/11.8.0/cuda-toolkit-release-notes/index.html) and [NVIDIA compatibility guidance](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html). The proposed cu118 wheel is a candidate until the target facts and device probes support it; do not treat `nvidia-smi`'s CUDA version as the wheel runtime. Do not install a separate CUDA toolkit or compile custom kernels merely to use prebuilt PyTorch. Do not download a detector to diagnose package readiness.
+
+Keep the existing proposed baseline unless a diagnosed compatibility issue or applicable package advisory requires a documented change: Python 3.11 x64, torch 2.7.1/cu118, torchvision 0.22.1, Transformers 4.51.3, Pillow 11.2.1, Matplotlib 3.10.3. These are not locally tested pins. Recheck affected APIs if any version changes; no silent upgrade or altered checksum/TLS verification.
+
+## 3. Authorized isolated setup — after preflight
+
+Reuse `.venv` only after inspection establishes it is suitable. Otherwise preserve it and create a new environment under existing ignored `venv/`, using a path that does not already exist. Example below deliberately refuses to overwrite that path. It creates environment/dependency files only, no detector code or photo directories.
+
+```powershell
+$BantaiEnvironment = Join-Path (Get-Location) 'venv\phase2a'
+if (Test-Path $BantaiEnvironment) { throw 'Environment already exists; inspect it before reuse or choose a fresh ignored venv path.' }
+py -3.11 -m venv $BantaiEnvironment
+if ($LASTEXITCODE -ne 0) { throw 'Virtual environment creation failed.' }
+$BantaiPython = Join-Path $BantaiEnvironment 'Scripts\python.exe'
+& $BantaiPython -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu118
+if ($LASTEXITCODE -ne 0) { throw 'PyTorch installation failed; inspect the error before retrying.' }
+& $BantaiPython -m pip install transformers==4.51.3 Pillow==11.2.1 matplotlib==3.10.3
+if ($LASTEXITCODE -ne 0) { throw 'Supporting package installation failed; inspect the error.' }
+& $BantaiPython -m pip check
+if ($LASTEXITCODE -ne 0) { throw 'Dependency consistency check failed.' }
+```
+
+Use the CUDA index only after driver/build selection is justified. If CPU-only installation is the diagnosed choice, use the same proposed torch/torchvision versions from `https://download.pytorch.org/whl/cpu` in a fresh environment and record that source explicitly. CPU fallback is allowed without requesting phase approval again, but must not be called successful GPU verification. A CUDA wheel can run CPU operations too.
+
+Record a non-secret local preparation manifest beside the venv, including selected interpreter, exact commands/package versions, CUDA/CPU index, device/driver, verification outcomes, date and any fallback diagnosis. `pip freeze` plus `pip check` provides dependency evidence but does not by itself preserve the CUDA installation source. Do not commit an unexecuted freeze as a verified lock. No raw credentials or broad process-environment dump belongs in evidence.
+
+## 4. Package, CPU and GPU readiness — no detector
+
+If reusing an existing inspected environment, set `$BantaiPython` to its `Scripts\python.exe`. Probe commands below do not load a model or an image.
+
+```powershell
+& $BantaiPython -m pip check
+& $BantaiPython -m pip freeze
+& $BantaiPython -c "import sys,struct,torch,torchvision,transformers,PIL,matplotlib; print(sys.version); print('bits:',struct.calcsize('P')*8); print('versions:',torch.__version__,torchvision.__version__,transformers.__version__,PIL.__version__,matplotlib.__version__); print('wheel CUDA:',torch.version.cuda); x=torch.ones(1,device='cpu'); assert (x+x).item()==2; print('CPU tensor: passed'); print('CUDA available:',torch.cuda.is_available()); print('compiled architectures:',torch.cuda.get_arch_list())"
+```
+
+Record command exits; an import failure or failed CPU operation is a readiness failure to diagnose. With a usable GPU, run the explicit GPU probe so CPU fallback cannot conceal GPU failure:
+
+```powershell
+& $BantaiPython -c "import torch; assert torch.cuda.is_available(),'CUDA unavailable'; print('GPU:',torch.cuda.get_device_name(0)); print('capability:',torch.cuda.get_device_capability(0)); print('free/total bytes:',torch.cuda.mem_get_info()); x=torch.ones(1,device='cuda'); assert (x+x).item()==2; torch.cuda.synchronize(); print('GPU tensor: passed')"
+```
+
+A printed CUDA-available flag alone is not a passed GPU check. Record the actual tensor outcome, compiled architectures/capability and memory observation. On failure diagnose driver/wheel/support/memory before retrying; alternatively record a justified CPU-only route and leave GPU as failed/unrun, not passed. These basic tensor probes do not establish model-memory fit, speed or detection correctness.
+
+## 5. Native viewer readiness — synthetic display only
+
+On the interactive Windows desktop, run each command, visibly confirm rendering, close the window normally, and record exit status. No team image, overlay export, temporary image file or model is involved.
+
+```powershell
+& $BantaiPython -m tkinter
+& $BantaiPython -c "import matplotlib; matplotlib.use('TkAgg'); import matplotlib.pyplot as plt; f,a=plt.subplots(); a.plot([0,1],[0,1]); a.set_title('BANTAI Phase 2A viewer readiness — no model'); f.canvas.draw(); print('backend:',matplotlib.get_backend()); plt.show(block=True); plt.close(f); print('viewer returned normally')"
+```
+
+Tk alone is not proof the chosen Matplotlib backend renders; both checks matter. A process/GUI start or a remote headless backend is insufficient. If the actual native viewer cannot render, record a blocker rather than claiming viewer readiness. No display waiting is model timing, and no model timing exists in this phase.
+
+## Completion and stop boundary
+
+Update the ledger with actual target outputs/outcomes, selected environment path, exact resolved dependencies and install source, checkpoint metadata verification and native viewer confirmation. Keep passed, failed and unrun distinct. If a diagnosed CPU fallback is the usable route, state CPU-ready with GPU limitations explicitly. Required unresolved metadata, target package failures or viewer failures prevent full readiness.
+
+Stop after these checks. Do not implement the detector or its input/output pipeline, download/load pretrained weights, process photos, run inference, select clustering, train/fine-tune or start application modules. Detector implementation/inference needs later authorization. Existing JSON numeric/display contract and fictional examples are preserved, not executed here.

@@ -1,16 +1,16 @@
-# BANTAI Phase 1 implementation handoff for Antigravity
+# BANTAI Phase 1 implementation plan — Codex ownership
 
-Originally prepared 2026-10-17; published through merged PR #3. Status: planning deliverable with technical proposals and pending verification, not implementation authorization or Phase 1 acceptance. Current work is documentation correction only by Codex; Antigravity handles later authorized implementation. No dependencies, model weights, datasets, or detector code are installed, downloaded, or created by this work.
+Originally prepared 2026-10-17; published through merged PR #3. Status: published planning deliverable with technical proposals and pending verification; current Phase 2A preparation authorization does not accept Phase 1 or authorize detector implementation. The owner now assigns implementation to Codex and reports Antigravity made no changes. Phase 2A is authorized for Section 4 and Section 8 stages 2–3 only: local Windows setup/readiness. Detector implementation, model-weight downloads/loading and inference remain unauthorized. Local execution evidence is recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md); do not equate authorization or this plan with completed setup.
 
 ## 1. Repository state and requirement precedence
 
-Repository: `Piyaya-hub/BANTAI-Modeling-`. The correction fetched `origin/main` at `b366f769f38158675d02fda628c73971d30ed9bb`, the merge of PR #3; it was still the latest main at inspection. PRs #1–#2 had already merged. The clean checkout was inspected before creating `docs/phase-1-contract-corrections` from that main. This branch is for documentation and requested ignore-rule corrections only, not direct main changes or merge.
+Repository: `Piyaya-hub/BANTAI-Modeling-`. Current Phase 2A inspection fetched `origin/main` at `7a776cf`, the merge of PR #4 containing the contract corrections. PR #3 previously published this plan at `b366f76`. A clean checkout was used to create `docs/phase-2a-environment-preparation`; no direct main edits or merge are authorized. Earlier inspection details remain in Git history and the decision register.
 
 Read `AGENTS.md`, `README.md`, `.gitignore`, and all tracked `docs/` Markdown files. The tracked tree contains foundation/planning documentation and the ignore file, with no detector, dependency manifest/lock, inference configuration, or tracked photos/results/model cache. Ignored remote Python state is not evidence about the owner's Windows computer.
 
 Phase 0 is complete and Phase 1 planning is published. The latest owner requirements select Transformers and **functional visual checks on manually supplied unannotated team photographs**. Older mandatory annotations, held-out benchmarks, formal accuracy metrics, Phase 0-only task state, and pending PR #2/#3 language are superseded; history is retained in [DECISIONS.md](DECISIONS.md). The related scope, architecture, phase gates, test plan, README and agent/handoff guidance are corrected alongside this plan.
 
-Publication is not proof of local environment preparation, successful detection, or owner acceptance of every technical proposal. Setup, implementation and inference remain future authorized work under the agreed phase boundaries. Routine defaults inside an authorized phase do not require extra approval checkpoints. No annotation work, benchmark split, precision/recall/mAP, or numeric accuracy targets are required for this activity.
+Publication is not proof of local environment preparation, successful detection, or owner acceptance of every technical proposal. Phase 2A setup/readiness is now authorized under the agreed boundary; detector implementation and inference remain future work requiring later phase authorization. Routine defaults inside an authorized phase do not require extra approval checkpoints. No annotation work, benchmark split, precision/recall/mAP, or numeric accuracy targets are required for this activity.
 
 ## 2. Confirmed scope and evidence
 
@@ -18,7 +18,7 @@ Confirmed by owner: pretrained Grounding DINO Tiny, Hugging Face Transformers, W
 
 ### Official source findings
 
-The findings below preserve official-source checks from the original planning task; they were not reverified or expanded during this correction; no official example or published result is a BANTAI experiment.
+The findings below preserve official-source checks from the original planning task. Current Phase 2A package/wheel metadata rechecks and continuing source-access limits are recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md); they do not establish local compatibility. No official example or published result is a BANTAI experiment.
 
 | Finding | Evidence and verification limit |
 | --- | --- |
@@ -35,7 +35,7 @@ The findings below preserve official-source checks from the original planning ta
 
 The proxy returned `403 Forbidden` for Hugging Face, pytorch.org, developer.nvidia.com, and docs.nvidia.com. Their pages were not inspected. These were access limitations during the original planning session, not evidence that the user's computer lacks access.
 
-Before downloading weights later, Antigravity must open the exact [model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny), configuration and files; confirm the Swin-T/Tiny configuration, publisher/conversion provenance, model-specific license/usage conditions and any access terms, availability of safetensors, and immutable Hub commit. Pin processor and weights to the same verified revision. Do not infer checkpoint licensing solely from the original code license. Do not use `trust_remote_code=True` or download an alternative checkpoint silently.
+Before downloading weights later, Codex must open the exact [model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny), configuration and files; confirm the Swin-T/Tiny configuration, publisher/conversion provenance, model-specific license/usage conditions and any access terms, availability of safetensors, and immutable Hub commit. Pin processor and weights to the same verified revision. Do not infer checkpoint licensing solely from the original code license. Do not use `trust_remote_code=True` or download an alternative checkpoint silently.
 
 Check the detected Windows driver against NVIDIA's [CUDA 11.8 release notes](https://docs.nvidia.com/cuda/archive/11.8.0/cuda-toolkit-release-notes/index.html) and [compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html). Confirm RTX 2080 Super architecture against [NVIDIA's GPU table](https://developer.nvidia.com/cuda-legacy-gpus). Turing / compute capability 7.5 is the expected hardware fact, not a locally observed result. Driver suitability and installed memory remain unknown. No numerical minimum driver requirement is asserted as verified here.
 
@@ -67,7 +67,7 @@ This correction appends missing ignore rules `/data/input/`, `/results/`, `/.cac
 
 ## 4. Windows environment verification and proposed setup
 
-These PowerShell commands are **instructions for later execution on the target computer**, not commands run by Codex. Start at the actual repository root; do not reuse the cloud `.venv`.
+Phase 2A authorizes these setup/readiness steps on the actual Windows computer once preflight is available. Commands below are not claimed executed until results are recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md). This session currently has only cloud Linux access. Start at the actual repository root; do not reuse the cloud `.venv`.
 
 ### Read-only preflight
 
@@ -92,7 +92,7 @@ Record Windows version/architecture, Python architecture, driver, GPU identity, 
 
 Proposed baseline: Python 3.11 x64, `torch==2.7.1` with CUDA 11.8, `torchvision==0.22.1`, `transformers==4.51.3`, `Pillow==11.2.1`, and `matplotlib==3.10.3`. This is a reproducible source-checked baseline, not a claim to be latest or locally tested. Let Transformers resolve its required tokenizers, safetensors, Hub client, and other dependencies within its declared ranges, then freeze the exact verified environment. Review current package advisories before locking; if a required fix changes this baseline, recheck the pinned API and record the reason. No torchaudio or accelerate is required for single-device `.to(device)` inference.
 
-Proposed commands, to run only when implementation/setup is authorized and preflight is satisfactory:
+Setup is authorized by Phase 2A; run these proposed commands after checking actual Windows preflight and preserving any existing environment. No separate approval is needed for routine authorized setup, but missing target facts/access cannot be assumed:
 
 ```powershell
 py -3.11 -m venv .venv
@@ -476,13 +476,13 @@ For a decode error, use processing `status=error`, null dimensions where unavail
 
 ## 8. Ordered implementation checklist and acceptance gates
 
-All stages below are future work for Antigravity after plan review and explicit implementation authorization; Phase 1 is not declared accepted here. The Phase 2 inference gate still requires owner authorization; routine technical defaults within an authorized phase do not add new approval checkpoints. Stages 4–7 describe that future implementation/check activity, not permission to execute it during preparation.
+Codex owns these stages. Section 4 and stages 2–3 are now explicitly authorized as **Phase 2A**, with the boundary/acceptance evidence in [PHASES.md](PHASES.md#phase-2a--local-windows-environment-setup-and-readiness-verification). Stages 4–7, model-weight downloads/loading, detector implementation and inference remain unauthorized. Phase 1 acceptance or Windows readiness is not inferred from the authorization. Routine defaults within 2A need no additional phase approval; report actual evidence and stop after preparation.
 
 | Stage | Action | Concrete acceptance evidence |
 | --- | --- | --- |
 | 1 | Start a focused branch from current `main`; read instructions; confirm the corrected current guidance and preserve decision history. | Existing changes preserved; reviewed docs state Transformers + unannotated functional checking; no benchmark/annotation requirement introduced; no unrelated or direct-main changes. |
-| 2 | Run Windows preflight; verify official checkpoint metadata/conditions and driver compatibility; finalize environment proposal. | Local Python/driver/memory/package outputs recorded; exact Hub revision/config/license verified; CUDA choice justified or CPU fallback selected; no remote-machine assumptions. Missing facts remain explicit. |
-| 3 | After setup authorization, create isolated environment and lock compatible packages; verify native viewer and CPU/GPU tensor operations. | `pip check` passes; versions/device/build recorded; CPU path works; GPU either works or has a diagnosed fallback; Tk window opens/closes. No model detection claim from these checks. Owner reviews preparation evidence before the inference phase. |
+| 2 | Authorized Phase 2A: run Windows preflight; verify official checkpoint metadata/conditions and driver compatibility; finalize environment proposal. | Local Python/driver/memory/package outputs recorded; exact Hub revision/config/license verified; CUDA choice justified or CPU fallback selected; no remote-machine assumptions. Missing facts remain explicit. |
+| 3 | Authorized Phase 2A: create isolated environment and lock compatible packages; verify native viewer and CPU/GPU tensor operations. | `pip check` passes; versions/device/build recorded; CPU path works; GPU either works or has a diagnosed fallback; Tk window opens/closes. No model detection claim from these checks. Owner reviews preparation evidence before the inference phase. |
 | 4 | After inference implementation authorization, add minimal configuration/input/results contract handling. | Paths configurable and project-relative; empty/missing folders actionable; unsupported/decode errors distinct; originals unchanged; JSON written atomically; no source photos/cache/results tracked. Non-model checks exercise actual boundary behavior. |
 | 5 | Add pinned pretrained Transformers inference, exact mapping and conservative duplicate flags. | Processor/model use same verified revision; no training; grounded postprocessor uses verified API and original pixel sizes; raw phrases and scores preserved; unmapped outputs survive; no automatic clustering or fabricated group counts. |
 | 6 | Add native in-memory display, readable summaries and per-image JSON. | Visible boxes/labels/score percentages match JSON; no overall accuracy; windows release memory; default output creates no annotated images; no image overwrites; `ok`, `no_detections`, `error` distinguished independently of display states. Strict JSON sanitizes invalid values to null with diagnostics, invalid candidates are excluded from displayed/valid summaries, and initial inference JSON plus final display outcome are persisted atomically. Fixtures cover orientation/coordinates, numeric nulls, mapping/unmapped phrases, duplicate limits, source preservation, persistence interruption/failure and all display outcomes without claiming model performance. |
@@ -493,6 +493,6 @@ All stages below are future work for Antigravity after plan review and explicit 
 
 No additional user preference is needed to complete this plan. Proposed defaults resolve routine file layout, versions, folders, display, prompt mapping, and initial thresholds.
 
-Before setup/model execution: Antigravity must obtain local Windows preflight results and verify checkpoint card/revision/conditions plus driver compatibility through the official sources blocked in this session. These are concrete prerequisite checks, not requests for the user to pick technical versions or supply secret values. CPU fallback can unblock GPU-specific issues, but it cannot establish GPU acceptance.
+Before setup/model execution: Codex must obtain local Windows preflight results and verify checkpoint card/revision/conditions plus driver compatibility through the official sources blocked in this session. These are concrete prerequisite checks, not requests for the user to pick technical versions or supply secret values. CPU fallback can unblock GPU-specific issues, but it cannot establish GPU acceptance.
 
-Owner review and explicit implementation/phase authorization remain necessary before the future actions above. Category boundaries, exact aliases, overlap defaults and package pins remain technical proposals; apply the corrected numeric/display requirements consistently. Publication alone does not accept every proposal. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.
+Phase 2A setup/readiness is authorized; missing target evidence/access is the current prerequisite. Only later detector/inference phases require further phase authorization. Category boundaries, exact aliases, overlap defaults and package pins remain technical proposals; apply the corrected numeric/display requirements consistently. Publication alone does not accept every proposal. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.

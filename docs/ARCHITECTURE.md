@@ -1,6 +1,6 @@
 # Model inference architecture
 
-Status: proposed workflow for later authorized implementation by Antigravity. Phase 0 is complete and Phase 1 planning is published; hardware/environment/model compatibility and successful detection remain unverified. Current work is documentation correction only.
+Status: proposed detector workflow for later phase authorization under Codex ownership. Phase 0 is complete and Phase 1 planning is published; hardware/environment/model compatibility and successful detection remain unverified. Phase 2A currently authorizes local Windows environment setup/readiness only; the detector workflow below is not authorized for execution.
 
 ## Intended functional-check path
 

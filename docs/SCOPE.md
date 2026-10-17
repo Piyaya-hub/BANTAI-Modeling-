@@ -14,7 +14,7 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 - Functionally check pretrained GroundingDINO-T (Swin-T / Tiny configuration) through Hugging Face Transformers and direct text prompts. Automatic grouping, training, fine-tuning, and alternative models are outside this baseline.
 - Establish documentation and verifiable phase gates before model work.
 
-Phase 0 is complete and Phase 1 planning is published. Environment preparation is unverified. Current work is documentation correction only; Antigravity performs later authorized implementation under [PHASES.md](PHASES.md).
+Phase 0 is complete and Phase 1 planning is published. Environment preparation is unverified. Codex now owns implementation. Current authorization is Phase 2A local Windows environment setup/readiness only, mapped to plan Section 4 and Section 8 stages 2–3 under [PHASES.md](PHASES.md). No detector implementation or inference is authorized.
 
 ## Initial exclusions
 

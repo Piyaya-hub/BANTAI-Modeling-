@@ -2,13 +2,13 @@
 
 ## Current scope and evidence
 
-Phase 0 is complete and Phase 1 planning is published. Current work is documentation correction only; no software implementation or inference runs occur here. Antigravity will run the checks below during later authorized preparation/implementation.
+Phase 0 is complete and Phase 1 planning is published. Codex now owns implementation and is authorized for Phase 2A local Windows setup/readiness only, using plan Section 4 and Section 8 stages 2–3. Only environment/package/device/native-viewer probes and metadata inspection are in scope now; detector fixtures/software, photo processing, and model inference checks below remain future work. See [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md) for target evidence and current blockers.
 
 The owner manually downloads/extracts unannotated team photographs from Google Drive into a project folder. Current model checking is functional visual inspection, not formal ground-truth evaluation. No annotation work, benchmark split, precision/recall/mAP, or numerical accuracy target is required. Software fixtures verify program behavior and are not ground-truth evaluation of the model.
 
-## Documentation checks for this correction
+## Documentation checks
 
-Check all tracked Markdown references, parse every fenced JSON example strictly, and review current-state/category/phase/output/status consistency. Confirm original ignore rules remain intact and only `/data/input/`, `/results/`, and `/.cache/huggingface/` exclusions are appended if missing. Inspect for already tracked photos/results/caches without silently untracking them. Ensure the diff contains only requested documentation and ignore rules.
+Check all tracked Markdown references, parse every fenced JSON example strictly, and review current-state/category/phase/output/status consistency. Confirm existing ignore rules, including `/data/input/`, `/results/`, and `/.cache/huggingface/`, remain intact. Inspect for already tracked photos/results/caches without silently untracking them. Ensure the Phase 2A diff contains only authorized preparation/collaboration documentation and any explicitly needed environment helpers, never detector implementation.
 
 ## Planned software checks
 
