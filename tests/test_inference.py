@@ -45,7 +45,7 @@ class SyntheticTensor:
 
     def max(self, dim):
         assert dim == -1
-        return SimpleNamespace(values=SyntheticTensor([[max(row) if all(math.isfinite(v) for v in row) else float("nan")
+        return SimpleNamespace(values=SyntheticTensor([[float("nan") if any(math.isnan(v) for v in row) else max(row)
                                                       for row in batch] for batch in self.data]))
 
 
@@ -182,7 +182,7 @@ class InferenceTests(unittest.TestCase):
         processor.post_process_grounded_object_detection.return_value=[{
             "text_labels":["a discarded bag"],"boxes":SyntheticTensor([[1.5,1,4.5,3]]),"scores":SyntheticTensor([.8])}]
         torch=SimpleNamespace(sigmoid=lambda x:x)
-        result=extract_candidates(outputs,{"input_ids":"synthetic-ids"},processor,self.config,6,4,torch)
+        result=extract_candidates(outputs,{"input_ids":SyntheticTensor([[10,11]])},processor,self.config,6,4,torch)
         self.assertEqual([d["id"] for d in result],["q0","q1","q2"])
         self.assertEqual(result[0]["box_xyxy"],[1.5,1,4.5,3])
         self.assertEqual(result[1]["raw_phrase"],"")
@@ -202,7 +202,7 @@ class InferenceTests(unittest.TestCase):
         processor.post_process_grounded_object_detection.return_value=[{
             "text_labels":[],"boxes":SyntheticTensor([]),"scores":SyntheticTensor([])}]
         with self.assertRaises(InferenceError):
-            extract_candidates(outputs,{"input_ids":[]},processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x))
+            extract_candidates(outputs,{"input_ids":SyntheticTensor([[10]])},processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x))
 
     def test_grounded_adapter_uses_tensor_threshold_mask_at_float32_boundary(self):
         value=struct.unpack("f",struct.pack("f",.1))[0]
@@ -212,7 +212,72 @@ class InferenceTests(unittest.TestCase):
         processor=MagicMock()
         processor.post_process_grounded_object_detection.return_value=[{
             "text_labels":[],"boxes":SyntheticTensor([]),"scores":SyntheticTensor([])}]
-        self.assertEqual(extract_candidates(outputs,{"input_ids":[]},processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x)),[])
+        self.assertEqual(extract_candidates(outputs,{"input_ids":SyntheticTensor([[10]])},processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x)),[])
+
+    def test_expected_negative_infinity_padding_preserves_valid_predictions(self):
+        # Upstream fills both attention-mask zeros and the fixed-width text tail
+        # with -inf. This mirrors that layout; every value is synthetic.
+        for with_mask in (True, False):
+            logits = [.8,.2,float("-inf"),float("-inf")]
+            ids = [10,11,0] if with_mask else [10,11]
+            inputs = {"input_ids":SyntheticTensor([ids])}
+            if with_mask:
+                inputs["attention_mask"] = SyntheticTensor([[1,1,0]])
+            outputs = SimpleNamespace(logits=SyntheticTensor([[logits]]),
+                                      pred_boxes=SyntheticTensor([[[.5,.5,.5,.5]]]))
+            processor = MagicMock()
+            processor.post_process_grounded_object_detection.return_value = [{
+                "text_labels":["a discarded bag"], "boxes":SyntheticTensor([[1.5,1,4.5,3]]),
+                "scores":SyntheticTensor([.8])}]
+            result = extract_candidates(outputs,inputs,processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x))
+            self.assertEqual(len(result),1)
+            self.assertEqual(result[0]["state"],"retained")
+            self.assertEqual(result[0]["model_score"],.8)
+            self.assertEqual(result[0]["numeric_diagnostics"],[])
+            self.assertEqual(self.functional(result)["status"],"ok")
+
+    def test_padding_does_not_turn_below_threshold_queries_into_errors(self):
+        outputs = SimpleNamespace(logits=SyntheticTensor([[[.1,.2,float("-inf")]]]),
+                                  pred_boxes=SyntheticTensor([[[.5,.5,.5,.5]]]))
+        processor = MagicMock()
+        processor.post_process_grounded_object_detection.return_value = [{
+            "text_labels":[],"boxes":SyntheticTensor([]),"scores":SyntheticTensor([])}]
+        result = extract_candidates(outputs,{"input_ids":SyntheticTensor([[10,11]])},processor,self.config,6,4,
+                                    SimpleNamespace(sigmoid=lambda x:x))
+        self.assertEqual(result,[])
+        self.assertEqual(self.functional(result)["status"],"no_detections")
+
+    def test_active_nonfinite_and_unexpected_padding_nonfinite_remain_invalid(self):
+        for position,value in ((0,float("-inf")),(0,float("inf")),(0,float("nan")),
+                               (1,float("inf")),(1,float("nan")),(2,float("inf")),(2,float("nan"))):
+            with self.subTest(position=position,value=value):
+                tokens=[.2,float("-inf"),float("-inf")]
+                tokens[position]=value
+                outputs=SimpleNamespace(logits=SyntheticTensor([[tokens]]),pred_boxes=SyntheticTensor([[[.5,.5,.5,.5]]]))
+                torch=SimpleNamespace(sigmoid=lambda x:x)
+                selected=not any(math.isnan(v) for v in tokens) and max(tokens)>.35
+                processor=MagicMock()
+                processor.post_process_grounded_object_detection.return_value=[{
+                    "text_labels":["a discarded bag"] if selected else [],
+                    "boxes":SyntheticTensor([[1.5,1,4.5,3]] if selected else []),
+                    "scores":SyntheticTensor([max(tokens)] if selected else [])}]
+                result=extract_candidates(outputs,{"input_ids":SyntheticTensor([[10,0]]),
+                                          "attention_mask":SyntheticTensor([[1,0]])},processor,self.config,6,4,torch)
+                self.assertEqual(len(result),1)
+                self.assertEqual(result[0]["state"],"invalid")
+                self.assertIsNone(result[0]["model_score"])
+                self.assertIn("nonfinite_model_logit",[d["reason"] for d in result[0]["numeric_diagnostics"]])
+                self.assertEqual(self.functional(result)["error"]["code"],"invalid_predictions")
+
+    def test_invalid_attention_masks_are_not_guessed(self):
+        outputs=SimpleNamespace(logits=SyntheticTensor([[[.2,.1,float("-inf")]]]),
+                                pred_boxes=SyntheticTensor([[[.5,.5,.5,.5]]]))
+        for mask in ([0,0],[1],[1,2]):
+            with self.assertRaises(InferenceError) as caught:
+                extract_candidates(outputs,{"input_ids":SyntheticTensor([[10,11]]),
+                                            "attention_mask":SyntheticTensor([mask])},MagicMock(),self.config,6,4,
+                                   SimpleNamespace(sigmoid=lambda x:x))
+            self.assertEqual(caught.exception.code,"invalid_text_mask")
 
     def loader_fixtures(self):
         config=SimpleNamespace(_commit_hash=REVISION,model_type="grounding-dino",

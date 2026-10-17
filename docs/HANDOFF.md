@@ -1,5 +1,7 @@
 # BANTAI Phase 2C baseline handoff
 
+Latest follow-up: PR #7 is merged. Owner-supplied Windows tests ran 50 cases with 49 passes/one privilege-related symlink skip. The supplied first model attempt downloaded safetensors and reached query extraction, but a validator bug rejected the model's intentional negative-infinity text padding on all 900 queries. The focused `fix/grounding-dino-padding-logits` branch corrects the audit using attention-mask/tail positions, while retaining true nonfinite/box/score checks. **54 cloud software tests pass**; corrected target inference/native overlay outcomes remain pending. Reuse cached model files and the existing environment; preserve the failed run. See the supplied-evidence/correction section in [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). Earlier implementation-time unrun statements below are historical and narrowed by these supplied results.
+
 ## Current result and execution limits
 
 The owner instructed Codex to proceed with Phase 2C (D-025), superseding the previous stop-before-2C boundary. PR #6 is merged; this focused branch starts from current main `5db174b`. The baseline now implements pinned model/processor loading, float32 eval/inference mode, device handling/one auto-mode OOM CPU retry, exact mapping, conservative duplicate/review flags, readable summaries and native in-memory TkAgg viewing with the existing atomic display lifecycle. The CLI still defaults to preparation; inference requires `--mode infer`. Requirements and the existing verified target environment are preserved.

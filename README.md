@@ -12,7 +12,7 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-Phase 2B foundation is published through merged PR #6. The owner has authorized **Phase 2C**, and the pinned pretrained inference/mapping/native-display baseline is implemented for review. The default CLI remains preparation-only; `--mode infer` explicitly enables model loading/inference and optional viewing. Software checks pass, but no actual pretrained-model, target Windows/GPU or real-photo result is claimed by this cloud implementation. See [2C checks and limitations](docs/PHASE_2C_CHECKS.md).
+Phase 2B foundation is published through merged PR #6. The owner has authorized **Phase 2C**, and the pinned pretrained inference/mapping/native-display baseline is implemented for review. The default CLI remains preparation-only; `--mode infer` explicitly enables model loading/inference and optional viewing. Software checks pass. Supplied Windows follow-up ran the software suite and reached the first model attempt, exposing an expected-padding validator bug now corrected for review. A corrected target run and native photo rendering remain unverified; no detection-quality or GPU acceptance is claimed. See [2C checks and limitations](docs/PHASE_2C_CHECKS.md).
 
 The owner supplies unannotated team photographs, manually downloaded/extracted from Google Drive into a configurable project folder (proposed `data/input/`). The planned detection activity is functional checking and visual inspection, with no required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets.
 
