@@ -120,3 +120,7 @@ D-028: The owner supersedes below-threshold/full-dump console selection with pas
 ## Width-driven previews and full-mode restoration - 2026-10-18
 
 D-029: The owner requests larger configurable-width/aspect-preserving terminal previews with vertical scrolling, fewer pauses, fixed table alignment, token rows grouped by query, passing-only summary and working full below-threshold diagnostics. This supersedes D-028's restriction on explicit full-mode console output only. Preserve all inference, checkpoint/threshold, source/JSON and terminal-only boundaries. Verify using saved-result replay without rerunning inference; same branch and no merge. See [current terminal contract](TERMINAL_VIEWER.md).
+
+## Consistent mapping and presentation owner instruction - 2026-10-18
+
+D-030: The owner requests consistent detection summaries containing image/query IDs, raw decoded phrase, mapped category and mapping reason, score, threshold status and rounded boxes. Keep unmapped predictions distinct from failed detections; never force incomplete phrases into categories. Improve wrapping and terminal preview quality within the actual grid, explain resolution limits without claiming recovered detail, retain complete raw precision/token scores in JSON and summary/full modes. Use saved results where possible; preserve model inference, prompts, thresholds, originals and existing functionality. Continue the same feature branch/PR without merging. See [current presentation contract](TERMINAL_VIEWER.md).

@@ -18,7 +18,7 @@ class TerminalDisplayError(RuntimeError):
 
 
 def safe_text(value):
-    return json.dumps(str(value), ensure_ascii=True)[1:-1]
+    return json.dumps(str(value), ensure_ascii=True)[1:-1].replace("|", r"\u007c")
 
 
 def score_text(value):
@@ -126,12 +126,53 @@ def selected_queries(result, mode="summary", below_count=0):
     return [by_id.get(d["id"], dict(d, threshold_pass=True)) for d in passing_candidates(result)]
 
 
+def quoted_text(value):
+    """Quote raw text so empty strings and controls remain explicit."""
+    return json.dumps(value,ensure_ascii=True).replace("|",r"\u007c")
+
+
+def box_text(box):
+    if box is None:
+        return "null"
+    return "["+", ".join(f"{v:.2f}" if finite_number(v) else "null" for v in box)+"]"
+
+
+def detection_fields(result, query, *, full=False):
+    """Presentation-only record; never remap phrases or round persisted data."""
+    d=next((d for d in result["detections"] if d["id"]==query["id"]),None)
+    record=d if d is not None else query
+    phrase=record["raw_phrase"]
+    category=record["category"]
+    unmapped=category is None and phrase is not None
+    mapping=record.get("mapping_reason","not recorded")
+    invalid=bool(record["numeric_diagnostics"]) or bool(query.get("invalid_token_positions"))
+    passed=query.get("threshold_pass",True)
+    model_score=query["model_score"] if full else record["model_score"]
+    status=decision(model_score,passed,invalid)
+    fields=[("Image ID",quoted_text(result["source"]["image_id"])),
+            ("Query ID",safe_text(query["id"])),
+            ("Raw decoded phrase",quoted_text(phrase) if phrase is not None else "not decoded"),
+            ("Mapped category",safe_text(category) if category is not None else "unmapped" if unmapped else "not assigned (not decoded)"),
+            ("Mapping reason",safe_text(mapping)),
+            ("Model score",score_text(model_score)),
+            ("Threshold status",status),
+            ("Box xyxy (pixels)",box_text(record.get("box_xyxy",record.get("raw_box_xyxy")))),
+            ("Policy state",record.get("state","diagnostic only"))]
+    if full and "raw_box_xyxy" in record and record.get("box_xyxy") != record["raw_box_xyxy"]:
+        fields.append(("Raw box xyxy",box_text(record["raw_box_xyxy"])))
+    return fields
+
+
 def table_pages(headers, rows, *, width, page_rows):
-    """Aligned 3/4-column tables; the status heading never needs to wrap."""
+    """Responsive wrapped tables: preserve complete headers/values without clipping."""
     width = max(24,width)
     status_width = max(len(headers[-1]), max((len(str(r[-1])) for r in rows),default=0))
     status_width = max(15,status_width)
-    if len(headers) == 4:
+    if len(headers) == 2:
+        label_width=min(24,max(10,width//3),max(len(headers[0]),max((len(str(r[0])) for r in rows),default=0)))
+        widths=[label_width,width-label_width-3]
+        flexible=1
+    elif len(headers) == 4:
         query_width = min(8,max(5,max((len(str(r[0])) for r in rows),default=5)))
         widths = [query_width,width-query_width-6-status_width-9,6,status_width]
         flexible = 1
@@ -152,8 +193,6 @@ def table_pages(headers, rows, *, width, page_rows):
             yield page or ["(no rows)"]
         return
     labels = list(headers)
-    if len(labels[flexible]) > widths[flexible]:
-        labels[flexible] = "Phrase" if len(headers)==4 else "Token"
     def render(row):
         cells = [textwrap.wrap(str(c),width=w,break_long_words=True,break_on_hyphens=False) or [""] for c,w in zip(row,widths)]
         return [" | ".join((c[i] if i<len(c) else "").ljust(w) for c,w in zip(cells,widths)).rstrip()
@@ -182,13 +221,11 @@ def presentation_blocks(result, mode="summary", *, width=80, below_count=0, page
     queries=selected_queries(result,mode)
     full=mode=="full" and raw is not None
     by_id={d["id"]:d for d in result["detections"]}
-    if full:
-        query_rows=[(q["id"],"not decoded" if q["raw_phrase"] is None else safe_text(q["raw_phrase"]),score_text(q["model_score"]),
-                     decision(q["model_score"],q["threshold_pass"],bool(q["numeric_diagnostics"]) or bool(q.get("invalid_token_positions")))) for q in queries]
-    else:
-        query_rows=[(d["id"],safe_text(d["raw_phrase"]),score_text(d["model_score"]),"PASS") for d in detections]
-    for page in table_pages(("Query","Detected Phrase","Score","Box Status"),query_rows,width=width,page_rows=page_rows):
-        yield ["DETECTION SUMMARY"]+page
+    yield ["DETECTION SUMMARY"]+textwrap.wrap("Image ID: "+quoted_text(result["source"]["image_id"]),width=width)+textwrap.wrap("Processing status: "+result["status"],width=width)
+    for q in queries:
+        fields=detection_fields(result,q,full=full)
+        for page in table_pages(("Field","Value"),fields,width=width,page_rows=page_rows):
+            yield [f"DETECTION {safe_text(q['id'])}"]+page
     if not detections:
         yield textwrap.wrap("No valid retained queries pass the configured box threshold; no boxes are drawn.",width=width)
     counts=Counter(d["category"] or "unmapped" for d in detections)
@@ -199,9 +236,9 @@ def presentation_blocks(result, mode="summary", *, width=80, below_count=0, page
         info.append("Full diagnostics include every saved raw query. Only valid retained passing boxes are drawn.")
     elif mode=="full":
         info.append("Raw diagnostics unavailable in this older record; only saved retained predictions can be shown.")
+    if any(d["category"] is None for d in detections):
+        info.append("An unmapped retained/PASS prediction is not a failed detection. Its decoded phrase has no assigned category; incomplete phrases are never forced into categories.")
     yield [line for text in info for line in textwrap.wrap(text,width=width)]
-    for d in detections:
-        yield [line for text in [f"BOX {d['id']}: {d['box_xyxy']}",f"CATEGORY {d['id']}: {d['category'] or 'unmapped'}"] for line in textwrap.wrap(text,width=width)]
     yield ["TEXT-TOKEN SCORE DETAILS"]
     token_count=0
     for q in queries if raw is not None else []:
@@ -248,16 +285,29 @@ def summary(result, mode=None, **overrides):
     return "\n\n".join("\n".join(block) for block in presentation_blocks(result, mode, **options))
 
 
+def preview_dimensions(image, result, *, columns=None):
+    desired=result.get("display",{}).get("preview_width",120)
+    available=columns if columns is not None else min(desired,terminal_size().columns-1)
+    width=min(image.width,max(1,min(400,available)))
+    return width,max(1,round(image.height*width/image.width))
+
+
+def preview_description(image,result,*,columns=None):
+    width,height=preview_dimensions(image,result,columns=columns)
+    lines=[f"Preview: source {image.width}x{image.height} px -> {width}x{height} sampled px / {(height+1)//2} terminal rows.",
+           "Truecolor half-block grid; Lanczos downsampling, no upscaling. Small details can disappear; terminal size limits resolution."]
+    if any(len(d["id"])>width for d in passing_candidates(result)):
+        lines.append("This source-sized grid is too narrow for some full query ID labels; see the detection records.")
+    return lines
+
+
 def terminal_image_lines(image, result, *, columns=None, rows=None):
     """Width-driven square pixels; vertical scrolling is intentional.
 
     rows remains an accepted legacy argument but no longer limits image height.
     """
     from PIL import Image, ImageDraw
-    size = terminal_size()
-    desired = result.get("display",{}).get("preview_width",120)
-    columns = max(1,min(400,columns if columns is not None else min(desired,size.columns-1)))
-    width, height = columns,max(1,round(image.height*columns/image.width))
+    width,height=preview_dimensions(image,result,columns=columns)
     colors = {"garbage_pile": (255,165,0), "individual_litter": (0,255,0), "group_of_individual_litter": (0,255,255), None: (255,0,255)}
     labels = {}
     with image.resize((width,height), Image.Resampling.LANCZOS).convert("RGB") as preview:
@@ -269,6 +319,8 @@ def terminal_image_lines(image, result, *, columns=None, rows=None):
             color = colors[d["category"]]
             draw.rectangle(box,outline=color,width=1)
             ident = d["id"]
+            if len(ident)>width:
+                continue  # Never print a misleading, clipped query ID.
             lx = max(0,min(int(box[0]),width-len(ident)))
             preferred = min((height-1)//2,int(box[1])//2)
             candidates = sorted(range((height+1)//2), key=lambda y: abs(y-preferred))
@@ -286,8 +338,11 @@ def terminal_image_lines(image, result, *, columns=None, rows=None):
                     line.append(f"\x1b[38;2;0;0;0m\x1b[48;2;{r};{g};{b}m{char}")
                 else:
                     r,g,b = pixels[x,y]
-                    br,bg,bb = pixels[x,min(y+1,height-1)]
-                    line.append(f"\x1b[38;2;{r};{g};{b}m\x1b[48;2;{br};{bg};{bb}m\u2580")
+                    background="\x1b[49m"
+                    if y+1<height:
+                        br,bg,bb=pixels[x,y+1]
+                        background=f"\x1b[48;2;{br};{bg};{bb}m"
+                    line.append(f"\x1b[38;2;{r};{g};{b}m{background}\u2580")
             yield "".join(line)+"\x1b[0m"
 
 
@@ -295,7 +350,8 @@ def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None)
     stream = sys.stdout if stream is None else stream
     input_stream = sys.stdin if input_stream is None else input_stream
     # No escape bytes are emitted until capabilities have been checked.
-    stream.write(f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}\n")
+    heading=f"IMAGE: {safe_text(Path(result['source']['image_id']).name)}"
+    stream.write("\n".join(textwrap.wrap(heading,width=max(24,terminal_size(stream).columns-1)))+"\n")
     stream.flush()
     size = terminal_capabilities(stream)
     settings=result.get("display",{})
@@ -313,6 +369,7 @@ def show_image(image, result, *, cache_dir=None, stream=None, input_stream=None)
             raise TerminalDisplayError("Terminal input closed during paging; display unfinished.")
     try:
         image_width=min(width,settings.get("preview_width",120))
+        write([line for text in preview_description(image,result,columns=image_width) for line in textwrap.wrap(text,width=width)])
         for line in terminal_image_lines(image,result,columns=image_width):
             write([line])
         # Summary streams together with no Enter prompts. Full-mode paging is

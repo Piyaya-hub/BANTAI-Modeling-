@@ -22,6 +22,7 @@ from scripts.pipeline import run_inference
 from scripts.postprocessing import apply_policies, map_phrase, normalize_phrase
 from scripts.results import candidate, make_result, prepare_result, save_result, validate_result
 from scripts.viewer import candidate_label, show_image, summary, terminal_image_lines, TerminalDisplayError, terminal_capabilities, selected_queries, presentation_blocks, decision, passing_candidates, float32_pass
+from scripts.viewer import detection_fields, preview_dimensions, preview_description, table_pages
 
 
 class SyntheticTensor:
@@ -648,6 +649,54 @@ class InferenceTests(unittest.TestCase):
             bad["display"][key]=value
             with self.assertRaises(ConfigError):
                 validate_config(bad)
+
+    def test_detection_records_preserve_mapping_and_round_only_presentation(self):
+        result=self.functional([self.prediction("q0",phrase="a garbage pile",score=.419058620929718),
+                                self.prediction("q1",phrase="a group",score=.49413442611694336)])
+        before=copy.deepcopy(result)
+        records=[dict(detection_fields(result,d)) for d in result["detections"]]
+        self.assertEqual(list(records[0]),list(records[1]))
+        self.assertEqual(records[0]["Mapped category"],"garbage_pile")
+        self.assertEqual(records[1]["Raw decoded phrase"],'"a group"')
+        self.assertEqual(records[1]["Mapped category"],"unmapped")
+        self.assertEqual(records[1]["Mapping reason"],"no_exact_alias")
+        self.assertEqual(records[1]["Threshold status"],"PASS")
+        self.assertEqual(records[1]["Model score"],"0.4941")
+        self.assertEqual(records[1]["Box xyxy (pixels)"],"[0.00, 0.00, 4.00, 3.00]")
+        for mode in ("summary","full"):
+            self.assertIn("not a failed detection",summary(result,mode))
+        self.assertEqual(result,before)
+
+    def test_complete_detection_fields_wrap_without_clipping_or_false_columns(self):
+        result=self.functional([self.prediction("q0",phrase="a group | with a very long incomplete phrase\n"*4)])
+        result["source"]["image_id"]="nested/"*30+"photo.jpg"
+        fields=detection_fields(result,result["detections"][0])
+        for width in (24,32,49,79,119):
+            pages=list(table_pages(("Field","Value"),fields,width=width,page_rows=50))
+            self.assertTrue(all(len(line)<=width for page in pages for line in page))
+            body="\n".join(line for page in pages for line in page)
+            self.assertIn(r"\u007c",body)
+            self.assertNotIn("...",body)
+            separators=[i for i,c in enumerate(pages[0][0]) if c=="|"]
+            for page in pages:
+                for line in page:
+                    if "|" in line:
+                        self.assertEqual([i for i,c in enumerate(line) if c=="|"],separators)
+
+    def test_preview_never_upscales_and_preserves_odd_source_edge(self):
+        result=self.functional([])
+        with Image.new("RGB",(3,5),(10,20,30)) as image:
+            original=image.tobytes()
+            self.assertEqual(preview_dimensions(image,result,columns=120),(3,5))
+            lines=list(terminal_image_lines(image,result,columns=120))
+            self.assertEqual(len(lines),3)
+            self.assertIn("\x1b[49m",lines[-1])
+            self.assertNotIn("\x1b[49m",lines[0])
+            caption=" ".join(preview_description(image,result,columns=120))
+            self.assertIn("3x5 sampled px",caption)
+            self.assertIn("no upscaling",caption)
+            self.assertIn("Small details can disappear",caption)
+            self.assertEqual(image.tobytes(),original)
 
     def bare_detector(self, requested="auto", actual="cuda"):
         d=GroundingDinoDetector.__new__(GroundingDinoDetector)

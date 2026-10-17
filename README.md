@@ -58,6 +58,8 @@ Inference mode may download the pinned processor/config/safetensors into `.cache
 
 Inference results, `run.json`, `environment.json` and `preprocessing.json` are JSON-only outputs under a reserved run directory. Source images are unchanged. Default terminal viewing prints a truecolor half-block preview and results below it, then atomically updates display outcome after stdout flush. Closing/interruption before the final update can leave pending; failed display preserves successful inference. Failures to initialize the runtime/load the model are processing errors with no detections fabricated. Direct package versions must match the 2A baseline; missing/mismatched packages fail before any download.
 
+Detection records show the same image/query IDs, quoted raw phrase, saved category/mapping reason, score, threshold status and rounded box across images. `unmapped` is distinct from failed inference or a failed threshold decision. The preview reports its source/sample dimensions, uses Lanczos downsampling without upscaling, and cannot recover photo detail lost to the terminal grid. Widen the terminal as well as increasing preview width for more samples; JSON retains full precision.
+
 Exit codes: 0 for completed requested processing/display; 1 for per-image processing or enabled-display errors after batch continuation; 2 for configuration/input-folder/persistence errors or unsupported-only inputs; 130 for interrupted inference runs. `no_detections` only follows successful model/postprocessing with no above-threshold or invalid candidates. Candidate counts are not physical object/independent-region counts, which remain unknown. Scores are not accuracy.
 
 ## Dependency reproduction reference
