@@ -74,8 +74,25 @@ def validate_config(value, root=ROOT):
         if not finite_number(post["overlap_iou"]) or not 0 <= post["overlap_iou"] <= 1:
             raise ConfigError("overlap_iou must be finite in [0,1]")
         d = c["display"]
-        if type(d["enabled"]) is not bool or d["backend"] != "TkAgg" or d["save_annotated"] is not False:
-            raise ConfigError("display requires boolean enabled, TkAgg, save_annotated=false")
+        if type(d["enabled"]) is not bool or d["backend"] not in ("terminal", "TkAgg") or d["save_annotated"] is not False:
+            raise ConfigError("display requires boolean enabled, terminal backend, save_annotated=false")
+        # Accept historical configurations, but never launch their former GUI backend.
+        d["backend"] = "terminal"
+        if d.setdefault("terminal_mode", "summary") not in ("summary", "full"):
+            raise ConfigError("terminal_mode must be summary or full")
+        for key, default, maximum in (("summary_below_threshold", 0, 900), ("page_rows", 10, 100)):
+            value = d.setdefault(key, default)
+            if type(value) is not int or not (0 if key == "summary_below_threshold" else 1) <= value <= maximum:
+                raise ConfigError(f"{key} must be an integer in the supported range")
+        if type(d.setdefault("include_special_tokens", False)) is not bool:
+            raise ConfigError("include_special_tokens must be boolean")
+        # Summary remains passing-only; full explicitly opts into raw diagnostics.
+        d["summary_below_threshold"] = 0
+        if type(d.setdefault("preview_width",120)) is not int or not 20 <= d["preview_width"] <= 400:
+            raise ConfigError("preview_width must be an integer in [20,400]")
+        if type(d.setdefault("paginate",False)) is not bool:
+            raise ConfigError("paginate must be boolean")
+
     except (KeyError, TypeError) as exc:
         raise ConfigError(f"missing or malformed configuration field: {exc}") from exc
     return c

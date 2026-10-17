@@ -64,7 +64,7 @@ def active_text_tokens(inputs):
     return [bool(v) for v in mask[0]]
 
 
-def extract_candidates(outputs, inputs, processor, config, width, height, torch):
+def extract_candidates(outputs, inputs, processor, config, width, height, torch, *, diagnostics=None):
     """Audit raw queries before upstream threshold comparisons can hide invalids.
 
     Grounded postprocessing uses the pinned API. Invalid raw queries below the
@@ -73,7 +73,8 @@ def extract_candidates(outputs, inputs, processor, config, width, height, torch)
     """
     logits = outputs.logits.detach().cpu().tolist()
     normalized = outputs.pred_boxes.detach().cpu().tolist()
-    score_tensor = torch.sigmoid(outputs.logits).max(dim=-1).values
+    probabilities = torch.sigmoid(outputs.logits)
+    score_tensor = probabilities.max(dim=-1).values
     scores = score_tensor.detach().cpu().tolist()
     # Use torch's dtype-aware comparison exactly as the pinned processor does;
     # comparing exported float32 values to Python floats can differ at a boundary.
@@ -84,6 +85,8 @@ def extract_candidates(outputs, inputs, processor, config, width, height, torch)
     if not (len(rows) == len(boxes) == len(query_scores)):
         raise InferenceError("postprocessing", "invalid_output_shape", "Inconsistent query counts")
     active = active_text_tokens(inputs)
+    if rows and (len(active) > len(rows[0]) or any(len(row) != len(rows[0]) for row in rows)):
+        raise InferenceError("postprocessing", "invalid_output_shape", "Token frame does not align with logits")
     if rows and not any(active[:len(rows[0])]):
         raise InferenceError("postprocessing", "invalid_text_mask", "No active text token in the model's output frame")
     selected = [i for i, retained in enumerate(keep[0]) if retained]
@@ -99,6 +102,21 @@ def extract_candidates(outputs, inputs, processor, config, width, height, torch)
     if not (len(selected) == len(phrases) == len(pixel_boxes) == len(selected_scores)):
         raise InferenceError("postprocessing", "invalid_output_shape", "Grounded results do not match raw threshold selection")
     by_query = {q: (phrase, box, score) for q, phrase, box, score in zip(selected, phrases, pixel_boxes, selected_scores)}
+    if diagnostics is not None:
+        ids = inputs["input_ids"].detach().cpu().tolist()[0]
+        positions = [j for j, enabled in enumerate(active) if enabled and ids[j] != processor.tokenizer.pad_token_id]
+        token_names = processor.tokenizer.convert_ids_to_tokens(ids)
+        if len(token_names) != len(ids) or not all(isinstance(t, str) for t in token_names):
+            raise InferenceError("postprocessing", "invalid_tokens", "Tokenizer did not preserve input-token alignment")
+        token_scores = probabilities.detach().cpu().tolist()[0]
+        token_keep = (probabilities > config["text_threshold"]).detach().cpu().tolist()[0]
+        diagnostics.update(schema_version="bantai.query-diagnostics.v1",
+                           score_definition="sigmoid(logit); query score is maximum over model token frame; not accuracy",
+                           threshold=config["threshold"], text_threshold=config["text_threshold"],
+                           padding_policy="exclude attention-mask zero positions, pad token IDs and fixed-width tail; retain other active special tokens",
+                           tokens=[{"position": j, "token_id": ids[j], "token": token_names[j],
+                                    "special": ids[j] in processor.tokenizer.all_special_ids} for j in positions],
+                           queries=[])
     candidates = []
     for i, (tokens, box, score) in enumerate(zip(rows, boxes, query_scores)):
         if not isinstance(tokens, list) or not tokens or not isinstance(box, list) or len(box) != 4:
@@ -123,6 +141,19 @@ def extract_candidates(outputs, inputs, processor, config, width, height, torch)
         d["query_index"] = i
         if bad_logits:
             d["numeric_diagnostics"].append({"field": "logits", "reason": "nonfinite_model_logit"})
+        if diagnostics is not None:
+            diagnostics["queries"].append({
+                "id": f"q{i}", "query_index": i,
+                "model_score": query_scores[i] if finite_number(query_scores[i]) else None,
+                "threshold_pass": bool(keep[0][i]),
+                "raw_phrase": phrase if i in by_query else None,
+                "category": category if i in by_query else None,
+                "raw_box_xyxy": d["raw_box_xyxy"],
+                "numeric_diagnostics": list(d["numeric_diagnostics"]),
+                "token_scores": [token_scores[i][j] if finite_number(tokens[j]) and finite_number(token_scores[i][j]) else None for j in positions],
+                "token_threshold_pass": [bool(token_keep[i][j]) if finite_number(tokens[j]) else False for j in positions],
+                "invalid_token_positions": [j for j in positions if not finite_number(tokens[j])],
+            })
         if d["state"] == "invalid" or i in by_query:
             candidates.append(d)
     return candidates
@@ -134,7 +165,7 @@ class GroundingDinoDetector:
         self.versions = runtime_versions()  # Fail before downloads if the runtime is missing/mismatched.
         try:
             import torch
-            from transformers import AutoConfig, AutoModelForZeroShotObjectDetection, AutoProcessor
+            from transformers import AutoConfig, AutoModelForZeroShotObjectDetection, GroundingDinoProcessor
         except Exception as exc:
             raise InferenceError("runtime", "dependency_import_failed", f"Verified library import failed ({type(exc).__name__}); inspect the target environment") from exc
         self.torch = torch
@@ -163,7 +194,9 @@ class GroundingDinoDetector:
                     or model_config.backbone_config.num_heads != [3, 6, 12, 24]):
                 raise InferenceError("model_load", "configuration_mismatch", "Expected Grounding DINO with Swin backbone")
             model_config.disable_custom_kernels = True
-            self.processor = AutoProcessor.from_pretrained(config["model"]["id"], **kwargs)
+            # Use the known built-in processor. AutoProcessor discovery in this pinned
+            # release can omit local_files_only/revision during cached-file probing.
+            self.processor = GroundingDinoProcessor.from_pretrained(config["model"]["id"], **kwargs)
             self.model = AutoModelForZeroShotObjectDetection.from_pretrained(
                 config["model"]["id"], config=model_config, use_safetensors=True,
                 torch_dtype=torch.float32, **kwargs)
@@ -218,13 +251,18 @@ class GroundingDinoDetector:
             self.torch.cuda.synchronize()
 
     def _once(self, image):
+        self.query_diagnostics = None
         inputs = self.processor(images=image, text=self.config["prompt"], return_tensors="pt")
         inputs = inputs.to(self.device)
         with self.torch.inference_mode():
             self.forward_attempts += 1
             outputs = self.model(**inputs)
             self.completed_forwards += 1
-        return extract_candidates(outputs, inputs, self.processor, self.config, image.width, image.height, self.torch)
+        diagnostics = {}
+        predictions = extract_candidates(outputs, inputs, self.processor, self.config, image.width, image.height,
+                                         self.torch, diagnostics=diagnostics)
+        self.query_diagnostics = diagnostics
+        return predictions
 
     def _warm_and_measure(self, image):
         warmup_ms = None

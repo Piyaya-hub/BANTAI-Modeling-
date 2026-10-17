@@ -1,5 +1,7 @@
 # Development phases
 
+Owner-authorized viewer amendment: replace native TkAgg viewing with terminal ANSI/Unicode rendering and add unfiltered query/token diagnostics, summary/full modes, tests and documentation. Acceptance criterion 5 now uses terminal writes/flush instead of window closure; retain persist-before-display and separate display failure. See [terminal contract](TERMINAL_VIEWER.md). No broader phase transition is implied.
+
 Phase 0 is complete; the Phase 1 planning deliverable is published through merged PR #3. Publication does not establish environment preparation, successful detection, or owner acceptance of every proposal. Codex now owns implementation, replacing Antigravity (owner reports no Antigravity changes). Phase 2A is complete on supplied evidence; the owner now authorizes Phase 2C baseline inference and native display; routine defaults within an authorized phase do not introduce extra approval checkpoints.
 
 | Phase | Work and current status | Acceptance evidence |
@@ -54,6 +56,8 @@ Acceptance criteria:
 Implementation and software checks are recorded in [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). Requirements and supplied 2A evidence remain unchanged; no reinstall/fresh-install claim.
 
 ## Present gate
+
+Direct Windows follow-up on the padding fix now records successful cached CUDA inference on one photo and normal native display, with 53 software tests passing and one privilege-related skip. See [actual Windows evidence](PHASE_2C_WINDOWS_RUN.md). The owner reports correct detections and small piles needing review; broader scene coverage and phase acceptance remain unresolved. The paragraph below describes the earlier pre-correction gate.
 
 Phase 2B is merged through PR #6, with current main `5db174b` at branch creation. Phase 2C baseline implementation is available for review; **valid target detections, model-memory/device acceptance and native photo-overlay rendering remain unverified**. Supplied follow-up reached the first model attempt after a completed weight download, but an implementation bug rejected expected text-padding logits; the focused correction is described in [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). The cloud itself still lacks torch/Transformers and target desktop/photos. An actual local-files-only CLI probe records `runtime/missing_dependency`, not no detections. This is an execution prerequisite, not a request for renewed phase authorization.
 

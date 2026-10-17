@@ -21,7 +21,8 @@ from scripts.inference import (GroundingDinoDetector, InferenceError, DIRECT_VER
 from scripts.pipeline import run_inference
 from scripts.postprocessing import apply_policies, map_phrase, normalize_phrase
 from scripts.results import candidate, make_result, prepare_result, save_result, validate_result
-from scripts.viewer import candidate_label, draw_overlays, show_image, summary
+from scripts.viewer import candidate_label, show_image, summary, terminal_image_lines, TerminalDisplayError, terminal_capabilities, selected_queries, presentation_blocks, decision, passing_candidates, float32_pass
+from scripts.viewer import detection_fields, preview_dimensions, preview_description, table_pages
 
 
 class SyntheticTensor:
@@ -148,8 +149,9 @@ class InferenceTests(unittest.TestCase):
         processed, _ = apply_policies(predictions)
         self.assertEqual(processed[0]["state"],"invalid")
         text = summary(self.functional(processed))
-        self.assertIn("synthetic-bad invalid (excluded)",text)
-        self.assertIn("70.0% model score",text)
+        self.assertNotIn("synthetic-bad",text)
+        self.assertNotIn("INVALID",text)
+        self.assertIn("0.7000",text)
         self.assertIn("individual_litter=1",text)
         self.assertIn("Physical object count: unknown",text)
 
@@ -286,9 +288,9 @@ class InferenceTests(unittest.TestCase):
         model.config=config
         processor=MagicMock()
         processor.image_processor.to_dict.return_value={"synthetic_processor":True}
-        module=SimpleNamespace(AutoConfig=MagicMock(),AutoProcessor=MagicMock(),AutoModelForZeroShotObjectDetection=MagicMock())
+        module=SimpleNamespace(AutoConfig=MagicMock(),GroundingDinoProcessor=MagicMock(),AutoModelForZeroShotObjectDetection=MagicMock())
         module.AutoConfig.from_pretrained.return_value=config
-        module.AutoProcessor.from_pretrained.return_value=processor
+        module.GroundingDinoProcessor.from_pretrained.return_value=processor
         module.AutoModelForZeroShotObjectDetection.from_pretrained.return_value=model
         torch=SimpleNamespace(float32="synthetic-float32",cuda=SimpleNamespace(is_available=lambda:False,OutOfMemoryError=SyntheticCudaOOM))
         return module,torch,model,processor
@@ -298,7 +300,7 @@ class InferenceTests(unittest.TestCase):
         with patch("scripts.inference.runtime_versions",return_value=DIRECT_VERSIONS), \
                 patch.dict("sys.modules",{"torch":torch,"transformers":module}):
             d=GroundingDinoDetector(self.config,local_files_only=True)
-        for api in (module.AutoConfig,module.AutoProcessor,module.AutoModelForZeroShotObjectDetection):
+        for api in (module.AutoConfig,module.GroundingDinoProcessor,module.AutoModelForZeroShotObjectDetection):
             kwargs=api.from_pretrained.call_args.kwargs
             self.assertEqual(kwargs["revision"],REVISION)
             self.assertEqual(kwargs["cache_dir"],self.config["paths"]["cache"])
@@ -345,28 +347,356 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(calls,["cpu","enter","exit"])
         self.assertEqual(d.completed_forwards,1)
 
-    def test_native_viewer_requests_tk_draws_and_closes_after_normal_return_or_error(self):
-        # A call-order simulation, not evidence a native desktop window rendered.
-        for fail in (False,True):
-            mpl=MagicMock()
-            plt=MagicMock()
-            mpl.pyplot=plt
-            fig,ax=MagicMock(),MagicMock()
-            plt.subplots.return_value=(fig,ax)
-            if fail:
-                fig.canvas.draw.side_effect=RuntimeError("synthetic draw failure")
-            with Image.new("RGB",(6,4)) as image, \
-                    patch.dict("sys.modules",{"matplotlib":mpl,"matplotlib.pyplot":plt}), \
-                    patch("scripts.viewer.draw_overlays"):
-                if fail:
-                    with self.assertRaises(RuntimeError):
-                        show_image(image,self.functional(),cache_dir=self.root / "cache")
-                    plt.show.assert_not_called()
-                else:
-                    show_image(image,self.functional(),cache_dir=self.root / "cache")
-                    plt.show.assert_called_once_with(block=True)
-                mpl.use.assert_called_once_with("TkAgg",force=True)
-                plt.close.assert_called_once_with(fig)
+    def raw_fixture(self):
+        import torch
+        # Actual tensor operations on synthetic data, never pretrained predictions.
+        logits = torch.tensor([[[0., -2., float("-inf"), float("-inf")],
+                                [-4., -3., float("-inf"), float("-inf")],
+                                [float("nan"), -2., float("-inf"), float("-inf")]]])
+        outputs = SimpleNamespace(logits=logits, pred_boxes=torch.tensor([[[.5,.5,.5,.5]]*3]))
+        inputs = {"input_ids": torch.tensor([[101, 123, 0]]), "attention_mask": torch.tensor([[1,1,0]])}
+        processor = MagicMock()
+        processor.tokenizer.convert_ids_to_tokens.return_value = ["[CLS]", "litter", "[PAD]"]
+        processor.tokenizer.all_special_ids = [101, 0]
+        processor.tokenizer.pad_token_id = 0
+        processor.post_process_grounded_object_detection.return_value = [{
+            "text_labels": ["a discarded bag"], "boxes": torch.tensor([[1.5,1.,4.5,3.]]), "scores": torch.tensor([.5])}]
+        return torch, outputs, inputs, processor
+
+    def test_raw_scores_alignment_padding_invalid_and_filter_equivalence(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        raw = {}
+        args = (outputs, inputs, processor, self.config, 6, 4, torch)
+        with_raw = extract_candidates(*args, diagnostics=raw)
+        self.assertEqual(with_raw, extract_candidates(*args))
+        self.assertEqual([t["position"] for t in raw["tokens"]], [0,1])
+        self.assertEqual([t["token"] for t in raw["tokens"]], ["[CLS]", "litter"])
+        self.assertEqual(len(raw["queries"]), 3)
+        self.assertAlmostEqual(raw["queries"][0]["token_scores"][1], torch.sigmoid(torch.tensor(-2.)).item())
+        rejected = raw["queries"][1]
+        self.assertFalse(rejected["threshold_pass"])
+        self.assertIsNone(rejected["raw_phrase"])
+        self.assertIsNone(rejected["category"])
+        self.assertTrue(all(v > 0 for v in rejected["token_scores"]))
+        self.assertIsNone(raw["queries"][2]["token_scores"][0])
+        self.assertEqual(raw["queries"][2]["invalid_token_positions"], [0])
+        result = self.functional(with_raw)
+        result["query_diagnostics"] = raw
+        json.dumps(prepare_result(result), allow_nan=False)
+        full = summary(result, "full", width=120, include_special=True)
+        self.assertEqual(full.count("SPECIAL"),3)
+        self.assertEqual(full.count("litter [pos=1 id=123]"),3)
+        self.assertIn("not decoded",full)
+        self.assertIn("BELOW THRESHOLD",full)
+        self.assertNotIn("SPECIAL", summary(result))
+        result["query_diagnostics"]["queries"][0]["token_scores"].pop()
+        with self.assertRaises(ValueError):
+            prepare_result(result)
+
+    def test_raw_strict_threshold_boundary_and_no_attention_mask(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        outputs.logits = torch.zeros((1,1,4))
+        outputs.logits[0,0,3] = -float("inf")
+        outputs.pred_boxes = outputs.pred_boxes[:,:1]
+        inputs.pop("attention_mask")
+        self.config.update(threshold=.5, text_threshold=.5)
+        processor.post_process_grounded_object_detection.return_value = [{
+            "text_labels": [], "boxes": torch.empty((0,4)), "scores": torch.empty(0)}]
+        raw = {}
+        self.assertEqual(extract_candidates(outputs, inputs, processor, self.config, 6,4,torch,diagnostics=raw), [])
+        self.assertEqual(len(raw["tokens"]), 2)
+        self.assertEqual(raw["queries"][0]["token_scores"], [.5]*2)
+        self.assertFalse(raw["queries"][0]["threshold_pass"])
+        self.assertEqual(raw["queries"][0]["token_threshold_pass"], [False]*2)
+
+    def test_terminal_image_no_exports_no_gui_and_results_below_image(self):
+        result = self.functional()
+        stream = io.StringIO()
+        with Image.new("RGB", (60,40), "black") as image:
+            before = image.tobytes()
+            with patch("PIL.Image.Image.save", side_effect=AssertionError("export forbidden")), \
+                    patch("PIL.Image.Image.show", side_effect=AssertionError("GUI forbidden")):
+                with patch("scripts.viewer.terminal_capabilities", return_value=os.terminal_size((80,24))):
+                    show_image(image, result, stream=stream, input_stream=SimpleNamespace(isatty=lambda:True, readline=lambda:"\n"))
+                lines = list(terminal_image_lines(image, result, columns=20, rows=8))
+                empty = list(terminal_image_lines(image, self.functional([]), columns=20, rows=8))
+            self.assertEqual(image.tobytes(), before)
+        self.assertNotEqual(lines, empty)
+        self.assertLessEqual(len(lines), 8)
+        self.assertIn("\x1b[38;2;", stream.getvalue())
+        self.assertLess(stream.getvalue().index("\u2580"), stream.getvalue().index("DETECTION SUMMARY"))
+        self.assertTrue(stream.getvalue().endswith("\x1b[0m\n"))
+
+    def test_terminal_controls_escaped_and_write_errors_propagate(self):
+        result = self.functional()
+        result["source"]["image_id"] = "bad\x1b[2J\nname"
+        self.assertNotIn("\x1b", summary(result))
+        stream = MagicMock()
+        stream.write.side_effect = OSError("synthetic broken pipe")
+        with Image.new("RGB",(6,4)) as image, self.assertRaises(OSError):
+            show_image(image, result, stream=stream)
+
+    def test_pipeline_persists_complete_diagnostics_even_without_display(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        raw = {}
+        predictions = extract_candidates(outputs, inputs, processor, self.config, 6,4,torch,diagnostics=raw)
+        detector = self.detector(predictions)
+        detector.query_diagnostics = raw
+        self.config["display"]["enabled"] = False
+        code, _, records, _, show = self.run_pipeline([self.image_file()], detector)
+        self.assertEqual(code, 0)
+        self.assertEqual(records[0]["query_diagnostics"], raw)
+        show.assert_not_called()
+
+    def test_legacy_backend_migrates_and_invalid_terminal_mode_rejected(self):
+        self.config["display"]["backend"] = "TkAgg"
+        self.assertEqual(validate_config(self.config)["display"]["backend"], "terminal")
+        self.config["display"]["terminal_mode"] = "invalid"
+        with self.assertRaises(ConfigError):
+            validate_config(self.config)
+
+    def presentation_fixture(self):
+        torch, outputs, inputs, processor = self.raw_fixture()
+        raw = {}
+        predictions = extract_candidates(outputs, inputs, processor, self.config, 6,4,torch,diagnostics=raw)
+        result = self.functional(predictions)
+        result["query_diagnostics"] = raw
+        return result
+
+    def test_summary_passing_only_and_full_restores_raw_coverage(self):
+        result = self.presentation_fixture()
+        raw = result["query_diagnostics"]
+        raw["queries"][0]["token_scores"][1] = .8123456789
+        raw["queries"][0]["token_threshold_pass"][1] = True
+        # Passing raw duplicates are still excluded from normal output/overlays.
+        duplicate = copy.deepcopy(result["detections"][0])
+        duplicate.update(id="q3",model_score=.49,state="duplicate",duplicate_of="q0")
+        result["detections"].append(duplicate)
+        q3 = copy.deepcopy(raw["queries"][0]); q3.update(id="q3",query_index=3,model_score=.49)
+        raw["queries"].append(q3)
+        before = copy.deepcopy(result)
+        for mode in ("summary",):
+            self.assertEqual([q["id"] for q in selected_queries(result,mode,900)],["q0"])
+            text = summary(result,mode,width=120,below_count=900,include_special=True)
+            self.assertEqual(text.count("litter [pos=1 id=123]"),1)
+            self.assertIn("0.8123",text)
+            for excluded in ("q1", "q2", "q3", "SPECIAL", "not decoded", "INVALID", "BELOW THRESHOLD"):
+                self.assertNotIn(excluded,text)
+        self.assertEqual([q["id"] for q in selected_queries(result,"full")],["q0","q1","q2","q3"])
+        full=summary(result,"full",width=120,include_special=True)
+        for included in ("QUERY q0", "QUERY q1", "QUERY q2", "QUERY q3", "BELOW THRESHOLD", "INVALID", "SPECIAL", "duplicate"):
+            self.assertIn(included,full)
+        self.assertEqual(full.count("litter [pos=1 id=123]"),4)
+        self.assertEqual(result,before)  # Raw precision and excluded diagnostics intact.
+
+    def test_token_console_uses_stored_strict_mask_and_excludes_invalid_values(self):
+        result=self.presentation_fixture()
+        q=result["query_diagnostics"]["queries"][0]
+        for score,mask,invalid in ((.25,False,[]),(float("nan"),True,[]),(.8,True,[1])):
+            q["token_scores"][1]=score
+            q["token_threshold_pass"][1]=mask
+            q["invalid_token_positions"]=invalid
+            self.assertNotIn("litter [pos=1",summary(result,width=120))
+        q["token_scores"][1]=.2500000298023224
+        q["token_threshold_pass"][1]=True
+        q["invalid_token_positions"]=[]
+        self.assertIn("litter [pos=1",summary(result,width=120))
+        self.assertEqual(q["token_scores"][1],.2500000298023224)
+
+    def test_empty_passing_results_render_original_and_empty_tables(self):
+        result = self.presentation_fixture()
+        result["detections"] = []
+        text = summary(result,width=120)
+        self.assertIn("No valid retained queries pass",text)
+        self.assertIn("No ordinary text tokens pass",text)
+        self.assertEqual(passing_candidates(result),[])
+        with Image.new("RGB",(60,40),"blue") as image:
+            lines=list(terminal_image_lines(image,result,columns=30,rows=10))
+            expected=list(terminal_image_lines(image,self.functional([]),columns=30,rows=10))
+        self.assertEqual(lines,expected)
+        self.assertTrue(any("\u2580" in line for line in lines))
+
+    def test_legacy_float32_boundary_without_model_import(self):
+        self.assertFalse(float32_pass(.35,.35))
+        self.assertFalse(float32_pass(.35000000001,.35))
+        self.assertTrue(float32_pass(.3500000238418579,.35))
+        result=self.functional([self.prediction(score=.35)])
+        self.assertEqual(passing_candidates(result),[])
+        self.assertNotIn("0.3500 | PASS",summary(result))
+
+    def test_presentation_decimal_units_and_status_boundaries(self):
+        result = self.presentation_fixture()
+        text = summary(result,"full",width=120)
+        self.assertIn("0.5000",text)
+        self.assertIn("Box threshold: 0.3500",text)
+        self.assertIn("Text threshold: 0.2500",text)
+        self.assertNotIn("%",text)
+        self.assertNotIn("FAIL",text)
+        self.assertEqual(decision(.35,False),"BELOW THRESHOLD")
+        self.assertEqual(decision(.35000001,True),"PASS")
+        self.assertEqual(decision(None,False),"INVALID")
+        self.assertEqual(decision(.8,True,True),"INVALID")
+        self.assertEqual(result["query_diagnostics"]["queries"][0]["model_score"],.5)
+
+    def test_tables_fit_narrow_width_and_pages_are_bounded(self):
+        result = self.presentation_fixture()
+        for width in (32,50,79,120):
+            text = summary(result,"full",width=width,page_rows=2,include_special=True)
+            self.assertTrue(all(len(line)<=width for line in text.splitlines()),(width,text))
+        blocks = list(presentation_blocks(result,"full",width=79,page_rows=2))
+        tables = [b for b in blocks if b[0] in ("DETECTION SUMMARY","TEXT-TOKEN SCORE DETAILS")]
+        self.assertGreaterEqual(len(tables),2)
+        self.assertTrue(all(len(b)<=6 for b in tables))
+
+    def test_terminal_layout_groups_tables_without_any_default_pauses(self):
+        import re
+        result = self.presentation_fixture()
+        out = io.StringIO()
+        reader = MagicMock()
+        reader.isatty.return_value = True
+        reader.readline.return_value = "\n"
+        with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((80,24))):
+            show_image(image,result,stream=out,input_stream=reader)
+        text = out.getvalue()
+        self.assertTrue(text.startswith("IMAGE: synthetic-fixture.png\n"))
+        markers = [text.index(m) for m in ("IMAGE:","\u2580","DETECTION SUMMARY","TEXT-TOKEN SCORE DETAILS","CONFIGURATION")]
+        self.assertEqual(markers,sorted(markers))
+        image_text = text.split("DETECTION SUMMARY")[0]
+        image_text = re.sub(r"\x1b\[[0-9;]*m","",image_text)
+        self.assertIn("q0",image_text)
+        self.assertNotIn("q1",image_text)  # below threshold is table-only
+        reader.readline.assert_not_called()
+        self.assertNotIn("Enter: continue;",text)
+        narrow = io.StringIO()
+        with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((50,12))):
+            show_image(image,result,stream=narrow,input_stream=reader)
+        plain = re.sub(r"\x1b\[[0-9;]*m","",narrow.getvalue())
+        self.assertTrue(all(len(line)<=49 for line in plain.splitlines()))
+
+        self.assertTrue(all(len(line)<=79 for line in image_text.splitlines()))
+
+    def test_unsupported_stream_has_no_escape_bytes_or_shown_claim(self):
+        out = io.StringIO()
+        with Image.new("RGB",(6,4)) as image, self.assertRaisesRegex(TerminalDisplayError,"noninteractive"):
+            show_image(image,self.functional(),stream=out)
+        self.assertTrue(out.getvalue().startswith("IMAGE:"))
+        self.assertNotIn("\x1b",out.getvalue())
+        code,_,records,_,_=self.run_pipeline([self.image_file()],self.detector(),TerminalDisplayError("stdout is redirected"))
+        self.assertEqual(code,1)
+        self.assertEqual(records[0]["display"]["status"],"error")
+        self.assertEqual(records[0]["display"]["error"]["code"],"unsupported_terminal")
+        self.assertTrue(records[0]["inference"]["completed"])
+
+    def test_capability_unicode_color_and_small_terminal_diagnostics(self):
+        stream = SimpleNamespace(isatty=lambda:True,encoding="utf-8")
+        with patch.dict(os.environ,{"TERM":"dumb","TERM_PROGRAM":"","COLORTERM":"","WT_SESSION":""}), \
+                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,24))):
+            with self.assertRaisesRegex(TerminalDisplayError,"truecolor"):
+                terminal_capabilities(stream)
+        with patch.dict(os.environ,{"TERM":"xterm-256color","TERM_PROGRAM":"vscode"}), \
+                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,24))):
+            stream.encoding="ascii"
+            with self.assertRaisesRegex(TerminalDisplayError,"encoding"):
+                terminal_capabilities(stream)
+            stream.encoding="utf-8"
+            with patch("scripts.viewer.terminal_size",return_value=os.terminal_size((40,10))), self.assertRaisesRegex(TerminalDisplayError,"too small"):
+                terminal_capabilities(stream)
+
+    def test_renderer_failure_and_closed_pager_propagate(self):
+        result = self.functional()
+        reader = SimpleNamespace(isatty=lambda:True,readline=lambda:"")
+        with Image.new("RGB",(6,4)) as image, patch("scripts.viewer.terminal_capabilities",return_value=os.terminal_size((80,24))):
+            with patch("scripts.viewer.terminal_image_lines",side_effect=RuntimeError("synthetic render failure")), self.assertRaises(RuntimeError):
+                show_image(image,result,stream=io.StringIO(),input_stream=reader)
+            result["display"].update(terminal_mode="full",paginate=True)
+            with patch("scripts.viewer.presentation_blocks",return_value=iter([["line"]*100,["next"]])), self.assertRaisesRegex(TerminalDisplayError,"input closed"):
+                show_image(image,result,stream=io.StringIO(),input_stream=reader)
+
+    def test_preview_uses_width_and_scrolls_instead_of_shrinking_to_height(self):
+        import re
+        strip=lambda line: re.sub(r"\x1b\[[0-9;]*m","",line)
+        result=self.functional([])
+        result["display"]["preview_width"]=60
+        with Image.new("RGB",(300,600),"blue") as image, patch("scripts.viewer.terminal_size",return_value=os.terminal_size((100,12))):
+            normal=list(terminal_image_lines(image,result))
+            wide=list(terminal_image_lines(image,result,columns=90,rows=2))
+        self.assertEqual(len(normal),60)
+        self.assertTrue(all(len(strip(line))==60 for line in normal))
+        self.assertEqual(len(wide),90)
+        self.assertTrue(all(len(strip(line))==90 for line in wide))
+        with patch.dict(os.environ,{"TERM_PROGRAM":"vscode"}), patch("scripts.viewer.enable_windows_vt",return_value=False), \
+                patch("scripts.viewer.terminal_size",return_value=os.terminal_size((80,2))):
+            self.assertEqual(terminal_capabilities(SimpleNamespace(isatty=lambda:True,encoding="utf-8")).lines,2)
+
+
+    def test_token_groups_and_unwrapped_status_header(self):
+        result=self.presentation_fixture()
+        for width in (49,79,119):
+            blocks=list(presentation_blocks(result,"full",width=width,page_rows=2))
+            groups=[b for b in blocks if b[0].startswith("QUERY ")]
+            self.assertEqual([b[0].split()[1] for b in groups],["q0","q1","q2"])
+            for block in groups:
+                self.assertIn("Text Threshold Status",block[1])
+                header_positions=[i for i,c in enumerate(block[1]) if c=="|"]
+                for row in block[3:]:
+                    if "|" in row:
+                        self.assertEqual([i for i,c in enumerate(row) if c=="|"],header_positions)
+                self.assertTrue(all(len(line)<=width for line in block))
+
+    def test_terminal_presentation_configuration_limits(self):
+        for key,value in (("summary_below_threshold",-1),("summary_below_threshold",True),("page_rows",0),("include_special_tokens",1),("preview_width",0),("preview_width",True),("paginate",1)):
+            bad=copy.deepcopy(self.config)
+            bad["display"][key]=value
+            with self.assertRaises(ConfigError):
+                validate_config(bad)
+
+    def test_detection_records_preserve_mapping_and_round_only_presentation(self):
+        result=self.functional([self.prediction("q0",phrase="a garbage pile",score=.419058620929718),
+                                self.prediction("q1",phrase="a group",score=.49413442611694336)])
+        before=copy.deepcopy(result)
+        records=[dict(detection_fields(result,d)) for d in result["detections"]]
+        self.assertEqual(list(records[0]),list(records[1]))
+        self.assertEqual(records[0]["Mapped category"],"garbage_pile")
+        self.assertEqual(records[1]["Raw decoded phrase"],'"a group"')
+        self.assertEqual(records[1]["Mapped category"],"unmapped")
+        self.assertEqual(records[1]["Mapping reason"],"no_exact_alias")
+        self.assertEqual(records[1]["Threshold status"],"PASS")
+        self.assertEqual(records[1]["Model score"],"0.4941")
+        self.assertEqual(records[1]["Box xyxy (pixels)"],"[0.00, 0.00, 4.00, 3.00]")
+        for mode in ("summary","full"):
+            self.assertIn("not a failed detection",summary(result,mode))
+        self.assertEqual(result,before)
+
+    def test_complete_detection_fields_wrap_without_clipping_or_false_columns(self):
+        result=self.functional([self.prediction("q0",phrase="a group | with a very long incomplete phrase\n"*4)])
+        result["source"]["image_id"]="nested/"*30+"photo.jpg"
+        fields=detection_fields(result,result["detections"][0])
+        for width in (24,32,49,79,119):
+            pages=list(table_pages(("Field","Value"),fields,width=width,page_rows=50))
+            self.assertTrue(all(len(line)<=width for page in pages for line in page))
+            body="\n".join(line for page in pages for line in page)
+            self.assertIn(r"\u007c",body)
+            self.assertNotIn("...",body)
+            separators=[i for i,c in enumerate(pages[0][0]) if c=="|"]
+            for page in pages:
+                for line in page:
+                    if "|" in line:
+                        self.assertEqual([i for i,c in enumerate(line) if c=="|"],separators)
+
+    def test_preview_never_upscales_and_preserves_odd_source_edge(self):
+        result=self.functional([])
+        with Image.new("RGB",(3,5),(10,20,30)) as image:
+            original=image.tobytes()
+            self.assertEqual(preview_dimensions(image,result,columns=120),(3,5))
+            lines=list(terminal_image_lines(image,result,columns=120))
+            self.assertEqual(len(lines),3)
+            self.assertIn("\x1b[49m",lines[-1])
+            self.assertNotIn("\x1b[49m",lines[0])
+            caption=" ".join(preview_description(image,result,columns=120))
+            self.assertIn("3x5 sampled px",caption)
+            self.assertIn("no upscaling",caption)
+            self.assertIn("Small details can disappear",caption)
+            self.assertEqual(image.tobytes(),original)
 
     def bare_detector(self, requested="auto", actual="cuda"):
         d=GroundingDinoDetector.__new__(GroundingDinoDetector)
@@ -525,24 +855,6 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(records[0]["display"]["status"],"pending")
         self.assertEqual(records[0]["status"],"ok")
 
-    def test_headless_canvas_boxes_labels_and_pixel_frame_no_image_export(self):
-        # Real Matplotlib Agg drawing verifies geometry only, never native Tk rendering.
-        with patch.dict(os.environ,{"MPLCONFIGDIR":str(self.root / "mpl")}), \
-                patch("PIL.Image.Image.save",side_effect=AssertionError("image export forbidden")):
-            from matplotlib.figure import Figure
-            from matplotlib.backends.backend_agg import FigureCanvasAgg
-            result=self.functional([self.prediction(),self.prediction("synthetic-invalid",score=float("nan"))])
-            with Image.new("RGB",(6,4)) as image:
-                fig=Figure()
-                FigureCanvasAgg(fig)
-                ax=fig.subplots()
-                draw_overlays(ax,image,result)
-                fig.canvas.draw()
-                self.assertEqual(len(ax.patches),1)
-                self.assertEqual(ax.images[0].get_extent(),[0,6,4,0])
-                self.assertEqual(ax.texts[0].get_text(),candidate_label(result["detections"][0]))
-                self.assertEqual(tuple(ax.get_ylim()),(4,0))
-                fig.clear()
 
 
 if __name__ == "__main__":

@@ -1,5 +1,9 @@
 # BANTAI agent instructions
 
+Latest owner viewer policy: summary stays passing-only; explicit full mode includes saved below-threshold query/token diagnostics. Use configurable width-driven ANSI previews with vertical scrolling, grouped aligned token tables and no default Enter pauses. Synthetic display-check and source-verified replay are authorized without inference. Owner VS Code visual verification stays pending unless actually observed. This supersedes the previous all-console passing-only restriction; see [current terminal contract](docs/TERMINAL_VIEWER.md).
+
+The owner subsequently authorized replacing the native TkAgg pop-up with an in-memory ANSI/Unicode terminal viewer and adding complete pre-filter query/token score diagnostics in summary/full modes. This supersedes native-window requirements only; normal filtering, pinned dependencies, strict JSON, originals and all other scope boundaries remain. See [terminal viewer contract](docs/TERMINAL_VIEWER.md).
+
 ## Project boundary
 
 BANTAI is an academic intelligent-agent project for street-issue detection and hotspot prioritization. The initial development scope of this repository is **trash detection on still images only**. Roadside garbage, potholes, road-surface damage, incident management, and frequency-based hotspot prioritization belong to the broader proposal; they are not all approved implementation work here.

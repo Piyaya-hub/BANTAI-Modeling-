@@ -167,6 +167,21 @@ def validate_result(r):
         require(r["box_format"] == "xyxy_original_display_pixel_edges", "invalid box format")
         require(r["score_definition"] == {"range": [0, 1], "meaning": "model score; not accuracy"}, "invalid score definition")
         detections = r["detections"]
+        if "query_diagnostics" in r:
+            raw = r["query_diagnostics"]
+            require(raw["schema_version"] == "bantai.query-diagnostics.v1", "unknown query diagnostics schema")
+            require(raw["threshold"] == inference["threshold"] and raw["text_threshold"] == inference["text_threshold"], "diagnostic thresholds differ")
+            tokens = raw["tokens"]
+            positions = [t["position"] for t in tokens]
+            require(positions == sorted(set(positions)) and all(type(p) is int and p >= 0 for p in positions), "invalid token alignment")
+            require(all(type(t["token_id"]) is int and isinstance(t["token"], str) and type(t["special"]) is bool for t in tokens), "invalid token metadata")
+            for i, q in enumerate(raw["queries"]):
+                require(q["id"] == f"q{i}" and q["query_index"] == i, "invalid query alignment")
+                require(len(q["token_scores"]) == len(tokens) == len(q["token_threshold_pass"]), "invalid score alignment")
+                require(all(v is None or (finite_number(v) and 0 <= v <= 1) for v in [q["model_score"], *q["token_scores"]]), "invalid diagnostic scores")
+                require(type(q["threshold_pass"]) is bool and all(type(v) is bool for v in q["token_threshold_pass"]), "invalid diagnostic decisions")
+                require(q["raw_phrase"] is None or isinstance(q["raw_phrase"], str), "invalid raw phrase")
+                require(q["threshold_pass"] or (q["raw_phrase"] is None and q["category"] is None), "rejected queries cannot have invented labels")
         require(isinstance(detections, list), "detections must be a list")
         ids = set()
         for d in detections:
