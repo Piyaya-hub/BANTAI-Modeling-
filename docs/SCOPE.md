@@ -14,7 +14,7 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 - Functionally check pretrained GroundingDINO-T (Swin-T / Tiny configuration) through Hugging Face Transformers and direct text prompts. Automatic grouping, training, fine-tuning, and alternative models are outside this baseline.
 - Establish documentation and verifiable phase gates before model work.
 
-Phase 0 is complete and Phase 1 planning is published. Phase 2A technical environment preparation is complete on supplied evidence, recorded in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md); detector behavior remains unverified. Codex now owns implementation. Current authorization is Phase 2B input/output foundation only under [PHASES.md](PHASES.md), superseding the 2A-only stop boundary. Configuration, image preparation, result-contract helpers and persistence are implemented for review; no model loading, inference or viewer implementation is authorized.
+Phase 0 is complete and Phase 1 planning is published. Phase 2A technical environment preparation is complete on supplied evidence, recorded in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md); detector behavior remains unverified. Codex now owns implementation. Current authorization is Phase 2C baseline inference/mapping/native display under [PHASES.md](PHASES.md), superseding the previous 2B-only boundary. The baseline is implemented for review; actual model/target execution remains unverified. No automatic grouping, training or application modules.
 
 ## Initial exclusions
 

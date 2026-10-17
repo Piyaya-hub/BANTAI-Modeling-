@@ -1,0 +1,484 @@
+"""Synthetic software tests only. No pretrained weights, GPU or model predictions."""
+
+import contextlib
+import copy
+import io
+import json
+import math
+import os
+import struct
+from pathlib import Path
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest.mock import MagicMock, patch
+
+from PIL import Image
+
+from scripts.configuration import ROOT, ConfigError, load_config, validate_config, REVISION
+from scripts.inference import (GroundingDinoDetector, InferenceError, DIRECT_VERSIONS,
+                               extract_candidates, runtime_versions)
+from scripts.pipeline import run_inference
+from scripts.postprocessing import apply_policies, map_phrase, normalize_phrase
+from scripts.results import candidate, make_result, prepare_result, save_result, validate_result
+from scripts.viewer import candidate_label, draw_overlays, show_image, summary
+
+
+class SyntheticTensor:
+    """Only the adapter's data-export calls; deliberately does not imitate model execution."""
+    def __init__(self, data):
+        self.data = data
+
+    def detach(self):
+        return self
+
+    def cpu(self):
+        return self
+
+    def tolist(self):
+        return copy.deepcopy(self.data)
+
+    def __gt__(self, value):
+        # Model a float32 scalar comparison for boundary fixtures only.
+        threshold = struct.unpack("f", struct.pack("f", value))[0]
+        return SyntheticTensor([[v > threshold for v in row] for row in self.data])
+
+    def max(self, dim):
+        assert dim == -1
+        return SimpleNamespace(values=SyntheticTensor([[max(row) if all(math.isfinite(v) for v in row) else float("nan")
+                                                      for row in batch] for batch in self.data]))
+
+
+class SyntheticCudaOOM(RuntimeError):
+    pass
+
+
+class InferenceTests(unittest.TestCase):
+    def setUp(self):
+        (ROOT / "work").mkdir(exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(dir=ROOT / "work")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.config = load_config(overrides={"input": str(self.root / "photos"), "results": str(self.root / "results")})
+        self.config["paths"]["cache"] = str(self.root / "cache")
+        self.source = {"image_id": "synthetic-fixture.png", "sha256": "a"*64, "width": 6, "height": 4,
+                       "coordinate_frame": "exif_oriented_original"}
+
+    def prediction(self, ident="synthetic-q1", phrase="a discarded bag", box=(0,0,4,3), score=.7):
+        category, reason = map_phrase(phrase)
+        return candidate(ident, phrase, box, score, 6,4, category=category, mapping_reason=reason)
+
+    def functional(self, predictions=None):
+        return make_result("synthetic-run", self.source, self.config,
+                           detections=[self.prediction()] if predictions is None else predictions,
+                           inference_completed=True, library_version="4.51.3",
+                           execution={"actual_device":"cpu", "environment_manifest":"synthetic-test-only",
+                                      "preprocessing_manifest":"synthetic-test-only"})
+
+    def image_file(self, name="synthetic.png"):
+        folder = Path(self.config["paths"]["input"])
+        folder.mkdir(exist_ok=True)
+        p = folder / name
+        with Image.new("RGB", (6,4)) as image:
+            image.save(p)
+        return p
+
+    def detector(self, predictions=None):
+        detector = MagicMock()
+        detector.versions = {"transformers":"4.51.3"}
+        detector.device = "cpu"
+        detector.fallbacks = []
+        detector.preprocessing = {"test_fixture":"synthetic software processor; no model"}
+        detector.predict.return_value = ([self.prediction()] if predictions is None else predictions,
+                                         {"scope":"synthetic software fixture; not measured", "inference_ms":None})
+        detector.environment.return_value = {"test_fixture":"synthetic software environment; no model"}
+        return detector
+
+    def run_pipeline(self, files, detector, viewer=None):
+        with patch("scripts.pipeline.GroundingDinoDetector", return_value=detector) as factory, \
+                patch("scripts.pipeline.show_image", side_effect=viewer) as show, \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = run_inference(self.config, files, local_files_only=True)
+        run = next(Path(self.config["paths"]["results"]).iterdir())
+        records = [json.loads(p.read_text()) for p in run.glob("*.json")
+                   if p.name not in ("run.json", "environment.json", "preprocessing.json")]
+        return code, run, records, factory, show
+
+    def test_exact_aliases_do_not_force_partial_or_combined_phrases(self):
+        for phrase in (" A   Garbage Pile. ", "an garbage pile!", "garbage pile"):
+            self.assertEqual(map_phrase(phrase), ("garbage_pile","exact_alias"))
+        self.assertEqual(map_phrase("a group of scattered litter")[0],"group_of_individual_litter")
+        self.assertEqual(map_phrase("a discarded bottle"), (None,"no_exact_alias"))
+        for phrase in ("bottle", "garbage pile and bag", "", "individual discarded item group"):
+            self.assertIsNone(map_phrase(phrase)[0])
+        self.assertEqual(normalize_phrase("An  discarded bag."),"discarded bag")
+
+    def test_duplicates_keep_highest_score_and_preserve_near_and_other_phrases(self):
+        raw = [self.prediction("synthetic-a", score=.6),
+               self.prediction("synthetic-b", phrase="Discarded Bag.", score=.8),
+               self.prediction("synthetic-near", box=(0,0,4.01,3)),
+               self.prediction("synthetic-other", phrase="a garbage pile")]
+        processed, flags = apply_policies(raw)
+        self.assertEqual(processed[0]["state"],"duplicate")
+        self.assertEqual(processed[0]["duplicate_of"],"synthetic-b")
+        self.assertEqual(processed[2]["state"],"retained")
+        self.assertEqual(processed[3]["state"],"retained")
+        self.assertEqual(raw[0]["state"],"retained")
+        validate_result(self.functional(processed))
+        self.assertTrue(flags)
+        processed[0]["duplicate_of"]="synthetic-near"
+        with self.assertRaises(ValueError):
+            validate_result(self.functional(processed))
+
+    def test_overlaps_flag_without_suppression_or_memberships(self):
+        obj = self.prediction("synthetic-object", box=(1,1,2,2))
+        region = self.prediction("synthetic-region", phrase="a group of scattered litter", box=(0,0,5,4))
+        near = self.prediction("synthetic-near", phrase="a group of individual litter", box=(0,0,5.1,4))
+        processed, flags = apply_policies([obj,region,near])
+        self.assertEqual([p["state"] for p in processed],["retained"]*3)
+        self.assertIn("same_category_overlap",{f["kind"] for f in flags})
+        self.assertIn("cross_category_overlap",{f["kind"] for f in flags})
+        self.assertIn("object_within_region_membership_unresolved",{f["kind"] for f in flags})
+        result = self.functional(processed)
+        self.assertEqual(result["review"]["memberships"],[])
+        self.assertIsNone(result["review"]["physical_object_count"])
+
+    def test_invalid_candidates_are_not_deduplicated_or_summarized_as_valid(self):
+        predictions = [self.prediction("synthetic-bad",score=float("nan")),self.prediction()]
+        processed, _ = apply_policies(predictions)
+        self.assertEqual(processed[0]["state"],"invalid")
+        text = summary(self.functional(processed))
+        self.assertIn("synthetic-bad invalid (excluded)",text)
+        self.assertIn("70.0% model score",text)
+        self.assertIn("individual_litter=1",text)
+        self.assertIn("Physical object count: unknown",text)
+
+    def test_postprocessing_configuration_rejects_invalid_policy_and_numbers(self):
+        for key,value in (("mapping_version","other"),("duplicate_policy","nms"),("overlap_iou",float("nan")),("overlap_iou",True)):
+            c=copy.deepcopy(self.config)
+            c["postprocessing"][key]=value
+            with self.assertRaises(ConfigError):
+                validate_config(c)
+
+    def test_pinned_runtime_guard_missing_or_changed_packages(self):
+        with patch("scripts.inference.importlib.metadata.version", side_effect=lambda p:DIRECT_VERSIONS[p]):
+            self.assertEqual(runtime_versions(),DIRECT_VERSIONS)
+        with patch("scripts.inference.importlib.metadata.version", return_value="99.0"):
+            with self.assertRaises(InferenceError) as caught:
+                runtime_versions()
+            self.assertEqual(caught.exception.code,"dependency_version_mismatch")
+        import importlib.metadata
+        with patch("scripts.inference.importlib.metadata.version", side_effect=importlib.metadata.PackageNotFoundError("synthetic")):
+            with self.assertRaises(InferenceError) as caught:
+                runtime_versions()
+            self.assertEqual(caught.exception.code,"missing_dependency")
+
+    def test_grounded_adapter_threshold_target_sizes_and_invalid_raw_queries(self):
+        # Scores here are synthetic post-sigmoid fixtures, deliberately not torch/model output.
+        logits = [[[.8,.2],[float("nan"),.4],[.1,.2],[.1,.2]]]
+        boxes = [[[.5,.5,.5,.5],[.5,.5,.5,.5],[.5,.5,-.5,.5],[.5,.5,.5,.5]]]
+        outputs = SimpleNamespace(logits=SyntheticTensor(logits),pred_boxes=SyntheticTensor(boxes))
+        processor=MagicMock()
+        processor.post_process_grounded_object_detection.return_value=[{
+            "text_labels":["a discarded bag"],"boxes":SyntheticTensor([[1.5,1,4.5,3]]),"scores":SyntheticTensor([.8])}]
+        torch=SimpleNamespace(sigmoid=lambda x:x)
+        result=extract_candidates(outputs,{"input_ids":"synthetic-ids"},processor,self.config,6,4,torch)
+        self.assertEqual([d["id"] for d in result],["q0","q1","q2"])
+        self.assertEqual(result[0]["box_xyxy"],[1.5,1,4.5,3])
+        self.assertEqual(result[1]["raw_phrase"],"")
+        self.assertEqual(result[1]["state"],"invalid")
+        self.assertEqual(result[2]["state"],"invalid")
+        self.assertIsNone(result[1]["model_score"])
+        kwargs=processor.post_process_grounded_object_detection.call_args.kwargs
+        self.assertEqual(kwargs["target_sizes"],[(4,6)])
+        self.assertEqual(kwargs["threshold"],.35)
+        self.assertEqual(kwargs["text_threshold"],.25)
+        self.assertNotIn("box_threshold",kwargs)
+        validate_result(self.functional(result))
+
+    def test_grounded_adapter_rejects_mismatched_results(self):
+        outputs=SimpleNamespace(logits=SyntheticTensor([[[.8]]]),pred_boxes=SyntheticTensor([[[.5,.5,.5,.5]]]))
+        processor=MagicMock()
+        processor.post_process_grounded_object_detection.return_value=[{
+            "text_labels":[],"boxes":SyntheticTensor([]),"scores":SyntheticTensor([])}]
+        with self.assertRaises(InferenceError):
+            extract_candidates(outputs,{"input_ids":[]},processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x))
+
+    def test_grounded_adapter_uses_tensor_threshold_mask_at_float32_boundary(self):
+        value=struct.unpack("f",struct.pack("f",.1))[0]
+        self.assertGreater(value,.1)  # Exported Python float comparison differs.
+        self.config["threshold"]=.1
+        outputs=SimpleNamespace(logits=SyntheticTensor([[[value]]]),pred_boxes=SyntheticTensor([[[.5,.5,.5,.5]]]))
+        processor=MagicMock()
+        processor.post_process_grounded_object_detection.return_value=[{
+            "text_labels":[],"boxes":SyntheticTensor([]),"scores":SyntheticTensor([])}]
+        self.assertEqual(extract_candidates(outputs,{"input_ids":[]},processor,self.config,6,4,SimpleNamespace(sigmoid=lambda x:x)),[])
+
+    def loader_fixtures(self):
+        config=SimpleNamespace(_commit_hash=REVISION,model_type="grounding-dino",
+                               backbone_config=SimpleNamespace(model_type="swin",depths=[2,2,6,2],num_heads=[3,6,12,24]))
+        model=MagicMock()
+        model.config=config
+        processor=MagicMock()
+        processor.image_processor.to_dict.return_value={"synthetic_processor":True}
+        module=SimpleNamespace(AutoConfig=MagicMock(),AutoProcessor=MagicMock(),AutoModelForZeroShotObjectDetection=MagicMock())
+        module.AutoConfig.from_pretrained.return_value=config
+        module.AutoProcessor.from_pretrained.return_value=processor
+        module.AutoModelForZeroShotObjectDetection.from_pretrained.return_value=model
+        torch=SimpleNamespace(float32="synthetic-float32",cuda=SimpleNamespace(is_available=lambda:False,OutOfMemoryError=SyntheticCudaOOM))
+        return module,torch,model,processor
+
+    def test_loader_pins_config_model_processor_safetensors_and_evaluation(self):
+        module,torch,model,processor=self.loader_fixtures()
+        with patch("scripts.inference.runtime_versions",return_value=DIRECT_VERSIONS), \
+                patch.dict("sys.modules",{"torch":torch,"transformers":module}):
+            d=GroundingDinoDetector(self.config,local_files_only=True)
+        for api in (module.AutoConfig,module.AutoProcessor,module.AutoModelForZeroShotObjectDetection):
+            kwargs=api.from_pretrained.call_args.kwargs
+            self.assertEqual(kwargs["revision"],REVISION)
+            self.assertEqual(kwargs["cache_dir"],self.config["paths"]["cache"])
+            self.assertIs(kwargs["trust_remote_code"],False)
+            self.assertIs(kwargs["local_files_only"],True)
+        model_kwargs=module.AutoModelForZeroShotObjectDetection.from_pretrained.call_args.kwargs
+        self.assertIs(model_kwargs["use_safetensors"],True)
+        self.assertTrue(model_kwargs["config"].disable_custom_kernels)
+        model.eval.assert_called_once()
+        model.to.assert_called_once_with(device="cpu",dtype="synthetic-float32")
+        self.assertEqual(d.preprocessing["processor_revision"],REVISION)
+        d.close()
+
+    def test_loader_rejects_unresolved_or_wrong_revision_before_weights(self):
+        module,torch,_,_=self.loader_fixtures()
+        module.AutoConfig.from_pretrained.return_value._commit_hash="wrong"
+        with patch("scripts.inference.runtime_versions",return_value=DIRECT_VERSIONS), \
+                patch.dict("sys.modules",{"torch":torch,"transformers":module}):
+            with self.assertRaises(InferenceError) as caught:
+                GroundingDinoDetector(self.config)
+        self.assertEqual(caught.exception.code,"revision_mismatch")
+        module.AutoModelForZeroShotObjectDetection.from_pretrained.assert_not_called()
+
+    def test_forward_uses_inference_context_and_oriented_rgb_input(self):
+        d=self.bare_detector(actual="cpu")
+        calls=[]
+        @contextlib.contextmanager
+        def inference_context():
+            calls.append("enter")
+            yield
+            calls.append("exit")
+        d.torch.inference_mode=inference_context
+        class SyntheticInputs(dict):
+            def to(self,device):
+                calls.append(device)
+                return self
+        inputs=SyntheticInputs(input_ids="synthetic-tokens",pixel_values="synthetic-pixels")
+        d.processor=MagicMock(return_value=inputs)
+        d.forward_attempts=d.completed_forwards=0
+        with Image.new("RGB",(6,4)) as image, patch("scripts.inference.extract_candidates",return_value=[]) as extract:
+            self.assertEqual(d._once(image),[])
+            d.processor.assert_called_once_with(images=image,text=self.config["prompt"],return_tensors="pt")
+            self.assertEqual(extract.call_args.args[4:6],(6,4))
+        self.assertEqual(calls,["cpu","enter","exit"])
+        self.assertEqual(d.completed_forwards,1)
+
+    def test_native_viewer_requests_tk_draws_and_closes_after_normal_return_or_error(self):
+        # A call-order simulation, not evidence a native desktop window rendered.
+        for fail in (False,True):
+            mpl=MagicMock()
+            plt=MagicMock()
+            mpl.pyplot=plt
+            fig,ax=MagicMock(),MagicMock()
+            plt.subplots.return_value=(fig,ax)
+            if fail:
+                fig.canvas.draw.side_effect=RuntimeError("synthetic draw failure")
+            with Image.new("RGB",(6,4)) as image, \
+                    patch.dict("sys.modules",{"matplotlib":mpl,"matplotlib.pyplot":plt}), \
+                    patch("scripts.viewer.draw_overlays"):
+                if fail:
+                    with self.assertRaises(RuntimeError):
+                        show_image(image,self.functional(),cache_dir=self.root / "cache")
+                    plt.show.assert_not_called()
+                else:
+                    show_image(image,self.functional(),cache_dir=self.root / "cache")
+                    plt.show.assert_called_once_with(block=True)
+                mpl.use.assert_called_once_with("TkAgg",force=True)
+                plt.close.assert_called_once_with(fig)
+
+    def bare_detector(self, requested="auto", actual="cuda"):
+        d=GroundingDinoDetector.__new__(GroundingDinoDetector)
+        d.config=copy.deepcopy(self.config)
+        d.config["device"]=requested
+        d.device=actual
+        d.fallbacks=[]
+        d.model=MagicMock()
+        d.torch=SimpleNamespace(float32="synthetic-float32",cuda=SimpleNamespace(
+            OutOfMemoryError=SyntheticCudaOOM,empty_cache=MagicMock(),synchronize=MagicMock(),is_available=lambda:False))
+        return d
+
+    def test_device_selection_explicit_cuda_and_auto_cpu(self):
+        d=self.bare_detector()
+        self.assertEqual(d.select_device("auto"),"cpu")
+        self.assertEqual(d.fallbacks[0]["code"],"cuda_unavailable")
+        with self.assertRaises(InferenceError):
+            d.select_device("cuda")
+        self.assertEqual(d.select_device("cpu"),"cpu")
+
+    def test_auto_oom_retries_cpu_once_and_records_provenance(self):
+        d=self.bare_detector()
+        d._warm_and_measure=MagicMock(side_effect=[SyntheticCudaOOM("synthetic CUDA OOM"),([], {"scope":"synthetic"})])
+        self.assertEqual(d.predict(None),([],{"scope":"synthetic"}))
+        self.assertEqual(d.device,"cpu")
+        self.assertEqual(d._warm_and_measure.call_count,2)
+        self.assertEqual(d.fallbacks[0]["code"],"cuda_out_of_memory")
+        d.model.to.assert_called_once_with(device="cpu",dtype="synthetic-float32")
+
+    def test_explicit_cuda_and_unrelated_failures_never_silently_fallback(self):
+        for error in (SyntheticCudaOOM("synthetic OOM"),RuntimeError("synthetic other failure")):
+            d=self.bare_detector("cuda")
+            d._warm_and_measure=MagicMock(side_effect=error)
+            with self.assertRaises(InferenceError):
+                d.predict(None)
+            self.assertEqual(d.fallbacks,[])
+            self.assertEqual(d._warm_and_measure.call_count,1)
+
+    def test_warmup_once_per_actual_device_and_timing_scope(self):
+        d=self.bare_detector(actual="cpu")
+        d.warmed_devices=set()
+        d.load_ms=12
+        d._once=MagicMock(return_value=[])
+        _,first=d._warm_and_measure(None)
+        _,second=d._warm_and_measure(None)
+        self.assertEqual(d._once.call_count,3)
+        self.assertTrue(first["warmup_performed_for_device"])
+        self.assertFalse(second["warmup_performed_for_device"])
+        self.assertIsNone(second["warmup_ms"])
+        self.assertIn("excludes decode/model_load/warmup/duplicate_overlap_review/display",first["scope"])
+
+    def test_pipeline_persists_pending_before_viewer_and_then_shown(self):
+        p=self.image_file()
+        original=p.read_bytes()
+        def viewer(image,result,**kwargs):
+            run=next(Path(self.config["paths"]["results"]).iterdir())
+            saved=[json.loads(f.read_text()) for f in run.glob("*.json") if len(f.stem)==64]
+            self.assertEqual(saved[0]["display"]["status"],"pending")
+            self.assertEqual(image.size,(6,4))
+        detector=self.detector()
+        code,run,records,factory,show=self.run_pipeline([p],detector,viewer)
+        self.assertEqual(code,0)
+        self.assertEqual(records[0]["status"],"ok")
+        self.assertEqual(records[0]["display"]["status"],"shown")
+        self.assertEqual(records[0]["model"]["library_version"],"4.51.3")
+        factory.assert_called_once_with(self.config,local_files_only=True)
+        self.assertEqual(p.read_bytes(),original)
+        detector.close.assert_called_once()
+        self.assertTrue(all(f.suffix==".json" for f in run.iterdir()))
+
+    def test_pipeline_display_error_preserves_inference_and_continues(self):
+        files=[self.image_file("synthetic-a.png"),self.image_file("synthetic-b.png")]
+        code,run,records,_,show=self.run_pipeline(files,self.detector(),RuntimeError("synthetic viewer failed"))
+        self.assertEqual(code,1)
+        self.assertEqual(show.call_count,2)
+        for r in records:
+            self.assertEqual(r["status"],"ok")
+            self.assertIsNone(r["error"])
+            self.assertEqual(r["display"]["status"],"error")
+            self.assertTrue(r["detections"])
+
+    def test_pipeline_disabled_display_and_no_detections(self):
+        self.config["display"]["enabled"]=False
+        code,_,records,_,show=self.run_pipeline([self.image_file()],self.detector([]))
+        self.assertEqual(code,0)
+        self.assertEqual(records[0]["status"],"no_detections")
+        self.assertEqual(records[0]["display"]["status"],"disabled")
+        show.assert_not_called()
+
+    def test_pipeline_all_invalid_is_processing_error_without_viewer(self):
+        invalid=self.prediction(score=float("nan"))
+        code,_,records,_,show=self.run_pipeline([self.image_file()],self.detector([invalid]))
+        self.assertEqual(code,1)
+        self.assertEqual(records[0]["status"],"error")
+        self.assertEqual(records[0]["error"]["code"],"invalid_predictions")
+        self.assertEqual(records[0]["display"]["status"],"not_attempted")
+        show.assert_not_called()
+
+    def test_pipeline_prediction_failure_continues_without_reloading_model(self):
+        files=[self.image_file("synthetic-a.png"),self.image_file("synthetic-b.png")]
+        detector=self.detector()
+        detector.predict.side_effect=[InferenceError("inference","prediction_failed","synthetic failure"),
+                                      ([self.prediction()],{"scope":"synthetic software fixture", "inference_ms":None})]
+        code,_,records,factory,show=self.run_pipeline(files,detector)
+        self.assertEqual(code,1)
+        self.assertEqual({r["status"] for r in records},{"error","ok"})
+        self.assertEqual(detector.predict.call_count,2)
+        factory.assert_called_once()
+        show.assert_called_once()
+
+    def test_interrupted_viewer_keeps_saved_pending_and_returns_130(self):
+        code,_,records,_,_=self.run_pipeline([self.image_file()],self.detector(),KeyboardInterrupt())
+        self.assertEqual(code,130)
+        self.assertEqual(records[0]["display"]["status"],"pending")
+        self.assertEqual(records[0]["status"],"ok")
+
+    def test_pipeline_decode_and_unsupported_never_load_model(self):
+        folder=Path(self.config["paths"]["input"])
+        folder.mkdir()
+        bad=folder/"broken.png"
+        bad.write_bytes(b"synthetic decode failure")
+        unsupported=folder/"file.txt"
+        unsupported.touch()
+        code,_,records,factory,show=self.run_pipeline([bad,unsupported],self.detector())
+        self.assertEqual(code,1)
+        factory.assert_not_called()
+        show.assert_not_called()
+        self.assertEqual({r["status"] for r in records},{"error","skipped_unsupported"})
+        self.assertTrue(all(r["model"]["library_version"] is None for r in records))
+
+    def test_pipeline_startup_error_persisted_and_not_retried_for_each_image(self):
+        files=[self.image_file("synthetic-a.png"),self.image_file("synthetic-b.png")]
+        with patch("scripts.pipeline.GroundingDinoDetector",side_effect=InferenceError("runtime","missing_dependency","synthetic missing dependency")) as factory, \
+                contextlib.redirect_stdout(io.StringIO()):
+            code=run_inference(self.config,files)
+        self.assertEqual(code,1)
+        self.assertEqual(factory.call_count,1)
+        run=next(Path(self.config["paths"]["results"]).iterdir())
+        records=[json.loads(p.read_text()) for p in run.glob("*.json") if len(p.stem)==64]
+        self.assertEqual(len(records),2)
+        self.assertTrue(all(r["error"]["code"]=="missing_dependency" and not r["inference"]["completed"] for r in records))
+
+    def test_pipeline_failed_initial_persistence_prevents_viewer(self):
+        p=self.image_file()
+        with patch("scripts.pipeline.save_result",side_effect=OSError("synthetic initial failure")):
+            code,_,_,_,show=self.run_pipeline([p],self.detector())
+        self.assertEqual(code,2)
+        show.assert_not_called()
+
+    def test_pipeline_failed_final_persistence_leaves_pending(self):
+        p=self.image_file()
+        with patch("scripts.pipeline.save_display_outcome",side_effect=OSError("synthetic final failure")):
+            code,_,records,_,show=self.run_pipeline([p],self.detector())
+        self.assertEqual(code,2)
+        show.assert_called_once()
+        self.assertEqual(records[0]["display"]["status"],"pending")
+        self.assertEqual(records[0]["status"],"ok")
+
+    def test_headless_canvas_boxes_labels_and_pixel_frame_no_image_export(self):
+        # Real Matplotlib Agg drawing verifies geometry only, never native Tk rendering.
+        with patch.dict(os.environ,{"MPLCONFIGDIR":str(self.root / "mpl")}), \
+                patch("PIL.Image.Image.save",side_effect=AssertionError("image export forbidden")):
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+            result=self.functional([self.prediction(),self.prediction("synthetic-invalid",score=float("nan"))])
+            with Image.new("RGB",(6,4)) as image:
+                fig=Figure()
+                FigureCanvasAgg(fig)
+                ax=fig.subplots()
+                draw_overlays(ax,image,result)
+                fig.canvas.draw()
+                self.assertEqual(len(ax.patches),1)
+                self.assertEqual(ax.images[0].get_extent(),[0,6,4,0])
+                self.assertEqual(ax.texts[0].get_text(),candidate_label(result["detections"][0]))
+                self.assertEqual(tuple(ax.get_ylim()),(4,0))
+                fig.clear()
+
+
+if __name__ == "__main__":
+    unittest.main()

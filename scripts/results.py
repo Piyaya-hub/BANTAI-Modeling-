@@ -1,7 +1,6 @@
 """Section 7 result utilities. Callers supply predictions; this module runs no model.
 
-Phase 2B exercises predictions only in explicitly synthetic software tests.
-Mapping, duplicate selection and overlap interpretation belong to later work.
+Synthetic software tests are separate from observed model outputs.
 """
 
 import copy
@@ -75,7 +74,7 @@ def valid_candidates(result):
 
 
 def make_result(run_id, source, config, *, detections=(), inference_completed=False,
-                execution=None, error=None, unsupported=False):
+                execution=None, error=None, unsupported=False, library_version=None):
     """Build functional results only with explicit inference completion/evidence.
 
     A decoded/prepared photo is deliberately rejected here without an error or
@@ -111,7 +110,7 @@ def make_result(run_id, source, config, *, detections=(), inference_completed=Fa
     enabled = config["display"]["enabled"]
     result = {"schema_version": "bantai.functional.v1", "run_id": run_id, "source": copy.deepcopy(source),
               "model": {"id": config["model"]["id"], "revision": config["model"]["revision"],
-                        "library": "transformers", "library_version": "4.51.3"},
+                        "library": "transformers", "library_version": library_version},
               "inference": inference, "status": status,
               "display": {"enabled": enabled, "status": ("pending" if enabled else "disabled")
                           if status in ("ok", "no_detections") else "not_attempted", "error": None},
@@ -137,7 +136,8 @@ def validate_result(r):
         require(source["sha256"] is None or re.fullmatch(r"[0-9a-f]{64}", source["sha256"]), "invalid SHA-256")
         size = valid_size(source["width"], source["height"])
         require(size or (source["width"] is None and source["height"] is None), "invalid dimensions")
-        require(model["library"] == "transformers" and isinstance(model["library_version"], str), "model library metadata required")
+        require(model["library"] == "transformers" and (model["library_version"] is None
+                or isinstance(model["library_version"], str)), "invalid model library metadata")
         require(model["id"] == MODEL_ID and model["revision"] == REVISION, "2A-verified model/revision required")
         for key in ("threshold", "text_threshold"):
             require(finite_number(inference[key]) and 0 <= inference[key] <= 1, "invalid required threshold")
@@ -158,6 +158,7 @@ def validate_result(r):
             if needed:
                 require(all(isinstance(error[k], str) and error[k] for k in ("stage", "code", "message")), "malformed error")
         if success or inference["completed"]:
+            require(model["library_version"] == "4.51.3", "completed inference requires observed pinned library version")
             require(size and source["sha256"] is not None, "completed inference requires source dimensions/hash")
             require(inference["actual_device"] in ("cpu", "cuda"), "actual device required")
             require(all(isinstance(inference[k], str) and inference[k] for k in
@@ -191,7 +192,10 @@ def validate_result(r):
             if d["state"] == "duplicate":
                 target = by_id.get(d["duplicate_of"])
                 require(target is not None and target["state"] == "retained" and target["id"] != d["id"], "invalid duplicate reference")
-                require(d["raw_box_xyxy"] == target["raw_box_xyxy"] and d["raw_phrase"] == target["raw_phrase"], "duplicate must have identical box/phrase")
+                from .postprocessing import normalize_phrase
+                require(d["raw_box_xyxy"] == target["raw_box_xyxy"]
+                        and normalize_phrase(d["raw_phrase"]) == normalize_phrase(target["raw_phrase"]), "duplicate must have identical raw box/normalized phrase")
+                require(target["model_score"] >= d["model_score"], "duplicate target must retain highest score")
         require(status != "ok" or bool(valid_candidates(r)), "ok requires a retained valid candidate")
         require(status != "no_detections" or not detections, "no_detections cannot hide invalid predictions")
         if status in ("error", "skipped_unsupported") and detections:

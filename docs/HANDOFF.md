@@ -1,4 +1,16 @@
-# BANTAI Phase 2B foundation handoff
+# BANTAI Phase 2C baseline handoff
+
+## Current result and execution limits
+
+The owner instructed Codex to proceed with Phase 2C (D-025), superseding the previous stop-before-2C boundary. PR #6 is merged; this focused branch starts from current main `5db174b`. The baseline now implements pinned model/processor loading, float32 eval/inference mode, device handling/one auto-mode OOM CPU retry, exact mapping, conservative duplicate/review flags, readable summaries and native in-memory TkAgg viewing with the existing atomic display lifecycle. The CLI still defaults to preparation; inference requires `--mode infer`. Requirements and the existing verified target environment are preserved.
+
+New modules: `scripts/inference.py`, `postprocessing.py`, `pipeline.py`, `viewer.py`; integration changes to configuration/CLI/result validation; `tests/test_inference.py` and a small foundation-fixture update; current-state docs and D-025. Model/processor/config use the verified revision; raw invalid queries are retained before threshold loss; no automatic grouping/membership/count inference or image exports.
+
+Actual checks: **50 software tests passed** using existing cloud Python 3.13.5/Pillow 11.1.0/Matplotlib 3.10.1+dfsg1. CLI help, compilation and whitespace checks passed. A real cached-only CLI probe on a synthetic image returned exit 1 and persisted `runtime/missing_dependency` because torch is absent, with incomplete inference and unattempted display. This is not a no-detection/model result. Headless Agg drawing passed; native Tk calls are simulated. No package install/reinstall or weight download occurred. Full evidence, commands and assumptions: [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md).
+
+The implementation is ready for code review and target execution, **not verified model/target acceptance**. Actual model loading/inference, GTX 1660 Ti memory fit, native photo overlays and unannotated team-photo observations remain unrun. Run the new software tests and baseline in the existing Windows `.venv` using [README.md](../README.md); record actual JSON/native outcomes and limitations. Missing target/runtime/photos are execution prerequisites, not a request for repeated phase confirmation. Commit/publication outcomes are reported in the completion message; no merge or later optimization/grouping is authorized.
+
+## Historical Phase 2B handoff — prior stop boundary superseded by D-025
 
 ## Current result and next boundary
 

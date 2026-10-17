@@ -13,5 +13,10 @@
   "settings_status": "proposed_unvalidated",
   "device": "auto",
   "dtype": "float32",
+  "postprocessing": {
+    "mapping_version": "aliases-v1",
+    "duplicate_policy": "exact-raw-box-normalized-phrase-highest-score-v1",
+    "overlap_iou": 0.8
+  },
   "display": {"enabled": true, "backend": "TkAgg", "save_annotated": false}
 }
