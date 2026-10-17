@@ -4,7 +4,7 @@
 
 The owner authorizes Codex to perform **local Windows environment setup/readiness only**, corresponding to [PHASE_1_IMPLEMENTATION_PLAN.md](PHASE_1_IMPLEMENTATION_PLAN.md) Section 4 and Section 8 stages 2–3. Codex replaces Antigravity; the owner states Antigravity made no changes. See the [phase definition](PHASES.md#phase-2a--local-windows-environment-setup-and-readiness-verification) and D-022/D-023 in [DECISIONS.md](DECISIONS.md).
 
-**Not yet ready: partial Windows preflight is supplied; Python, CUDA compatibility, environment/viewer readiness and a local checkout remain unconfirmed.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are instructions; only the owner-supplied command results explicitly recorded below have been observed. Codex has not executed on the target. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
+**Partially prepared, not yet ready: Python 3.11.9 x64, local cloning and venv creation are confirmed by supplied outputs; ML package/device/viewer and checkpoint readiness remain outstanding.** This session can execute in a Linux cloud checkout only. `uname -s` returned `Linux`; no `pwsh` executable or Windows remote-execution tool is available. This is evidence about the attached session, not about the owner's computer. Local commands below are instructions; only the owner-supplied command results explicitly recorded below have been observed. Codex has not executed on the target. Authorization is already given; the missing prerequisite is target access/results, not renewed permission for setup.
 
 No dependency installation, GPU/CPU package probe, native viewer operation, model download/loading or inference on the target is claimed. Do not install ML packages in the cloud as a substitute. No photographs, annotations or detector implementation are needed for these readiness checks.
 
@@ -13,23 +13,23 @@ No dependency installation, GPU/CPU package probe, native viewer operation, mode
 | Check | Actual outcome in this task | Required next evidence |
 | --- | --- | --- |
 | Repository baseline | Fetched latest `main`: `7a776cf`, merge of PR #4; started from a clean checkout | Preserve local Windows checkout/user changes when inspecting it |
-| Windows/Git/Python | Owner-supplied CMD output: Windows 10 version 10.0.19045.6466; Git 2.45.1.windows.1 works; `py -0p` is not recognized | Discover Python through `where python`/`python --version` and other locations; confirm architecture/venv. Missing launcher does not prove missing Python |
+| Windows/Git/Python | Supplied CMD output: Windows 10 version 10.0.19045.6466; Git 2.45.1.windows.1; WinGet installed Python 3.11.9 x64 with verified hash; new-terminal Python probe returned 3.11.9/AMD64/64 bits and real Python311 executable | Use the verified interpreter and target venv; do not confuse earlier Store alias with the installed interpreter |
 | GPU/driver/memory | Supplied successful `nvidia-smi` query: NVIDIA GeForce GTX 1660 Ti; driver 472.19; 6144 MiB total, 5235–5236 MiB free at query time | Validate driver/wheel compatibility and actual CUDA tensor execution or diagnosed CPU fallback; model-memory fit remains untested |
 | Proposed package metadata | Rechecked official PyPI: Transformers 4.51.3 requires Python >=3.9, torch extra >=2.0; torchvision 0.22.1 requires torch 2.7.1 | Actual Windows imports, `pip check`, exact resolved packages; metadata alone is not runtime verification |
 | Proposed CUDA wheel | Official cu118 index lists torch 2.7.1 CPython 3.11 Windows x64 wheel | Driver/build/capability check and actual tensor operation on target |
 | Checkpoint/configuration/conditions/revision/safetensors | Metadata-only request to Hugging Face API blocked by cloud proxy: tunnel `403 Forbidden` | Inspect official model metadata/card/files on accessible target; record immutable commit and conditions; do not fetch weights |
 | NVIDIA driver reference | Official CUDA 11.8 release-notes request blocked by cloud proxy: tunnel `403 Forbidden` | Compare target driver to official NVIDIA compatibility/release guidance; no guessed minimum asserted |
-| Isolated environment/lock | Unrun: Python/interpreter and local checkout unresolved | Preserve existing environment; create/reuse an inspected isolated environment, exact package list plus CUDA/CPU index |
+| Local checkout/environment | Supplied clone succeeded at the owner-selected Documents/Python/Project Image-object Detection folder on this preparation branch; `.venv` creation/verification returned Python 3.11.9 | Install/test proposed packages inside this venv; record exact resolved dependencies and CUDA/CPU index, not an unexecuted lock |
 | CPU/GPU probes | Unrun | Actual package/device operations below; GPU unavailable may produce diagnosed CPU readiness only |
 | Native Tk/Matplotlib viewer | Unrun | Visible synthetic window, successful drawing/normal return and resource closure; no saved images |
 
 Official references rechecked for metadata only: [Transformers metadata](https://pypi.org/pypi/transformers/4.51.3/json), [torchvision metadata](https://pypi.org/pypi/torchvision/0.22.1/json), [CUDA 11.8 wheel listing](https://download.pytorch.org/whl/cu118/torch/). Metadata verification does not establish Windows/GPU compatibility or acceptance of all proposed pins. Earlier source findings and limits remain in the plan; they are not upgraded to local evidence.
 
-## Supplied Command Prompt evidence and immediate next check
+## Supplied Command Prompt evidence and completed interpreter setup
 
-The supplied transcript uses **Command Prompt (CMD)**, not PowerShell. Its successful GPU query identifies GTX 1660 Ti, replacing the earlier RTX 2080 Super assumption. The first failed GPU command accidentally joined `--format=csv` to `git --version`; the later correctly separated queries succeeded. This is a paste error, not a GPU failure. Git availability is confirmed by supplied output; `py` availability failed, but Python installation is still unknown. A subsequent combined line (`where python, python --version, ...`) ran only `where` lookups, not the intended version commands. It exposed a `WindowsApps` Python path but did not verify an interpreter; that path may be a Store alias. The next requested check is the single command `python --version`. No personal filesystem path from the transcript is needed in Git.
+The supplied transcript uses **Command Prompt (CMD)**, not PowerShell. Its successful GPU query identifies GTX 1660 Ti, replacing the earlier RTX 2080 Super assumption. The first failed GPU command accidentally joined `--format=csv` to `git --version`; the later correctly separated queries succeeded. This is a paste error, not a GPU failure. Git availability is confirmed by supplied output; `py` availability failed, but Python installation is still unknown. A subsequent combined line (`where python, python --version, ...`) ran only `where` lookups, not the intended version commands. It exposed a `WindowsApps` Python path but did not verify an interpreter; that path may be a Store alias. The follow-up `python --version` reported no Python interpreter and a Microsoft Store shortcut. WinGet then successfully installed Python 3.11.9 x64 from python.org and verified its installer hash. A new terminal confirmed a real Python311 executable, version 3.11.9 and 64 bits; a successful clone followed, then a new local `.venv` returned Python 3.11.9. These initial discovery checks are now historical, not blockers. No personal filesystem path from the transcript is needed in Git.
 
-Run these discovery commands **one at a time in CMD** and record the outputs:
+Initial discovery commands (historical; not needed again after the successful interpreter probe):
 
 ```bat
 where python
@@ -42,14 +42,14 @@ If `python --version` launches Microsoft Store, close it and record that an app-
 
 ## 1. Windows preflight and local repository copy
 
-A **checkout** means the local folder containing a cloned GitHub repository. The cloud copy used in this chat is not on the owner's PC. The owner asked what the Windows checkout meant, so no local clone or existing `.venv` is assumed.
+A **checkout** means the local folder containing a cloned GitHub repository. The cloud copy used in this chat is not on the owner's PC. A local clone is now confirmed by supplied output. The owner selected `%USERPROFILE%\Documents\Python\Project Image-object Detection`, and `.venv` in that folder reports Python 3.11.9. The cloud repository is a separate checkout. Do not clone again or recreate the environment.
 
 The initial Git/GPU checks already have supplied results. Continue with the CMD interpreter-discovery block above. For the fuller setup blocks below, open PowerShell explicitly (the current CMD prompt does not understand PowerShell variable or `Get-*` syntax). Use `py` commands only if the launcher is installed; otherwise substitute the verified Python executable. These hardware/tool checks do not require a repository folder. If Git is absent, install Git for Windows from its official distribution before cloning; diagnose missing Python/GPU tools separately. Do not request a token merely because a command has not been run.
 
-If there is no existing local copy and Git works, create one without overwriting a directory. After this preparation branch is pushed, it can be cloned directly:
+For a future fresh machine only, if there is no local copy and Git works, create one without overwriting a directory. This has already succeeded on the current target; do not rerun it there. After this preparation branch is pushed, it can be cloned directly:
 
 ```powershell
-$BantaiCheckout = Join-Path $env:USERPROFILE 'source\BANTAI-Modeling-'
+$BantaiCheckout = Join-Path $env:USERPROFILE 'Documents\Python\Project Image-object Detection'
 if (Test-Path $BantaiCheckout) { throw 'A folder already exists here; inspect it instead of overwriting or duplicating it.' }
 git clone --branch docs/phase-2a-environment-preparation https://github.com/Piyaya-hub/BANTAI-Modeling-.git $BantaiCheckout
 if ($LASTEXITCODE -ne 0) { throw 'Clone failed; preserve the output and diagnose Git/network/authentication access.' }
@@ -91,9 +91,19 @@ Check the real driver against [CUDA 11.8 release notes](https://docs.nvidia.com/
 
 Keep the existing proposed baseline unless a diagnosed compatibility issue or applicable package advisory requires a documented change: Python 3.11 x64, torch 2.7.1/cu118, torchvision 0.22.1, Transformers 4.51.3, Pillow 11.2.1, Matplotlib 3.10.3. These are not locally tested pins. Recheck affected APIs if any version changes; no silent upgrade or altered checksum/TLS verification.
 
-## 3. Authorized isolated setup — after preflight
+## Current next step — install and probe the candidate PyTorch build
 
-Reuse `.venv` only after inspection establishes it is suitable. Otherwise preserve it and create a new environment under existing ignored `venv/`, using a path that does not already exist. Example below deliberately refuses to overwrite that path. It creates environment/dependency files only, no detector code or photo directories.
+The verified target venv is `%USERPROFILE%\Documents\Python\Project Image-object Detection\.venv`. Run commands in CMD using its quoted Python executable. Candidate package installation is within Phase 2A and does not download pretrained model weights. Driver 472.19 compatibility remains a hypothesis to check through official guidance and actual tensor execution; a successful wheel installation alone is not GPU readiness.
+
+```bat
+"%USERPROFILE%\Documents\Python\Project Image-object Detection\.venv\Scripts\python.exe" -m pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu118
+```
+
+After this command succeeds, verify CPU/GPU tensor execution before claiming compatibility. A failing GPU probe needs diagnosis or a clearly recorded CPU fallback; model-memory fit and detection behavior remain untested. Supporting packages and viewer checks follow. Do not run a model to validate environment setup.
+
+## 3. Authorized isolated setup — reproduction only
+
+The current target already has a fresh verified `.venv`; preserve and use it. The alternative PowerShell environment-creation example below is for future reproduction only, not the next action on this machine. Reuse any pre-existing environment only after inspection establishes it is suitable. Otherwise preserve it and create a new environment under existing ignored `venv/`, using a path that does not already exist. Example below deliberately refuses to overwrite that path. It creates environment/dependency files only, no detector code or photo directories.
 
 ```powershell
 $BantaiEnvironment = Join-Path (Get-Location) 'venv\phase2a'

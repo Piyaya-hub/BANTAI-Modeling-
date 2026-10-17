@@ -57,6 +57,10 @@ These decisions are sourced from the owner's latest instruction; no additional a
 
 D-001/D-006 and D-009–D-011 remain current: modelling-only trash still images, direct prompts first, mixed categories/multiple candidate regions, and no automatic grouping in the baseline. Category codes are `individual_litter`, `group_of_individual_litter`, and `garbage_pile`. Predictions do not prove membership or physical-object/independent-region counts; unresolved counts remain null. Application modules, APIs, databases, road anomalies, video/cameras, incident consolidation, and hotspots remain outside scope.
 
+## Subsequent supplied preparation progress
+
+After the initial Store-alias failure, owner-supplied WinGet output reports Python 3.11.9 x64 installed from python.org with verified installer hash. A new terminal then reports Python 3.11.9 (AMD64), the real Python311 executable and 64 bits. The owner selected a local Documents/Python/Project Image-object Detection folder; clone output succeeded, followed by `.venv` reporting Python 3.11.9. No ML package, device execution, checkpoint or viewer readiness follows from these observations. Earlier proposed pins remain subject to actual package/device checks.
+
 ## Technical proposals and pending verification
 
 - P-001: The [architecture](ARCHITECTURE.md) and detailed [plan](PHASE_1_IMPLEMENTATION_PLAN.md) propose the local pipeline and output contract. GroundingDINO-T/Transformers is selected; its checkpoint revision, conditions, and local compatibility are not verified.
