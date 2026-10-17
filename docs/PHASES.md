@@ -55,6 +55,8 @@ Implementation and software checks are recorded in [PHASE_2C_CHECKS.md](PHASE_2C
 
 ## Present gate
 
+Direct Windows follow-up on the padding fix now records successful cached CUDA inference on one photo and normal native display, with 53 software tests passing and one privilege-related skip. See [actual Windows evidence](PHASE_2C_WINDOWS_RUN.md). The owner reports correct detections and small piles needing review; broader scene coverage and phase acceptance remain unresolved. The paragraph below describes the earlier pre-correction gate.
+
 Phase 2B is merged through PR #6, with current main `5db174b` at branch creation. Phase 2C baseline implementation is available for review; **valid target detections, model-memory/device acceptance and native photo-overlay rendering remain unverified**. Supplied follow-up reached the first model attempt after a completed weight download, but an implementation bug rejected expected text-padding logits; the focused correction is described in [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). The cloud itself still lacks torch/Transformers and target desktop/photos. An actual local-files-only CLI probe records `runtime/missing_dependency`, not no detections. This is an execution prerequisite, not a request for renewed phase authorization.
 
 Use the existing verified Windows environment for the new tests and authorized functional run, recording actual JSON/native outcomes and qualitative limitations. Team photos are manually supplied and unannotated; missing scenarios remain unrun. Do not infer acceptance, merge or model quality from software checks. No automatic grouping, training, alternative-model selection, web/application modules or Phase 3 optimization is authorized.
