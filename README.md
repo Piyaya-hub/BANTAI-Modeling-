@@ -23,7 +23,8 @@ Phase 0 is documentation only. No object-detection implementation, model downloa
 - [Approved decisions, proposals, and unresolved choices](docs/DECISIONS.md)
 - [Validation and evaluation plan](docs/TEST_PLAN.md)
 - [Current state and handoff](docs/HANDOFF.md)
+- [Phase 1 implementation plan for review](docs/PHASE_1_IMPLEMENTATION_PLAN.md)
 
 ## Next step
 
-Review the Phase 0 documentation against its acceptance criteria. Phase 1 may begin only after explicit project-owner authorization. There are no application startup or model evaluation commands at this stage.
+Phase 0 is complete. Review the [Phase 1 implementation plan](docs/PHASE_1_IMPLEMENTATION_PLAN.md) for Antigravity. The latest owner requirements authorize planning and replace the older annotation/benchmark requirements with functional visual checks on unannotated team photos. Implementation, installation, and inference still require explicit authorization. There are no implemented application startup or model evaluation commands at this stage.
