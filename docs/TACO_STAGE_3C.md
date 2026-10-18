@@ -1,5 +1,7 @@
 # Stage 3C: native training loss and gradient investigation
 
+Historical investigation: D-040 subsequently approved [Stage 3D's separate training-only adapter and synthetic qualification](TACO_STAGE_3D.md). The proposal/approval boundary below describes Stage 3C; Stage 3D neither patches this native library nor authorizes real-data fine-tuning.
+
 Executed on the owner's Windows GTX 1660 Ti on 2026-10-18 under D-039; report finalized 2026-10-19 (Asia/Manila). **Do not proceed to real-image fine-tuning with the current native objective unchanged.** Evidence identifies encoder-supervision tensor wiring as the problem, rather than malformed eight-class targets, a failed Hungarian matcher or numerical overflow. The Stage 3B lifecycle pass remains valid, but did not establish that the encoder objective trains the intended branches.
 
 Recommended next stage: owner-approved **Stage 3D, a training-only encoder-output adapter and synthetic qualification**. Preserve decoder initialization detachment, query count, architecture, loss formula/coefficients, checkpoint and inference environment. No such adapter, Transformers patch, alternate optimizer objective or real-data trainer was installed by Stage 3C. The hypothesis calculations below are diagnostic recomputations only.

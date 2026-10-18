@@ -1,6 +1,8 @@
 # Software and functional detection checks
 
-Current [Stage 3C loss investigation](TACO_STAGE_3C.md) adds seven causal regression/diagnostic fixtures: target-count controls, same-value/different-gradient detach boundaries, independent masked focal accounting, non-accumulating diagnostic gradients, fully empty matching and large unmatched positive logits. Actual CUDA experiments trace eight module probes and compare baseline/2/1/0 targets, with one native update per pretrained reset. A separate baseline factor audit isolates box detachment and classification input routing. No hypothetical objective is optimized; approval is required before a corrected trainer is implemented.
+Current [Stage 3D adapter qualification](TACO_STAGE_3D.md) adds eleven regression tests and actual corrected-objective CUDA evidence. Cover native criterion equality, encoder gradients and updates, nonempty/partial-empty/fully-empty cases, expected zero empty regression, detached decoder initialization, direct/adapter decoder equivalence, model/processor/context replay, source-fingerprint reproducibility and failure guards. The full suite runs 144 tests (143 passed, one existing privilege skip). The bounded synthetic PASS does not authorize real-data training or establish accuracy, convergence, AMP/full-resolution fit or interrupted-training resume.
+
+Completed [Stage 3C](TACO_STAGE_3C.md) retains its seven causal fixtures and actual diagnostic evidence. Those hypotheses were not optimized until the separate Stage 3D authorization; its original code remains unchanged.
 
 Completed [Stage 3B isolated synthetic qualification](TACO_STAGE_3B.md) retains its twelve tests and actual native model/processor round-trip evidence. No full-model/AMP/real-resolution or real-photo training/evaluation is claimed. Preserve strict-clean splits, source identities and held-out evaluation policy.
 

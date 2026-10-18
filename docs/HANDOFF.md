@@ -1,4 +1,12 @@
-# BANTAI Stage 3C loss investigation handoff
+# BANTAI Stage 3D adapter qualification handoff
+
+Current 2026-10-19: D-040 approves the training-only encoder-output adapter and synthetic qualification. Branch `feat/stage3d-training-adapter` starts at Stage 3C `6ce0907` (PR #16, carrying prior #15/#14; main at branch creation `077657c`). Owner detection edits remain local and excluded. See [implementation, commands, complete PASS/FAIL evidence and limits](TACO_STAGE_3D.md).
+
+Final run `adapter-a06cfea197c545fc82c6df91c0b39583` is **PASS** for FP32 batch 2, frozen vision/BERT, 192/256 synthetic inputs: two corrected steps each for 11/2/1/0-target cases. Encoder proposal projection/normalization and box head receive nonempty gradients, Adam state and updates; empty regression is zero. All trainable parameters have gradient tensors. Decoder outputs remain exactly equal with/without the adapter at identical weights, before/after updates. Offline model/processor/adapter-context replay and repeated eval losses match exactly. Resume is explicitly unsupported.
+
+Peak case allocator memory is 2.732 GiB allocated / 2.910 GiB reserved; separate reload verification peaks at 2.998 GiB reserved while the original model remains resident. Full suite: 144 tests, 143 passed/one existing privilege skip; eleven new adapter tests passed. Installed Transformers, both environments, original snapshot, inference, taxonomy, strict-clean manifest and earlier synthetic/investigation code remain unchanged. Experimental weights/reports stay ignored, with no promotion. Stop here: real-data training, full-resolution/AMP fit, rights, data coverage/leakage acceptance, resumable trainer and evaluator qualification remain unrun/unresolved. No merge is authorized.
+
+## Historical Stage 3C handoff
 
 Current 2026-10-19: D-039 authorizes native loss investigation only; experiments completed late 2026-10-18 local time. Branch `investigate/stage3c-training-loss` starts from Stage 3B `b7a350d` (open PR #15, carrying Stage 3A #14; fetched main remains `077657c`). Local owner detection edits remain excluded. See [complete causal investigation, commands and approval proposal](TACO_STAGE_3C.md).
 

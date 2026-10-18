@@ -12,7 +12,9 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-**Stage 3C investigates native training loss and gradients.** [Actual CUDA diagnostics and the proposed correction](docs/TACO_STAGE_3C.md) show that encoder supervision uses detached boxes and learned-query/pre-encoder text scores. A four-case synthetic sweep, including empty targets, identifies the large unmatched-token focal contribution and confirms missing proposal-head updates. An external training-only tensor adapter is proposed, **not implemented or approved**. No real-data training readiness is claimed.
+**Stage 3D implements the approved training-only encoder-output adapter.** [Synthetic qualification and complete evidence](docs/TACO_STAGE_3D.md) record a bounded **PASS**: all eight corrected optimizer steps, encoder classification/box-head updates, expected empty regression, exact decoder equivalence and model/processor/adapter replay. Architecture, text mapping, native loss coefficients, installed libraries and inference remain unchanged. Peak corrected-case allocator memory was 2.732 GiB allocated / 2.910 GiB reserved; this is not full-resolution or real-data readiness.
+
+The completed [Stage 3C investigation](docs/TACO_STAGE_3C.md) supplies the causal evidence for the approved tensor-routing change. Its proposal/stop-before-adapter statements are historical. No TACO photo training, split/taxonomy changes, cloud use or checkpoint promotion occurred.
 
 Completed **Stage 3B** provides the [isolated environment, smoke command and evidence](docs/TACO_STAGE_3B.md): two CUDA optimizer steps and model/processor save-reload with the exact checkpoint, Transformers 4.51.3 and SciPy in `.venv-training`. Peak allocated memory was 2.69 GiB for a small FP32 batch with frozen vision/BERT. The inference `.venv` is unchanged. No TACO photo training, taxonomy change, replacement export or cloud use occurred.
 

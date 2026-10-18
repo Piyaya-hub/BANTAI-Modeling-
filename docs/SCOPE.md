@@ -10,7 +10,9 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
-Current D-039 authorizes [Stage 3C native loss/gradient investigation](TACO_STAGE_3C.md) using existing synthetic data/environment. Only native objectives drive optimizer updates; counterfactual tensor/gradient audits do not authorize an alternate training method. No library patch, loss disabling/reweighting, architecture/dependency change, real-data training, inference change, taxonomy/split replacement or cloud spending is authorized. Obtain approval before implementing a substantive correction.
+Current D-040 authorizes [Stage 3D training-only encoder-output adaptation and synthetic qualification](TACO_STAGE_3D.md). The approved tensor-routing correction uses the same criterion/coefficients and unchanged decoder initialization/architecture. No installed-library patch, inference/environment change, original-weight overwrite, taxonomy/split/data modification, real-photo training, cloud spending or automatic checkpoint promotion is authorized. Stop after this synthetic stage.
+
+D-039 authorized the completed [Stage 3C investigation](TACO_STAGE_3C.md), with its prior stop-before-method-change boundary now superseded only for this explicitly approved adapter.
 
 D-038 authorized the completed [Stage 3B isolated environment and synthetic smoke](TACO_STAGE_3B.md), preserved unchanged. Source photos/annotations, strict-clean splits and inference environment remain protected.
 
