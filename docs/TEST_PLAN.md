@@ -1,5 +1,7 @@
 # Software and functional detection checks
 
+Stage 2 preparation checks now cover whole-image strict eligibility, duplicate/conflicting source IDs, complete mapped COCO traceability, exact/perceptual photograph groups, seeded multi-label assignment, low-class coverage, artifact integrity and independent reconstruction from current source photographs/annotations. Repeated fixtures produce identical artifacts; edited exports must fail even if their checksums are updated. See [actual Stage 2 commands and results](TACO_STAGE_2.md). No model or weights are loaded for these utilities.
+
 Current TACO preparation checks: exact source-name taxonomy mapping, complete metadata/exclusion preservation, COCO xywh geometry, missing/corrupt/unsafe images, duplicate IDs, invalid references/boxes, source hashes, deterministic sampling and explicit stored/EXIF preview. Keep fixtures, native callback checks, agent image observations and human acceptance separate. See [actual TACO commands and evidence](TACO_PREPARATION.md). This independent tooling leaves the inference tests and pipeline unchanged.
 
 Scrollable-tab amendment: test exact repeated section order, raw/incomplete phrases, bounded readable labels above narrow/edge boxes, coordinate alignment, passing-only selectable tables, actual saved configuration, wheel/horizontal scrolling, multi-image replay, normal closure and batch failures. Keep synthetic/Agg/mock evidence separate from actual Windows visual observations. See [current GUI evidence](SCROLLABLE_VIEWER.md).

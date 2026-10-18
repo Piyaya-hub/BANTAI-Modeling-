@@ -1,5 +1,7 @@
 # TACO harmonization and annotation visualization
 
+Stage 1 history: the owner subsequently reported representative annotation review and authorized strict-clean conversion/splitting in D-036. See [Stage 2 commands and evidence](TACO_STAGE_2.md). The earlier no-export/no-splits boundary below is superseded for that implementation; fine-tuning remains unauthorized. These audit/viewer utilities remain unchanged.
+
 The owner authorized this preparation stage on 2026-10-18 (D-035): audit the existing external COCO dataset and visualize its annotations under the eight approved object labels. It creates review artifacts, not training examples or splits. The current Grounding DINO model, detection configuration, inference logic, three inference categories and results viewer are independent and unchanged.
 
 ## Files and requirements

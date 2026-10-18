@@ -1,4 +1,17 @@
-# BANTAI TACO preparation handoff
+# BANTAI Fine-Tuning Preparation Stage 2 handoff
+
+Current 2026-10-18: D-036 authorizes strict-clean TACO conversion and splitting on existing `feat/taco-harmonization`, after the owner's representative annotation review. The local detection config is preserved and excluded from commits. New preparation/policy/validation code is independent of the unchanged detector, taxonomy, annotation viewer and dependencies.
+
+Actual local export: `exports/taco/strict-clean-stage2-v1/` (ignored), 315 images / 538 annotations. Seed 42 gives train 221/397, validation 47/75, test 47/66 (images/annotations). All eight classes are present, but plastic bags have only two validation/two test images; cups and styrofoam also have small evaluation sets. Strict-clean selection sacrifices substantial mixed-scene coverage and can bias evaluation. COCO/source gates and independent reconstruction both passed; `training_ready=false` remains explicit.
+
+Source images/annotations are unchanged and external. Full original metadata, image-level quarantine decisions, unique exported IDs and original IDs/category/record indexes are retained in JSON/CSV ledgers. All 152 dimension mismatches plus nine additional ambiguous orientation cases are held. Exact-byte/pixel duplicates were absent; two near-duplicate candidate pairs were investigated, with the eligible pair coassigned to train and the other quarantined. No ignore strategy, source repair, copy/download, model load or fine-tuning occurred.
+
+See [files, commands, exact exclusion waterfall, class counts, checks and limitations](TACO_STAGE_2.md). Next action is owner review of bias/coverage and licensing/trainer compatibility before authorizing trainer work. PR #13 is the existing open review target; no merge is authorized.
+
+Final checks: 114 tests, 113 passed/one existing privilege skip. Independent real-data reconstruction returned passed with no errors; all final artifacts retain matching checksums. Source hashes, the inference/audit/viewer code, taxonomy and dependencies are preserved. No photo copies are present in the export.
+
+## Historical Stage 1 handoff
+
 
 Current 2026-10-18: D-035 authorizes TACO harmonization/audit and annotation visualization, without fine-tuning, downloads or final splits. Branch `feat/taco-harmonization` starts at main `5351d57`. New independent scripts/config/tests leave all detector/model/threshold/viewer code and existing requirements untouched. The owner's changing detection config remains local and uncommitted.
 
