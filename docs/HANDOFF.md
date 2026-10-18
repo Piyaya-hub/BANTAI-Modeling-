@@ -1,4 +1,15 @@
-# BANTAI Phase 2D handoff
+# BANTAI Phase 2E handoff
+
+Current 2026-10-18: D-034 authorizes functional checking and handoff, stopping before Phase 3 decisions/optimization. Branch `feat/phase-2e-functional-checking` starts at latest fetched main `a3ec215` (PR #11 merged externally). Study baseline prompt was `plastic bag. drink pouch. cigarette butt` at 0.20/0.10. A subsequent local edit adds `a` before `cigarette butt`; it remains preserved and untested, alongside the untracked nested folder and unchanged environment. No defaults were selected.
+
+Five cached CUDA experiments on the same three originals completed without model/processing failures: baseline, concrete prompt, original category prompt, box-only threshold and text-only threshold. All 15 raw-phrase/box overlays were inspected by the agent, with actual native replay verifying tables, zoom/pan callbacks, scrolling and closure. Findings include missed small litter, mixed/empty phrases, near duplicates, road-stripe false detection and pile/group confusion. No clear pile or clean no-trash scene is available. See [run IDs, timings, per-image comparisons, commands and limitations](PHASE_2E_RESULTS.md).
+
+The owner reported oversized/missing labels on small/nested boxes. Corrected defaults are 7.5/7 points; labels can extend within the axes and move above enclosing borders, with query IDs/connectors. Final human acceptance is pending, not inferred from automated checks. A separately reproduced Windows atomic-replacement access-denial was fixed with bounded retries; permanent failures preserve old JSON. Final software suite: 91 passed/one privilege skip. No detection logic, mapping, dependencies or model revision changed, and no inference rerun was needed for either fix.
+
+Next action: owner review of corrected viewer and Phase 2E evidence. Missing scenarios and category quality remain acceptance gaps. Phase 3 recommendations are proposals only; no optimization/grouping/training implementation or merge is authorized.
+
+## Historical Phase 2D handoff
+
 
 Current 2026-10-18: owner authorizes Display and Summaries (D-033), not Phase 2E or fine-tuning. Branch `feat/phase-2d-display-summaries` starts at latest fetched main `76c33f9` (merged PR #10); its tree already contained all previous viewer work. Local owner prompt `plastic bag. drink pouch`, thresholds 0.20/0.10 and untracked `BANTAI-Modeling-/` are preserved, excluded from this commit. No environment changes or inference rerun.
 

@@ -38,7 +38,9 @@ The complete EXIF-oriented RGB original is passed to Matplotlib in memory. Its i
 
 Only valid retained predictions passing the saved strict box-threshold decisions get boxes. Labels show the **raw decoded phrase**, optionally prefixed by its matching query ID when space permits, never the mapped category or prompt substitution. Scores stay in the summary. Incomplete phrases such as `a group` remain incomplete. Empty decoded strings are represented explicitly as `""`.
 
-Label layout is recalculated against actual screen dimensions on every draw, including zoom/pan. Following the owner’s final request, labels use 8.5 points with an 8-point fallback to occupy less image space; table text stays unchanged. Phrases wrap using actual glyph widths within their box's visible horizontal span, preferring whole words. Optional IDs are omitted when they would add a line. Contrasting black backgrounds remain separated from the top box border. Top-edge labels use the display margin. If the complete phrase cannot fit above a narrow/edge/long-phrase box at a readable size, it is omitted from that image view instead of clipped or rendered illegibly small. Its full phrase and query ID remain in the summary; zooming can make an on-image label fit. This is disclosed below the summary. Dense overlapping boxes can still produce nearby labels; use zoom and the full table to inspect them.
+Label layout is recalculated against actual screen dimensions on every draw, including zoom/pan. Following the owner's Phase 2E feedback about oversized/missing labels on small and nested boxes, defaults are 7.5 points with a 7-point fallback. Labels show query ID and the honest raw phrase, wrapping by actual glyph widths. Small boxes may borrow horizontal space within the axes; labels move upward to avoid enclosing borders and preceding labels. Thin connectors associate displaced labels with their boxes. Labels remain above their box and their backgrounds do not obscure retained box borders. Original coordinates and predictions are unchanged.
+
+All labels were placed at the checked initial fit for the owner-reported run and all 15 Phase 2E photo/result combinations. This is not a guarantee for arbitrarily dense or zoomed scenes: when no readable space exists, the full phrase/query stays in the selectable summary, and zoom may reveal it. Offscreen box tops do not leave stray labels. Final owner acceptance of the corrected size/placement is pending; earlier human feedback reported a failure. See [Phase 2E evidence](PHASE_2E_RESULTS.md).
 
 ## Tables and actual configuration
 
@@ -54,11 +56,11 @@ Inference persists each result before it can enter the GUI, queues in-memory ima
 
 Replay verifies **every pair** before creating any pending attempt: result stability, source path identity, SHA-256, oriented dimensions and coordinate frame. It imports no model/inference modules and never rewrites the original functional JSON/photo. Every source gets its own `results/<uuid>/replay.json`, with image number, saved provenance, layout, pending/final status and `inference_executed=false`. One shared window displays them all. Rendering creates no automatic annotated copies or temporary image files. Dependencies, weights, prompts, thresholds and category mapping are unchanged.
 
-## Phase 2D configuration and verification
+## Current configuration and verification
 
-`display.label_font_size` and `display.label_min_font_size` are optional finite point sizes in [8,16], with minimum <= preferred. Defaults remain the owner's 8.5/8 points. Add these fields to the existing display object to customize; no prompt or threshold change is needed. Current display settings are recorded in new inference/replay outcomes and shown alongside saved inference configuration. Historical results use the defaults unless replay display settings override them. Scores and thresholds use decimal [0,1] units throughout.
+`display.label_font_size` and `display.label_min_font_size` are optional finite point sizes in [6,16], with minimum <= preferred. Defaults are now 7.5/7 points after the Phase 2E owner feedback. Add these fields to the existing display object to customize; no prompt or threshold change is needed. Current display settings are recorded in new inference/replay outcomes and shown alongside saved inference configuration. Historical results use the defaults unless replay display settings override them. Scores and thresholds use decimal [0,1] units throughout.
 
-See [Phase 2D checks](PHASE_2D_CHECKS.md) for current evidence and pending visual acceptance. The observations below are preserved history; PR #10 has since merged them into main.
+See [Phase 2E results](PHASE_2E_RESULTS.md) for current evidence and pending human acceptance; [Phase 2D checks](PHASE_2D_CHECKS.md) preserve the earlier results. The observations below are preserved history; PR #10 has since merged them into main.
 
 ## Historical verification - 2026-10-18
 

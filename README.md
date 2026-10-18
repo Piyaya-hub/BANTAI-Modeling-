@@ -12,7 +12,7 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-Phase 2C includes pinned pretrained inference and native in-memory Matplotlib/TkAgg viewing. The padding fix has direct Windows CUDA evidence; see [Windows run](docs/PHASE_2C_WINDOWS_RUN.md). Phase 2D now authorizes completion and validation of the shared scrollable Tk/TkAgg tab with raw phrase labels and passing-only GUI tables. See [Phase 2D evidence and remaining visual checks](docs/PHASE_2D_CHECKS.md). See [scrollable results tab and checks](docs/SCROLLABLE_VIEWER.md). Preparation remains the default and inference requires `--mode infer`.
+Phase 2C includes pinned pretrained inference and native in-memory Matplotlib/TkAgg viewing. The padding fix has direct Windows CUDA evidence; see [Windows run](docs/PHASE_2C_WINDOWS_RUN.md). Phase 2E now authorizes functional checking and handoff. Five controlled cached CUDA runs on three existing photos are recorded in [Phase 2E results](docs/PHASE_2E_RESULTS.md); no default settings were selected. The shared Tk/TkAgg viewer retains raw phrase labels and passing-only GUI tables, with smaller labels and improved small/nested-box placement following owner feedback. See [Phase 2D evidence and remaining visual checks](docs/PHASE_2D_CHECKS.md). See [scrollable results tab and checks](docs/SCROLLABLE_VIEWER.md). Preparation remains the default and inference requires `--mode infer`.
 
 The owner supplies unannotated team photographs, manually downloaded/extracted from Google Drive into a configurable project folder (proposed `data/input/`). The planned detection activity is functional checking and visual inspection, with no required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets.
 
@@ -68,4 +68,4 @@ Exit codes: 0 for completed requested processing/display; 1 for per-image proces
 
 ## Next step
 
-Review [scrollable viewer checks](docs/SCROLLABLE_VIEWER.md) and [handoff](docs/HANDOFF.md). Cached CUDA full-mode execution succeeded on three local photos; visually inspect the native viewer and qualitative detection behavior in VS Code. Keep additional scenarios and category-quality judgments separate from software checks. No automatic merge, grouping or later optimization is authorized.
+Review [Phase 2E comparisons and limitations](docs/PHASE_2E_RESULTS.md) and [handoff](docs/HANDOFF.md). Corrected small/nested-box label placement has automated Windows replay and agent overlay evidence; final human confirmation remains pending. Clear piles and no-trash scenes are unavailable. Stop before Phase 3 decisions or optimization; no merge, grouping or training is authorized.

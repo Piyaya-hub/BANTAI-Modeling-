@@ -31,8 +31,8 @@ def section_data(result):
             ("Model",model["id"]),("Revision",model["revision"]),
             ("Device used",inference.get("actual_device") or "not recorded"),
             ("Score and threshold units","decimal [0,1]; strict > comparison; not accuracy"),
-            ("Label font (points)",str(result.get("display",{}).get("label_font_size",8.5))),
-            ("Minimum label font (points)",str(result.get("display",{}).get("label_min_font_size",8))),
+            ("Label font (points)",str(result.get("display",{}).get("label_font_size",7.5))),
+            ("Minimum label font (points)",str(result.get("display",{}).get("label_min_font_size",7))),
             ("Coordinate frame",result["source"]["coordinate_frame"])]
     return {"summary":summary,"tokens":tokens,"configuration":config,
             "token_message":"Token diagnostics unavailable in this saved result." if raw is None else "No ordinary text tokens pass the text threshold for retained queries."}
@@ -88,40 +88,50 @@ def phrase_artist(ax,d,detections,settings=None):
             x0,y0,x1,_=d["box_xyxy"]
             left,top=ax.transData.transform((x0,y0))
             right,_=ax.transData.transform((x1,y0))
+            if right < ax.bbox.x0 or left > ax.bbox.x1 or not ax.bbox.y0 <= top <= ax.bbox.y1:
+                self.stale=False
+                return
             left=max(left,ax.bbox.x0+1);right=min(right,ax.bbox.x1-1)
-            phrase=d["raw_phrase"]
-            phrase=phrase if phrase else '""'  # Explicit empty decoded string.
-            for break_words in (False,True):
-                for size in ((settings or {}).get("label_font_size",8.5),(settings or {}).get("label_min_font_size",8)):
-                    font=FontProperties(size=size)
-                    pad=size*renderer.dpi/72*.2
-                    available=right-left-2*pad-2
-                    if available<=0:continue
-                    measure=lambda value:renderer.get_text_width_height_descent(value,font,False)[0]
-                    if available<measure("MMM"):continue
-                    # Prefer matching IDs, but never displace the actual raw phrase.
-                    phrase_lines=wrap_pixels(phrase,available,measure,break_words=break_words)
-                    for prefix in (d["id"]+" ",""):
-                        lines=wrap_pixels(prefix+phrase,available,measure,break_words=break_words)
-                        if lines is None or len(lines)>8:continue
-                        if prefix and phrase_lines is not None and len(lines)>len(phrase_lines):continue
-                        label=Text(left+pad+1,top+5+pad,"\n".join(lines),fontproperties=font,
-                                   color="white",va="bottom",ha="left",transform=IdentityTransform(),
-                                   parse_math=False,bbox=dict(boxstyle="square,pad=0.2",facecolor="black",edgecolor="none",alpha=.9))
-                        label.set_figure(ax.figure)
-                        bounds=label.get_window_extent(renderer)
-                        if bounds.y1+pad>ax.bbox.y1-1 or bounds.y0-pad<ax.bbox.y0:continue
-                        rectangle=(bounds.x0-pad,bounds.y0-pad,bounds.x1+pad,bounds.y1+pad)
-                        if covers_border(rectangle,ax,detections):continue
-                        preceding=list(ax.artists)[:list(ax.artists).index(self)]
-                        if any(a.last_layout and not (rectangle[2]<a.last_layout["bounds"][0]
-                               or rectangle[0]>a.last_layout["bounds"][2] or rectangle[3]<a.last_layout["bounds"][1]
-                               or rectangle[1]>a.last_layout["bounds"][3]) for a in preceding if hasattr(a,"last_layout")):continue
-                        label.draw(renderer)
-                        self.last_layout={"bounds":rectangle,
-                                          "box_span":(left,right),"box_top":top,"font_size":size,"text":label.get_text()}
-                        break
-                    if self.last_layout:break  # Otherwise the complete phrase remains in the table.
+            anchor=((left+right)/2,top)
+            phrase=d["raw_phrase"] or '""'
+            text=d["id"]+" "+phrase
+            preceding=[a.last_layout for a in list(ax.artists)[:list(ax.artists).index(self)]
+                       if getattr(a,"last_layout",None)]
+            for size in ((settings or {}).get("label_font_size",7.5),(settings or {}).get("label_min_font_size",7)):
+                font=FontProperties(size=size)
+                pad=size*renderer.dpi/72*.2
+                measure=lambda value:renderer.get_text_width_height_descent(value,font,False)[0]
+                # Small/nested boxes may borrow horizontal space within the axes.
+                width=min(max(right-left,180*renderer.dpi/100),ax.bbox.width-4)
+                label_left=max(ax.bbox.x0+2,min(left,ax.bbox.x1-width-2))
+                lines=wrap_pixels(text,width-2*pad-2,measure)
+                if lines is None:continue
+                label=Text(label_left+pad+1,top+5+pad,"\n".join(lines),fontproperties=font,
+                           color="white",va="bottom",ha="left",transform=IdentityTransform(),
+                           parse_math=False,bbox=dict(boxstyle="square,pad=0.2",facecolor="black",edgecolor="none",alpha=.9))
+                label.set_figure(ax.figure)
+                # Move upwards to clear enclosing box borders and preceding labels.
+                # Exhaustion remains an honest table/zoom fallback, never a dropped box.
+                for offset in range(0,max(1,int(ax.bbox.y1-top)),4):
+                    label.set_y(top+5+pad+offset)
+                    bounds=label.get_window_extent(renderer)
+                    if bounds.y1+pad>ax.bbox.y1-1:break
+                    rectangle=(bounds.x0-pad,bounds.y0-pad,bounds.x1+pad,bounds.y1+pad)
+                    if covers_border(rectangle,ax,detections):continue
+                    if any(not (rectangle[2]<prior["bounds"][0]-2 or rectangle[0]>prior["bounds"][2]+2
+                               or rectangle[3]<prior["bounds"][1]-2 or rectangle[1]>prior["bounds"][3]+2)
+                           for prior in preceding):continue
+                    leader=offset>0 or rectangle[0]<left or rectangle[2]>right
+                    if leader:
+                        from matplotlib.lines import Line2D
+                        endpoint=(max(rectangle[0],min(anchor[0],rectangle[2])),rectangle[1])
+                        line=Line2D([anchor[0],endpoint[0]],[anchor[1]+2,endpoint[1]],
+                                    color="#666666",linewidth=.7,transform=IdentityTransform())
+                        line.set_figure(ax.figure);line.draw(renderer)
+                    label.draw(renderer)
+                    self.last_layout={"bounds":rectangle,"box_span":(left,right),
+                                      "box_top":top,"font_size":size,"text":label.get_text(),"leader":leader}
+                    break
                 if self.last_layout:break
             self.stale=False
     artist=PhraseLabel();artist.set_zorder(5);ax.add_artist(artist)

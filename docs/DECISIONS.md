@@ -138,3 +138,9 @@ The owner confirmed the corrected raw phrase labels were complete and subsequent
 ## Phase 2D authorization - 2026-10-18
 
 D-033: The owner explicitly authorizes Phase 2D - Display and Summaries, completing and validating the existing shared Tk/TkAgg viewer. Preserve local prompt/threshold/font edits, environment, model/mapping, originals and raw JSON. Use latest main and a focused branch, carry relevant unmerged work, prefer saved-image replay, distinguish automated from visual evidence, publish a PR without merging. Phase 2E, fine-tuning, grouping, new data collection and web modules remain excluded. Supersedes the earlier same-feature-branch instruction. See [2D acceptance evidence](PHASE_2D_CHECKS.md).
+
+## Phase 2E authorization - 2026-10-18
+
+D-034: The owner authorizes Phase 2E - Functional Checking and Handoff, superseding the stop-before-2E boundary. Use existing owner photos and pinned cached inference in the preserved Windows environment, compare current settings with a small controlled prompt/threshold set, inspect boxes and raw phrases, verify display/persistence and publish evidence without merging. Keep human confirmation separate; missing observations/scenarios remain pending. Stop before Phase 3 decisions or optimization. No training, grouping, model/dependency changes, collection or application modules. See [results and recommendations](PHASE_2E_RESULTS.md).
+
+During this work the owner reported that current labels needed to be smaller and some were absent for small/nested boxes. This authorizes the focused presentation correction: 7.5/7-point defaults, placement beyond narrow box width while bounded by axes and clear of box borders, query IDs/connectors. Corrected human acceptance remains pending. Existing 8.5/8-point decisions above describe history. Experimental prompt/threshold findings and proposed Phase 3 directions are evidence/proposals, not approved defaults or phase transitions.

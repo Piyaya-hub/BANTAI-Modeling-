@@ -22,6 +22,32 @@ from scripts.results import (candidate, make_result, prepare_result, save_displa
 
 
 class FoundationTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'nt', 'Windows access/sharing retry')
+    def test_atomic_windows_transient_retry_and_permanent_failure_preserve_old(self):
+        path=self.root/'retry.json'
+        atomic_json(path,{'status':'pending','predictions':[1]})
+        before=path.read_bytes()
+        original=os.replace
+        transient=PermissionError('simulated Windows access denial');transient.winerror=5
+        calls=[]
+        def replace(a,b):
+            calls.append((a,b))
+            if len(calls)==1:
+                self.assertEqual(path.read_bytes(),before)
+                raise transient
+            return original(a,b)
+        with patch('scripts.persistence.os.replace',side_effect=replace),patch('scripts.persistence.time.sleep') as sleep:
+            atomic_json(path,{'status':'shown','predictions':[1]},replace=True)
+        self.assertEqual(json.loads(path.read_text())['predictions'],[1])
+        sleep.assert_called_once_with(.05)
+        before=path.read_bytes()
+        with patch('scripts.persistence.os.replace',side_effect=transient) as replace,patch('scripts.persistence.time.sleep') as sleep:
+            with self.assertRaises(PermissionError):atomic_json(path,{'status':'error'},replace=True)
+        self.assertEqual(replace.call_count,5)
+        self.assertAlmostEqual(sum(c.args[0] for c in sleep.call_args_list),.75)
+        self.assertEqual(path.read_bytes(),before)
+        self.assertFalse(list(self.root.glob('.bantai-*')))
+
     def setUp(self):
         (ROOT / "work").mkdir(exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=ROOT / "work")
