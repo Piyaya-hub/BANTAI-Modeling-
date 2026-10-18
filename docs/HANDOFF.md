@@ -1,4 +1,12 @@
-# BANTAI Stage 3A assessment handoff
+# BANTAI Stage 3B synthetic training handoff
+
+Current 2026-10-18: D-038 authorizes isolated training setup and synthetic-only smoke checks. Branch `feat/stage3b-synthetic-training` carries Stage 3A `0ed97d9` from open PR #14, based on main `077657c`. The owner's uncommitted detection settings are preserved. See [complete environment, commands, actual runs and limitations](TACO_STAGE_3B.md).
+
+Installed `.venv-training` independently with the recorded Windows versions and SciPy 1.15.3; inference `.venv` is not modified. Twelve new tests pass. The full isolated suite runs 126 tests: 125 pass, one existing Windows privilege skip. The first CUDA attempt failed before loss because 128/192 images had too few encoder positions for 900 queries; a guard now rejects that condition. Explicit 192/256, FP32, batch 2, frozen vision/BERT passed two native forward/backward/AdamW updates and offline save/reload. Final run `ec713b1fbc47407b8d729d47fa13fbf2` records peak allocated/reserved memory 2.694/2.852 GiB and zero reload logit/box differences. All base snapshot/frozen parameter hashes remain unchanged.
+
+Qualification remains limited: native encoder box predictions/losses have no gradients and ten otherwise-trainable encoder tensors receive none; encoder classification dominates the total loss (~60,766 initially). No loss/version patch was made. Next action is review of these findings and authorization for further trainer qualification before real-data fine-tuning. No TACO photo training, real-data metrics, changed exports/taxonomy, cloud upload/spend or inference changes occurred. Full-resolution/all-parameter/AMP fit, resume, rights and rare-class/leakage readiness remain unrun or unresolved. Do not merge automatically.
+
+## Historical Stage 3A handoff
 
 Current 2026-10-18: D-037 authorizes technical feasibility assessment only. Branch `docs/taco-stage3a-assessment` was created from completed Stage 2 `18b1094` and fast-forwarded to latest fetched main `077657c` after PR #13 was found merged externally; their file trees are identical. The owner's local `config/detection.json` edits remain excluded. See [recommendation, exact-version evidence, recovery bounds, rights gaps and proposed smoke protocol](TACO_STAGE_3A.md).
 

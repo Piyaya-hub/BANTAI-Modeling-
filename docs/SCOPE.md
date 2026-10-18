@@ -10,7 +10,9 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
-Current D-037 authorizes [Stage 3A technical feasibility assessment](TACO_STAGE_3A.md) only: exact-checkpoint training compatibility, dataset expansion options, hardware, licensing and a proposed smoke/evaluation procedure. It does not authorize training, taxonomy changes, replacement exports, installations or inference changes.
+Current D-038 authorizes [Stage 3B isolated environment and synthetic training checks](TACO_STAGE_3B.md): training dependencies in `.venv-training`, a bounded native-loss PyTorch loop on in-memory synthetic images/boxes and model/processor save-reload. Inference `.venv`, pipeline, approved taxonomy, source photos/annotations and existing splits remain unchanged. No TACO photo training, real-data fine-tuning, cloud upload/spend or replacement export is authorized.
+
+D-037 authorized the completed [Stage 3A technical assessment](TACO_STAGE_3A.md). Dataset expansion, ignore/auxiliary taxonomy policies and rights handling remain unresolved proposals.
 
 D-036 authorized the completed [TACO Stage 2 strict-clean conversion and splitting](TACO_STAGE_2.md) after representative annotation review. This superseded the Stage 1 export/split stop boundary below only. Its whole-image quarantine policy and validated reference export remain unchanged.
 

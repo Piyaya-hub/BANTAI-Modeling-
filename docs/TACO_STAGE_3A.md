@@ -1,5 +1,7 @@
 # Stage 3A: Grounding DINO Tiny compatibility and dataset expansion assessment
 
+Historical assessment: [Stage 3B](TACO_STAGE_3B.md) now records an independently installed synthetic environment and actual bounded CUDA execution. The unrun statements below describe Stage 3A; Stage 3B does not authorize real-data training or clear dataset/license decisions.
+
 Assessment date: 2026-10-18. D-037 authorizes investigation and recommendations only. Stage 2 code/export at `18b1094` was reviewed on Windows. The eight-label taxonomy, strict-clean export, source photographs/annotations, inference code/configuration, cached weights and environment are preserved. No model was constructed, no forward/backward pass or optimizer step was run, and no replacement export, installation or download occurred. Tokenizer/image-processor probes below are CPU software checks, not model or training evidence.
 
 ## Recommendation and readiness

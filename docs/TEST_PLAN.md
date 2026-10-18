@@ -1,6 +1,8 @@
 # Software and functional detection checks
 
-Current Stage 3A is assessment only. [Compatibility/recovery evidence and the proposed smoke/evaluation protocol](TACO_STAGE_3A.md) separate source review, cached tokenizer/processor fixtures and analytical memory estimates from unrun forward/backward, AMP, save-reload, training and metrics. Preserve the strict-clean splits and held-out test identities. No training, new evaluation run or replacement export is authorized.
+Current Stage 3B authorizes only [isolated synthetic training qualification](TACO_STAGE_3B.md). Twelve new software checks cover prompt/category order, native loss arithmetic/gradients, target validation, padding/geometry, empty targets, numeric sentinels, encoder capacity, isolation and CLI bounds. Actual Windows CUDA evidence is separate: two finite native-loss steps, measured allocator peaks and model/processor reload equivalence. Native encoder regression has no gradient in the pinned path and is a readiness gap; no full-model/AMP/real-resolution or real-photo training/evaluation is claimed. Preserve strict-clean splits and held-out identities.
+
+Historical [Stage 3A assessment and proposed evaluation](TACO_STAGE_3A.md) remain relevant to future training/expansion. Stage 3B neither authorizes real-data fine-tuning nor clears licensing/annotation decisions.
 
 Completed Stage 2 preparation checks cover whole-image strict eligibility, duplicate/conflicting source IDs, complete mapped COCO traceability, exact/perceptual photograph groups, seeded multi-label assignment, low-class coverage, artifact integrity and independent reconstruction from current source photographs/annotations. Repeated fixtures produce identical artifacts; edited exports must fail even if their checksums are updated. See [actual Stage 2 commands and results](TACO_STAGE_2.md). No model or weights are loaded for these utilities.
 
