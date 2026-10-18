@@ -80,10 +80,10 @@ def validate_config(value, root=ROOT):
         d["backend"] = "TkAgg"
         if d.setdefault("layout","scrollable_tab") != "scrollable_tab":
             raise ConfigError("display layout must be scrollable_tab")
-        for key, default in (("label_font_size", 8.5), ("label_min_font_size", 8)):
+        for key, default in (("label_font_size", 7.5), ("label_min_font_size", 7)):
             value = d.setdefault(key, default)
-            if not finite_number(value) or not 8 <= value <= 16:
-                raise ConfigError(f"{key} must be a finite point size in [8,16]")
+            if not finite_number(value) or not 6 <= value <= 16:
+                raise ConfigError(f"{key} must be a finite point size in [6,16]")
         if d["label_min_font_size"] > d["label_font_size"]:
             raise ConfigError("label_min_font_size must not exceed label_font_size")
         if d.setdefault("terminal_mode", "summary") not in ("summary", "full"):

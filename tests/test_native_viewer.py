@@ -19,7 +19,7 @@ class NativeViewerTests(unittest.TestCase):
     def test_configurable_font_is_validated_and_used_on_redraw(self):
         from scripts.configuration import validate_config, ConfigError
         config=load_config()
-        for value in (True,7,17,float('nan')):
+        for value in (True,5,17,float('nan')):
             bad=copy.deepcopy(config);bad['display']['label_font_size']=value
             with self.assertRaises(ConfigError):validate_config(bad)
         bad=copy.deepcopy(config);bad['display']['label_min_font_size']=9
@@ -67,11 +67,11 @@ class NativeViewerTests(unittest.TestCase):
         layouts=[artist.last_layout for artist in ax.artists if artist.last_layout]
         self.assertTrue(layouts)
         for layout in layouts:
-            x0,y0,x1,y1=layout["bounds"];left,right=layout["box_span"]
+            x0,y0,x1,y1=layout["bounds"];left,right=ax.bbox.x0,ax.bbox.x1
             self.assertGreaterEqual(x0,left);self.assertLessEqual(x1,right)
             self.assertGreater(y0,layout["box_top"]+2)
-            self.assertGreaterEqual(layout["font_size"],8)
-            self.assertLessEqual(layout["font_size"],8.5)
+            self.assertGreaterEqual(layout["font_size"],7)
+            self.assertLessEqual(layout["font_size"],7.5)
             self.assertNotIn("86.1",layout["text"])
             self.assertNotIn("garbage_pile",layout["text"])
         self.assertIn("a garbage pile"," ".join(layouts[0]["text"].split()))
@@ -86,7 +86,8 @@ class NativeViewerTests(unittest.TestCase):
         canvas.draw()
         edge,tiny=ax.artists
         self.assertIsNotNone(edge.last_layout)
-        self.assertIsNone(tiny.last_layout)
+        self.assertIsNotNone(tiny.last_layout)
+        self.assertTrue(tiny.last_layout["leader"])
         self.assertIn('"a very long incomplete phrase"',str(section_data(result)["summary"]))
         bounds=edge.last_layout["bounds"]
         self.assertGreaterEqual(bounds[0],ax.bbox.x0);self.assertLessEqual(bounds[3],ax.bbox.y1)
@@ -104,6 +105,26 @@ class NativeViewerTests(unittest.TestCase):
         FigureCanvasAgg(figure).draw()
         self.assertEqual(len(ax.images),1);self.assertEqual(len(ax.patches),0)
         self.assertEqual(len(ax.artists),0)
+
+    def test_nested_tiny_boxes_keep_complete_labels_clear_of_borders(self):
+        result=self.result()
+        result['detections']=[candidate(ident,phrase,box,.8,60,40) for ident,phrase,box in (
+            ('outer','plastic bag',[5,5,55,35]),
+            ('inner','cigarette butt',[6,6,7,8]),
+            ('tiny','incomplete phrase',[6.2,6.5,6.8,7]))]
+        figure=Figure(figsize=(11,7.5));ax=figure.subplots();canvas=FigureCanvasAgg(figure)
+        with Image.new('RGB',(60,40)) as image:draw_overlays(ax,image,result)
+        for xlim in ((0,60),(0,30)):
+            ax.set_xlim(*xlim);canvas.draw()
+            self.assertTrue(all(a.last_layout for a in ax.artists))
+            for a in ax.artists:
+                layout=a.last_layout
+                self.assertIn(a.query_id,layout['text'])
+                self.assertIn(a.raw_phrase,' '.join(layout['text'].split()))
+                self.assertFalse(covers_border(layout['bounds'],ax,result['detections']))
+                self.assertGreater(layout['bounds'][1],layout['box_top'])
+        ax.set_xlim(56,60);canvas.draw()
+        self.assertTrue(all(a.last_layout is None for a in ax.artists))
 
     def test_saved_prompt_threshold_model_device_and_passing_tokens(self):
         result=self.result();result["query_diagnostics"]={
@@ -206,7 +227,7 @@ class NativeViewerTests(unittest.TestCase):
         self.assertTrue(all(a.last_layout for a in ax.artists))
         label=ax.artists[1].last_layout
         self.assertIn("discarded item","".join(label["text"].splitlines()))
-        self.assertGreaterEqual(label["font_size"],8)
+        self.assertGreaterEqual(label["font_size"],7)
         self.assertFalse(covers_border(label["bounds"],ax,result["detections"]))
 
     def test_synthetic_dispatch_and_legacy_config_migrate(self):

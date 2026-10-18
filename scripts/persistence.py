@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import tempfile
+import time
 import uuid
 
 
@@ -33,12 +34,26 @@ def strict_payload(record):
     return json.dumps(record, allow_nan=False, ensure_ascii=False, indent=2) + "\n"
 
 
+def replace_atomic(temp, path):
+    """Bound transient Windows access/sharing retries; never delete the old file."""
+    for attempt, delay in enumerate((0, .05, .1, .2, .4)):
+        if delay:
+            time.sleep(delay)
+        try:
+            os.replace(temp, path)
+            return
+        except PermissionError as exc:
+            if os.name != 'nt' or getattr(exc, 'winerror', None) not in (5, 32, 33) or attempt == 4:
+                raise
+
+
 def atomic_json(path, record, *, replace=False):
     """Create without clobbering; explicit replacement preserves prior file on failure.
 
     Hard-link publication is atomic and fails if an initial destination exists.
     Filesystems without hard-link support fail visibly rather than weaken safety.
-    os.replace handles explicit updates. Flush/fsync precede either publication.
+    os.replace handles explicit updates, with bounded Windows access/sharing
+    retries (at most 0.75 seconds). Flush/fsync precede either publication.
     Atomic visibility is guaranteed; power-loss directory durability is not claimed.
     """
     path = Path(path)
@@ -53,7 +68,7 @@ def atomic_json(path, record, *, replace=False):
             out.flush()
             os.fsync(out.fileno())
         if replace:
-            os.replace(temp, path)
+            replace_atomic(temp, path)
         else:
             os.link(temp, path)
     finally:

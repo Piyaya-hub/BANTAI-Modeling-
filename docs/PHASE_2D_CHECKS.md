@@ -1,5 +1,7 @@
 # Phase 2D — Display and Summaries checks
 
+Historical Phase 2D evidence. Phase 2E was subsequently authorized, and the owner reported small/nested-box label issues; see [current correction and results](PHASE_2E_RESULTS.md). Font defaults and prior acceptance gaps below describe the 2D version.
+
 Date: 2026-10-18. Base: fetched main `76c33f9`, containing PR #10 and the complete prior scrollable viewer. Focused branch: `feat/phase-2d-display-summaries`. No outstanding viewer work needed cherry-picking. Owner prompt/threshold edits remain local and unchanged; the untracked nested folder is untouched. No packages, model weights, revision, mapping or detection logic changed. No inference was run.
 
 ## Changes and evidence
