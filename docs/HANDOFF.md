@@ -1,4 +1,15 @@
-# BANTAI Phase 2E handoff
+# BANTAI TACO preparation handoff
+
+Current 2026-10-18: D-035 authorizes TACO harmonization/audit and annotation visualization, without fine-tuning, downloads or final splits. Branch `feat/taco-harmonization` starts at main `5351d57`. New independent scripts/config/tests leave all detector/model/threshold/viewer code and existing requirements untouched. The owner's changing detection config remains local and uncommitted.
+
+Actual external source: 1,248 readable, 252 missing, zero unreadable images; 3,938 annotations on readable images. Conservative validation holds 520 otherwise-valid annotations for stored/declared dimension mismatch and nine invalid annotations on readable images: 3,409 all-class usable annotations, 1,653 mapped objects across 735 images. All 152 dimension mismatches match an EXIF-oriented preview; coordinate policy needs review. There are eleven invalid annotations in the full source (two duplicated IDs affecting four records, seven negative-origin boxes), 49 excluded source categories and explicit Unlabeled litter. 413 mapped images also have usable excluded annotations; no implicit backgrounds are generated.
+
+Report is local/ignored at `reports/taco/review-v1/`; source photos and annotations remain external and unchanged. Native Windows checks exercised all-class sampling over ten actual photos and an EXIF preview over three, with selection, boxes, zoom/Home and closure. Agent inspected three in-memory annotation previews; human acceptance remains pending. Software suite: 100 passed/one existing privilege skip. See [file purposes, commands, counts, checks and limitations](TACO_PREPARATION.md).
+
+Next: owner review of annotation previews and decisions on exclusions/unlabeled regions, coordinates and source anomalies before authorizing a training-data export/split stage. No training or grouping is authorized, and no merge is performed.
+
+## Historical Phase 2E handoff
+
 
 Current 2026-10-18: D-034 authorizes functional checking and handoff, stopping before Phase 3 decisions/optimization. Branch `feat/phase-2e-functional-checking` starts at latest fetched main `a3ec215` (PR #11 merged externally). Study baseline prompt was `plastic bag. drink pouch. cigarette butt` at 0.20/0.10. A subsequent local edit adds `a` before `cigarette butt`; it remains preserved and untested, alongside the untracked nested folder and unchanged environment. No defaults were selected.
 

@@ -1,5 +1,7 @@
 # Software and functional detection checks
 
+Current TACO preparation checks: exact source-name taxonomy mapping, complete metadata/exclusion preservation, COCO xywh geometry, missing/corrupt/unsafe images, duplicate IDs, invalid references/boxes, source hashes, deterministic sampling and explicit stored/EXIF preview. Keep fixtures, native callback checks, agent image observations and human acceptance separate. See [actual TACO commands and evidence](TACO_PREPARATION.md). This independent tooling leaves the inference tests and pipeline unchanged.
+
 Scrollable-tab amendment: test exact repeated section order, raw/incomplete phrases, bounded readable labels above narrow/edge boxes, coordinate alignment, passing-only selectable tables, actual saved configuration, wheel/horizontal scrolling, multi-image replay, normal closure and batch failures. Keep synthetic/Agg/mock evidence separate from actual Windows visual observations. See [current GUI evidence](SCROLLABLE_VIEWER.md).
 
 ## Current scope and evidence
