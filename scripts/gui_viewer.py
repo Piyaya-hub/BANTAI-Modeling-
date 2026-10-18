@@ -30,6 +30,9 @@ def section_data(result):
             ("Box threshold",str(inference["threshold"])),("Text threshold",str(inference["text_threshold"])),
             ("Model",model["id"]),("Revision",model["revision"]),
             ("Device used",inference.get("actual_device") or "not recorded"),
+            ("Score and threshold units","decimal [0,1]; strict > comparison; not accuracy"),
+            ("Label font (points)",str(result.get("display",{}).get("label_font_size",8.5))),
+            ("Minimum label font (points)",str(result.get("display",{}).get("label_min_font_size",8))),
             ("Coordinate frame",result["source"]["coordinate_frame"])]
     return {"summary":summary,"tokens":tokens,"configuration":config,
             "token_message":"Token diagnostics unavailable in this saved result." if raw is None else "No ordinary text tokens pass the text threshold for retained queries."}
@@ -67,7 +70,7 @@ def wrap_pixels(text,width,measure,*,break_words=True):
     return lines
 
 
-def phrase_artist(ax,d,detections):
+def phrase_artist(ax,d,detections,settings=None):
     """Lay out against the actual renderer on every draw, including zoom/pan."""
     from matplotlib.artist import Artist
     from matplotlib.text import Text
@@ -89,7 +92,7 @@ def phrase_artist(ax,d,detections):
             phrase=d["raw_phrase"]
             phrase=phrase if phrase else '""'  # Explicit empty decoded string.
             for break_words in (False,True):
-                for size in (8.5,8):
+                for size in ((settings or {}).get("label_font_size",8.5),(settings or {}).get("label_min_font_size",8)):
                     font=FontProperties(size=size)
                     pad=size*renderer.dpi/72*.2
                     available=right-left-2*pad-2
@@ -136,7 +139,7 @@ def draw_overlays(ax,image,result):
     for d in detections:
         x0,y0,x1,y1=d["box_xyxy"];color=colors[d["category"]]
         ax.add_patch(Rectangle((x0,y0),x1-x0,y1-y0,fill=False,edgecolor=color,linewidth=2,zorder=3))
-        phrase_artist(ax,d,detections)
+        phrase_artist(ax,d,detections,result.get("display"))
     # Negative y margin is display space for labels above top-edge boxes;
     # image extent and every box stay in original EXIF-oriented coordinates.
     ax.set(xlim=(0,width),ylim=(height,-height*.22),xlabel="x (original pixels)",ylabel="y (original pixels)")
@@ -223,10 +226,18 @@ def open_results_window(entries):
             canvas.draw()
             data=section_data(result)
             ttk.Label(block,text="Detection Summary",font=("Segoe UI",13,"bold")).pack(anchor="w",pady=(12,0))
+            ttk.Label(block,text=f"Processing status: {result['status']}",wraplength=1050).pack(anchor="w")
+            if result.get("error"):
+                ttk.Label(block,text="Processing error: "+str(result["error"]),wraplength=1050).pack(anchor="w")
+            ttk.Label(block,text="Display status is recorded separately after window closure; saved predictions remain intact on display failure.",wraplength=1050).pack(anchor="w")
             if data["summary"]:
                 readonly_table(block,("Query","Raw decoded phrase","Mapped category","Mapping reason","Model score","Box xyxy (px)","Box threshold"),data["summary"])
                 ttk.Label(block,text="Scores are not accuracy. Full phrases remain here when an image label cannot fit at readable size. Unmapped is not a failed detection.",wraplength=1050).pack(anchor="w")
-            else:ttk.Label(block,text="No valid retained detections pass the box threshold. Original image displayed without boxes.").pack(anchor="w")
+            else:
+                message=("Processing failed; this is not a successful empty detection result."
+                         if result["status"]=="error" else
+                         "No valid retained detections pass the box threshold. Original image displayed without boxes.")
+                ttk.Label(block,text=message).pack(anchor="w")
             ttk.Label(block,text="Text-Token Details",font=("Segoe UI",13,"bold")).pack(anchor="w",pady=(12,0))
             if data["tokens"]:readonly_table(block,("Query","Token","Position","Token ID","Score","Text threshold"),data["tokens"])
             else:ttk.Label(block,text=data["token_message"]).pack(anchor="w")

@@ -16,6 +16,24 @@ from scripts.gui_viewer import section_data,table_text,wheel_steps,open_results_
 
 
 class NativeViewerTests(unittest.TestCase):
+    def test_configurable_font_is_validated_and_used_on_redraw(self):
+        from scripts.configuration import validate_config, ConfigError
+        config=load_config()
+        for value in (True,7,17,float('nan')):
+            bad=copy.deepcopy(config);bad['display']['label_font_size']=value
+            with self.assertRaises(ConfigError):validate_config(bad)
+        bad=copy.deepcopy(config);bad['display']['label_min_font_size']=9
+        with self.assertRaises(ConfigError):validate_config(bad)
+        result=self.result();result['display'].update(label_font_size=10,label_min_font_size=9)
+        figure=Figure(figsize=(12,8));ax=figure.subplots();canvas=FigureCanvasAgg(figure)
+        with Image.new('RGB',(60,40)) as image:draw_overlays(ax,image,result)
+        for limits in ((0,60),(0,55)):
+            ax.set_xlim(*limits);canvas.draw()
+            layouts=[a.last_layout for a in ax.artists if a.last_layout]
+            self.assertTrue(layouts)
+            self.assertTrue(all(x['font_size'] in (10,9) for x in layouts))
+        self.assertEqual(dict(section_data(result)['configuration'])['Label font (points)'],'10')
+
     def result(self,empty=False):
         config=load_config()
         config.update(threshold=.35,text_threshold=.25)

@@ -54,7 +54,13 @@ Inference persists each result before it can enter the GUI, queues in-memory ima
 
 Replay verifies **every pair** before creating any pending attempt: result stability, source path identity, SHA-256, oriented dimensions and coordinate frame. It imports no model/inference modules and never rewrites the original functional JSON/photo. Every source gets its own `results/<uuid>/replay.json`, with image number, saved provenance, layout, pending/final status and `inference_executed=false`. One shared window displays them all. Rendering creates no automatic annotated copies or temporary image files. Dependencies, weights, prompts, thresholds and category mapping are unchanged.
 
-## Verification - 2026-10-18
+## Phase 2D configuration and verification
+
+`display.label_font_size` and `display.label_min_font_size` are optional finite point sizes in [8,16], with minimum <= preferred. Defaults remain the owner's 8.5/8 points. Add these fields to the existing display object to customize; no prompt or threshold change is needed. Current display settings are recorded in new inference/replay outcomes and shown alongside saved inference configuration. Historical results use the defaults unless replay display settings override them. Scores and thresholds use decimal [0,1] units throughout.
+
+See [Phase 2D checks](PHASE_2D_CHECKS.md) for current evidence and pending visual acceptance. The observations below are preserved history; PR #10 has since merged them into main.
+
+## Historical verification - 2026-10-18
 
 Work continues on `feat/terminal-viewer-diagnostics` from fetched `000b3b0`. Owner prompt/threshold edits and the untracked `BANTAI-Modeling-/` folder are preserved. No model execution or package change is needed for this presentation work.
 
