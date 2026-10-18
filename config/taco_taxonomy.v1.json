@@ -1,0 +1,18 @@
+{
+  "schema_version": "bantai.taxonomy.v1",
+  "taxonomy_id": "bantai-taco-objects",
+  "version": "1.0.0",
+  "matching": "exact_original_category_name",
+  "excluded_annotation_policy": "requires_explicit_decision_not_background",
+  "flagged_categories": ["Unlabeled litter"],
+  "labels": [
+    {"id": 0, "name": "cigarette", "taco_categories": ["Cigarette"]},
+    {"id": 1, "name": "plastic_bottle", "taco_categories": ["Clear plastic bottle", "Other plastic bottle"]},
+    {"id": 2, "name": "plastic_bag", "taco_categories": ["Single-use carrier bag", "Garbage bag"]},
+    {"id": 3, "name": "plastic_wrapper", "taco_categories": ["Other plastic wrapper", "Crisp packet"]},
+    {"id": 4, "name": "plastic_film", "taco_categories": ["Plastic film"]},
+    {"id": 5, "name": "drink_can", "taco_categories": ["Drink can"]},
+    {"id": 6, "name": "plastic_cup", "taco_categories": ["Disposable plastic cup"]},
+    {"id": 7, "name": "styrofoam_piece", "taco_categories": ["Styrofoam piece"]}
+  ]
+}

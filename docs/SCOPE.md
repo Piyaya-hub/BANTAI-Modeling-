@@ -10,6 +10,10 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
+Current D-036 authorizes [TACO Stage 2 strict-clean conversion and splitting](TACO_STAGE_2.md) after representative annotation review. This supersedes the Stage 1 export/split stop boundary below only. Whole-image exclusions preserve known excluded objects as quarantine, with no assumed ignore-region semantics. Grounding DINO fine-tuning, new data downloads, dependency/model changes and inference changes remain outside this stage.
+
+Additional owner-authorized preparation now covers auditing/visualizing the existing external TACO dataset under the eight object labels in [the versioned taxonomy](../config/taco_taxonomy.v1.json). This leaves inference categories/behavior intact and creates no training examples, final splits, downloads or fine-tuning. [TACO evidence and pending handling decisions](TACO_PREPARATION.md) define this bounded exception to the earlier stop-before-optimization boundary.
+
 - Detect trash in still images.
 - Functionally check pretrained GroundingDINO-T (Swin-T / Tiny configuration) through Hugging Face Transformers and direct text prompts. Automatic grouping, training, fine-tuning, and alternative models are outside this baseline.
 - Establish documentation and verifiable phase gates before model work.

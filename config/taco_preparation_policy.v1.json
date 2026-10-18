@@ -1,0 +1,34 @@
+{
+  "schema_version": "bantai.taco-eligibility.v1",
+  "version": "1.0.0",
+  "subset": "strict_clean",
+  "image_rules_in_priority_order": [
+    "missing_or_unreadable",
+    "invalid_image_metadata",
+    "dimension_mismatch",
+    "ambiguous_exif_orientation",
+    "invalid_annotation",
+    "crowd_or_ignore_annotation",
+    "unlabeled_annotation",
+    "excluded_annotation",
+    "no_mapped_annotations",
+    "exact_duplicate_conflict",
+    "exact_duplicate_quarantine"
+  ],
+  "coordinate_frame": "stored_raster_without_exif_transpose",
+  "allowed_exif_orientations": [1],
+  "box_repair": "none",
+  "duplicate_annotation_id_repair": "none",
+  "empty_images": "quarantine",
+  "exact_duplicates": "coassign_and_propagate_quarantine",
+  "near_duplicates": {
+    "algorithm": "dhash64_ahash64_aspect_v1",
+    "max_dhash_distance": 4,
+    "max_ahash_distance": 4,
+    "max_relative_aspect_difference": 0.02,
+    "action": "coassign_eligible_candidates"
+  },
+  "split_algorithm": "rare_label_first_group_greedy_v1",
+  "default_ratios": {"train": 0.70, "validation": 0.15, "test": 0.15},
+  "default_seed": 42
+}

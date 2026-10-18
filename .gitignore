@@ -226,3 +226,9 @@ __marimo__/
 
 # Local implementation scratch and synthetic test artifacts
 /work/
+
+# Dataset preparation reports and optional local visualization scratch
+/reports/taco/
+/data/taco/
+/BANTAI-Datasets/
+/exports/taco/

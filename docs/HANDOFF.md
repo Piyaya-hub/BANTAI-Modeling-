@@ -1,4 +1,28 @@
-# BANTAI Phase 2E handoff
+# BANTAI Fine-Tuning Preparation Stage 2 handoff
+
+Current 2026-10-18: D-036 authorizes strict-clean TACO conversion and splitting on existing `feat/taco-harmonization`, after the owner's representative annotation review. The local detection config is preserved and excluded from commits. New preparation/policy/validation code is independent of the unchanged detector, taxonomy, annotation viewer and dependencies.
+
+Actual local export: `exports/taco/strict-clean-stage2-v1/` (ignored), 315 images / 538 annotations. Seed 42 gives train 221/397, validation 47/75, test 47/66 (images/annotations). All eight classes are present, but plastic bags have only two validation/two test images; cups and styrofoam also have small evaluation sets. Strict-clean selection sacrifices substantial mixed-scene coverage and can bias evaluation. COCO/source gates and independent reconstruction both passed; `training_ready=false` remains explicit.
+
+Source images/annotations are unchanged and external. Full original metadata, image-level quarantine decisions, unique exported IDs and original IDs/category/record indexes are retained in JSON/CSV ledgers. All 152 dimension mismatches plus nine additional ambiguous orientation cases are held. Exact-byte/pixel duplicates were absent; two near-duplicate candidate pairs were investigated, with the eligible pair coassigned to train and the other quarantined. No ignore strategy, source repair, copy/download, model load or fine-tuning occurred.
+
+See [files, commands, exact exclusion waterfall, class counts, checks and limitations](TACO_STAGE_2.md). Next action is owner review of bias/coverage and licensing/trainer compatibility before authorizing trainer work. PR #13 is the existing open review target; no merge is authorized.
+
+Final checks: 114 tests, 113 passed/one existing privilege skip. Independent real-data reconstruction returned passed with no errors; all final artifacts retain matching checksums. Source hashes, the inference/audit/viewer code, taxonomy and dependencies are preserved. No photo copies are present in the export.
+
+## Historical Stage 1 handoff
+
+
+Current 2026-10-18: D-035 authorizes TACO harmonization/audit and annotation visualization, without fine-tuning, downloads or final splits. Branch `feat/taco-harmonization` starts at main `5351d57`. New independent scripts/config/tests leave all detector/model/threshold/viewer code and existing requirements untouched. The owner's changing detection config remains local and uncommitted.
+
+Actual external source: 1,248 readable, 252 missing, zero unreadable images; 3,938 annotations on readable images. Conservative validation holds 520 otherwise-valid annotations for stored/declared dimension mismatch and nine invalid annotations on readable images: 3,409 all-class usable annotations, 1,653 mapped objects across 735 images. All 152 dimension mismatches match an EXIF-oriented preview; coordinate policy needs review. There are eleven invalid annotations in the full source (two duplicated IDs affecting four records, seven negative-origin boxes), 49 excluded source categories and explicit Unlabeled litter. 413 mapped images also have usable excluded annotations; no implicit backgrounds are generated.
+
+Report is local/ignored at `reports/taco/review-v1/`; source photos and annotations remain external and unchanged. Native Windows checks exercised all-class sampling over ten actual photos and an EXIF preview over three, with selection, boxes, zoom/Home and closure. Agent inspected three in-memory annotation previews; human acceptance remains pending. Software suite: 100 passed/one existing privilege skip. See [file purposes, commands, counts, checks and limitations](TACO_PREPARATION.md).
+
+Next: owner review of annotation previews and decisions on exclusions/unlabeled regions, coordinates and source anomalies before authorizing a training-data export/split stage. No training or grouping is authorized, and no merge is performed.
+
+## Historical Phase 2E handoff
+
 
 Current 2026-10-18: D-034 authorizes functional checking and handoff, stopping before Phase 3 decisions/optimization. Branch `feat/phase-2e-functional-checking` starts at latest fetched main `a3ec215` (PR #11 merged externally). Study baseline prompt was `plastic bag. drink pouch. cigarette butt` at 0.20/0.10. A subsequent local edit adds `a` before `cigarette butt`; it remains preserved and untested, alongside the untracked nested folder and unchanged environment. No defaults were selected.
 
