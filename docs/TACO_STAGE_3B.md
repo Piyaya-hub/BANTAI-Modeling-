@@ -1,5 +1,7 @@
 # Stage 3B: isolated environment and synthetic training smoke test
 
+Follow-up [Stage 3C investigation](TACO_STAGE_3C.md) now traces the encoder tensor/gradient findings and proposes a correction requiring approval. The Stage 3B lifecycle measurements below remain valid historical evidence, not real-data readiness.
+
 Executed on the owner's Windows computer, 2026-10-18, under D-038. **The bounded synthetic FP32 forward/backward/optimizer and save/reload smoke passed.** This qualifies only the recorded configuration. Native encoder-loss limitations below remain a real-data readiness blocker. No TACO photograph was read by the smoke command or used for training; the strict-clean dataset, inference `.venv`, pipeline, local inference settings, approved taxonomy and base checkpoint are preserved. No cloud service or spending was used.
 
 ## Implementation and boundaries

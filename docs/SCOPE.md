@@ -10,7 +10,9 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
-Current D-038 authorizes [Stage 3B isolated environment and synthetic training checks](TACO_STAGE_3B.md): training dependencies in `.venv-training`, a bounded native-loss PyTorch loop on in-memory synthetic images/boxes and model/processor save-reload. Inference `.venv`, pipeline, approved taxonomy, source photos/annotations and existing splits remain unchanged. No TACO photo training, real-data fine-tuning, cloud upload/spend or replacement export is authorized.
+Current D-039 authorizes [Stage 3C native loss/gradient investigation](TACO_STAGE_3C.md) using existing synthetic data/environment. Only native objectives drive optimizer updates; counterfactual tensor/gradient audits do not authorize an alternate training method. No library patch, loss disabling/reweighting, architecture/dependency change, real-data training, inference change, taxonomy/split replacement or cloud spending is authorized. Obtain approval before implementing a substantive correction.
+
+D-038 authorized the completed [Stage 3B isolated environment and synthetic smoke](TACO_STAGE_3B.md), preserved unchanged. Source photos/annotations, strict-clean splits and inference environment remain protected.
 
 D-037 authorized the completed [Stage 3A technical assessment](TACO_STAGE_3A.md). Dataset expansion, ignore/auxiliary taxonomy policies and rights handling remain unresolved proposals.
 

@@ -1,4 +1,12 @@
-# BANTAI Stage 3B synthetic training handoff
+# BANTAI Stage 3C loss investigation handoff
+
+Current 2026-10-19: D-039 authorizes native loss investigation only; experiments completed late 2026-10-18 local time. Branch `investigate/stage3c-training-loss` starts from Stage 3B `b7a350d` (open PR #15, carrying Stage 3A #14; fetched main remains `077657c`). Local owner detection edits remain excluded. See [complete causal investigation, commands and approval proposal](TACO_STAGE_3C.md).
+
+Controlled native CUDA cases with 11/2/1/0 targets completed, reset to the same pretrained state before each single native update. Encoder CE was 30378/167259/334564/334580; independent focal accounting and captured inputs identify learned-query/pre-encoder text scores rather than image-conditioned encoder proposal logits. Native boxes are detached; proposal-head probes have no gradients, Adam state or updates. Diagnostic selected encoder tensors recover box-head paths and give baseline CE 2.566 without changing the criterion. A separate factor audit proves graph restoration leaves loss values unchanged, whereas score routing changes matching. No hypothesis objective was optimized and no Transformers patch or library change occurred.
+
+Peak diagnostic allocator memory was 2.535 GiB allocated / 2.840 GiB reserved. Tests: 133 run, 132 passed, one existing Windows privilege skip; seven new fixtures passed. Both environments, protected source/settings/splits, Stage 3B trainer and cached weights remain preserved. Next: owner review/approval of a proposed Stage 3D external training-only encoder-tensor adapter and synthetic qualification. Stop before that implementation and before real-data fine-tuning. Original-resolution/full-parameter/AMP training, rights/evaluation/resume and dataset coverage remain unresolved. No merge is authorized.
+
+## Historical Stage 3B handoff
 
 Current 2026-10-18: D-038 authorizes isolated training setup and synthetic-only smoke checks. Branch `feat/stage3b-synthetic-training` carries Stage 3A `0ed97d9` from open PR #14, based on main `077657c`. The owner's uncommitted detection settings are preserved. See [complete environment, commands, actual runs and limitations](TACO_STAGE_3B.md).
 

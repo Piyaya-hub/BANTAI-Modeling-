@@ -1,6 +1,8 @@
 # Software and functional detection checks
 
-Current Stage 3B authorizes only [isolated synthetic training qualification](TACO_STAGE_3B.md). Twelve new software checks cover prompt/category order, native loss arithmetic/gradients, target validation, padding/geometry, empty targets, numeric sentinels, encoder capacity, isolation and CLI bounds. Actual Windows CUDA evidence is separate: two finite native-loss steps, measured allocator peaks and model/processor reload equivalence. Native encoder regression has no gradient in the pinned path and is a readiness gap; no full-model/AMP/real-resolution or real-photo training/evaluation is claimed. Preserve strict-clean splits and held-out identities.
+Current [Stage 3C loss investigation](TACO_STAGE_3C.md) adds seven causal regression/diagnostic fixtures: target-count controls, same-value/different-gradient detach boundaries, independent masked focal accounting, non-accumulating diagnostic gradients, fully empty matching and large unmatched positive logits. Actual CUDA experiments trace eight module probes and compare baseline/2/1/0 targets, with one native update per pretrained reset. A separate baseline factor audit isolates box detachment and classification input routing. No hypothetical objective is optimized; approval is required before a corrected trainer is implemented.
+
+Completed [Stage 3B isolated synthetic qualification](TACO_STAGE_3B.md) retains its twelve tests and actual native model/processor round-trip evidence. No full-model/AMP/real-resolution or real-photo training/evaluation is claimed. Preserve strict-clean splits, source identities and held-out evaluation policy.
 
 Historical [Stage 3A assessment and proposed evaluation](TACO_STAGE_3A.md) remain relevant to future training/expansion. Stage 3B neither authorizes real-data fine-tuning nor clears licensing/annotation decisions.
 
