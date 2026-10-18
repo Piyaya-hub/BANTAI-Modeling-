@@ -10,7 +10,9 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
-Current D-036 authorizes [TACO Stage 2 strict-clean conversion and splitting](TACO_STAGE_2.md) after representative annotation review. This supersedes the Stage 1 export/split stop boundary below only. Whole-image exclusions preserve known excluded objects as quarantine, with no assumed ignore-region semantics. Grounding DINO fine-tuning, new data downloads, dependency/model changes and inference changes remain outside this stage.
+Current D-037 authorizes [Stage 3A technical feasibility assessment](TACO_STAGE_3A.md) only: exact-checkpoint training compatibility, dataset expansion options, hardware, licensing and a proposed smoke/evaluation procedure. It does not authorize training, taxonomy changes, replacement exports, installations or inference changes.
+
+D-036 authorized the completed [TACO Stage 2 strict-clean conversion and splitting](TACO_STAGE_2.md) after representative annotation review. This superseded the Stage 1 export/split stop boundary below only. Its whole-image quarantine policy and validated reference export remain unchanged.
 
 Additional owner-authorized preparation now covers auditing/visualizing the existing external TACO dataset under the eight object labels in [the versioned taxonomy](../config/taco_taxonomy.v1.json). This leaves inference categories/behavior intact and creates no training examples, final splits, downloads or fine-tuning. [TACO evidence and pending handling decisions](TACO_PREPARATION.md) define this bounded exception to the earlier stop-before-optimization boundary.
 

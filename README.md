@@ -12,7 +12,9 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-**Fine-Tuning Preparation Stage 2** adds strict-clean eight-class COCO conversion and seeded, duplicate-aware image splits. The local subset contains 315 images/538 annotations: 221 training, 47 validation and 47 test images. Source photographs remain external; mixed/excluded/ambiguous images are quarantined whole. See [commands, class coverage, traceability and independent validation](docs/TACO_STAGE_2.md). Licensing, trainer compatibility and limited evaluation coverage remain unresolved; no fine-tuning is performed.
+**Stage 3A is a technical feasibility assessment only.** The [training compatibility and expansion assessment](docs/TACO_STAGE_3A.md) recommends the exact checkpoint through Transformers 4.51.3 in an isolated training environment, subject to owner approval, rights clearance and a bounded smoke test. SciPy is absent locally, training memory fit is unmeasured, and excluded/unlabeled regions cannot simply be dropped. No training, taxonomy change or replacement export is authorized.
+
+Completed **Fine-Tuning Preparation Stage 2** provides strict-clean eight-class COCO conversion and seeded, duplicate-aware image splits. The preserved subset contains 315 images/538 annotations: 221 training, 47 validation and 47 test images. Source photographs remain external; mixed/excluded/ambiguous images are quarantined whole. See [commands, class coverage, traceability and independent validation](docs/TACO_STAGE_2.md). Licensing and limited evaluation coverage remain unresolved; no fine-tuning is performed.
 
 The earlier [TACO harmonization/audit and annotation viewer](docs/TACO_PREPARATION.md) remain unchanged. Their 1,248 readable/252 missing images and 3,938 annotations on readable images are the source pool, before Stage 2 whole-image exclusions.
 

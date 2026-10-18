@@ -1,4 +1,14 @@
-# BANTAI Fine-Tuning Preparation Stage 2 handoff
+# BANTAI Stage 3A assessment handoff
+
+Current 2026-10-18: D-037 authorizes technical feasibility assessment only. Branch `docs/taco-stage3a-assessment` was created from completed Stage 2 `18b1094` and fast-forwarded to latest fetched main `077657c` after PR #13 was found merged externally; their file trees are identical. The owner's local `config/detection.json` edits remain excluded. See [recommendation, exact-version evidence, recovery bounds, rights gaps and proposed smoke protocol](TACO_STAGE_3A.md).
+
+Recommended route is the pinned HF checkpoint with Transformers 4.51.3's existing loss in a separate future PyTorch trainer/environment. SciPy and pycocotools are absent locally. Token-span and synthetic COCO processor probes passed, but no model was constructed or trained. Training VRAM/backward/AMP/save-reload remain unrun. Approximately 24 GB GPU capacity is a planning recommendation, not a measured requirement. Excluded/crowd flags do not provide spatial loss ignoring.
+
+The validated 315-image/538-object strict-clean export remains unchanged. Conditional review bounds: coordinates alone could add 44 images/55 mapped objects; known excluded-category cases could add 280/597. These are not approved additions. Of 315 retained photos, 185 have null license metadata, 35 only `CC`, and 95 an ODbL/OpenLitterMap notice; individual rights and annotation/database terms remain unresolved.
+
+Next action is owner review/approval of rights handling, isolated trainer/smoke scope, hardware/budget and any expansion policy. No taxonomy change, replacement export, dependency installation or fine-tuning occurred. Stage 2's 13 focused tests passed again; independent validation and final documentation checks are recorded in the assessment. No merge is authorized.
+
+## Historical Stage 2 handoff
 
 Current 2026-10-18: D-036 authorizes strict-clean TACO conversion and splitting on existing `feat/taco-harmonization`, after the owner's representative annotation review. The local detection config is preserved and excluded from commits. New preparation/policy/validation code is independent of the unchanged detector, taxonomy, annotation viewer and dependencies.
 
