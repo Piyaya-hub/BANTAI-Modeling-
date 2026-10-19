@@ -1,5 +1,13 @@
 # Decision register
 
+## Current Stage 4 authorization — 2026-10-19
+
+| ID | Approved decision | Consequence |
+| --- | --- | --- |
+| D-041 | Owner authorizes real-image fine-tuning and initial validation directly on Stage 3D's verified adapter as one continuous implementation task, conditional on verified permission or an appropriately approved lawful-use basis for source photos and annotations/database. | Implement loader, full resumable checkpoints, progress, real-memory pilot and bounded 2–3 epochs with fixed pretrained/validation comparison; preserve eight labels/splits, inference/environment and original weights. If rights remain unresolved, finish runnable software and identify exact approval before processing actual photos. No test-photo use, cloud spending/upload/publication, promotion or PR merge. Earlier synthetic-only boundaries are superseded within this scope. |
+
+Implementation/evidence: [Stage 4](TACO_STAGE_4.md). Software and generated-image qualification are recorded separately from real-photo gates. Missing rights evidence currently blocks actual photo processing/training; no permission, real-data outcome or benchmark is invented. The fixed initial protocol/settings in the implementation are bounded engineering choices, not measured optimal defaults or a taxonomy/architecture decision.
+
 ## Historical Phase 0 decisions — retained record
 
 Source: the project owner's Phase 0 task instructions. These entries preserve their original wording; they are not all current instructions. D-002 is refined by D-007/D-014; D-003's Phase 0-only task state is superseded by D-020; D-004's preserved original ignore rules now permit additive exclusions under D-019. No entry is experimental evidence.

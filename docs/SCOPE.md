@@ -10,7 +10,9 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
-Current D-040 authorizes [Stage 3D training-only encoder-output adaptation and synthetic qualification](TACO_STAGE_3D.md). The approved tensor-routing correction uses the same criterion/coefficients and unchanged decoder initialization/architecture. No installed-library patch, inference/environment change, original-weight overwrite, taxonomy/split/data modification, real-photo training, cloud spending or automatic checkpoint promotion is authorized. Stop after this synthetic stage.
+Current D-041 authorizes [Stage 4 real-image training and initial validation](TACO_STAGE_4.md) as one continuous implementation task, using the verified Stage 3D adapter and unchanged strict-clean eight-class train/validation splits. Actual-photo processing is conditional on documented permission or an approved lawful-use basis covering photos and annotations/database. Until cleared, complete runnable code/checks and report the blocking approval. No test-photo use, cloud spending/upload, publication, inference/base-weight change, split/taxonomy replacement or automatic promotion/merge is authorized. Earlier stage boundaries below are historical.
+
+Historical D-040 authorized [Stage 3D training-only encoder-output adaptation and synthetic qualification](TACO_STAGE_3D.md). The approved tensor-routing correction uses the same criterion/coefficients and unchanged decoder initialization/architecture. That stage prohibited installed-library patches, inference/environment changes, original-weight overwrite, taxonomy/split/data modification, real-photo training, cloud spending or automatic checkpoint promotion, and stopped after synthetic qualification. D-041 now defines the conditional real-data scope above.
 
 D-039 authorized the completed [Stage 3C investigation](TACO_STAGE_3C.md), with its prior stop-before-method-change boundary now superseded only for this explicitly approved adapter.
 

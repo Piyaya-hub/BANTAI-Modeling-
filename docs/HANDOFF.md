@@ -1,4 +1,14 @@
-# BANTAI Stage 3D adapter qualification handoff
+# BANTAI Stage 4 handoff
+
+Current 2026-10-19: D-041 authorizes real-image fine-tuning and initial validation as one continuous task, conditional on documented photo and annotation/database rights. Branch `feat/stage4-real-image-training` builds on Stage 3D `22bcdbc` (open PR #17, carrying #14–#16; fetched main `077657c`). [Stage 4 implementation, rights scope, commands, resume behavior and evidence](TACO_STAGE_4.md) are available. The loader/trainer/pilot/progress/COCO evaluator and complete optimizer/RNG/sampler checkpoints are implemented. The verified Stage 3D adapter remains unchanged; no native miswired loss is used.
+
+Full suite: 158 run, 157 passed/one existing privilege skip. Final generated-image CUDA continuation `76903099b57f453da9514e6a06fce128` passes: exact pre-update weights/optimizer/RNG/batch restoration, loss equality, post-update parameter maximum difference `4.10e-8` (not bitwise identical), encoder updates, frozen preservation and decoder equivalence. A same-model repeated-update control differs by `8.38e-8`; an isolated strict-determinism probe identifies unsupported CUDA grid-sampler backward. Earlier tolerance, shared-alias diagnostic and combined-probe OOM failures remain documented. No model/resolution/loss fallback occurred. Source photos were not opened. The actual real-data CLI stopped at `blocked_rights` with zero photo reads/optimizer steps. No real pilot, actual-photo memory result, TACO-trained checkpoint or real validation metric is claimed; human review remains pending.
+
+**Next action:** owner supplies documented permission or approved institutional/legal basis, authority/date/evidence/scope/obligations covering the exact 221 training and 47 validation photos plus annotation/database rights. Metadata contains 161 unspecified/null, 30 generic CC and 77 ODbL-notice images in that scope. Then execute the documented command directly: actual-photo coordinate preflight, unchanged baseline, measured memory pilot and bounded run; stop/report technical failures without silently changing settings. Test photos remain untouched. No additional standalone assessment stage, dataset changes, cloud spending, publication, inference promotion or merge.
+
+Only `pycocotools==2.0.10` was added inside `.venv-training`, with a pinned Windows wheel hash; existing package versions and inference `.venv` are preserved. Owner detection edits are excluded from commits. Generated images/checkpoints/reports and any actual private rights evidence remain ignored.
+
+## Historical Stage 3D handoff
 
 Current 2026-10-19: D-040 approves the training-only encoder-output adapter and synthetic qualification. Branch `feat/stage3d-training-adapter` starts at Stage 3C `6ce0907` (PR #16, carrying prior #15/#14; main at branch creation `077657c`). Owner detection edits remain local and excluded. See [implementation, commands, complete PASS/FAIL evidence and limits](TACO_STAGE_3D.md).
 
