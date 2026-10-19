@@ -4,6 +4,8 @@
 
 Owner authorization D-041 supersedes Stage 3D's stop-before-real-data boundary, subject to the owner's explicit image-use condition. This is one continuous implementation stage, not a new assessment phase. Branch `feat/stage4-real-image-training` builds directly on Stage 3D `22bcdbc` (open PR #17), carrying the unmerged Stage 3A–3D work above fetched main `077657c`.
 
+Implementation commit `601bb81` is published in [PR #18 targeting main](https://github.com/Piyaya-hub/BANTAI-Modeling-/pull/18). It remains unmerged; only code/docs are published, with no dataset/model artifacts or implied rights approval.
+
 The runnable loader, corrected-objective trainer, pilot, progress, complete resumable checkpoints and fixed validation evaluator are implemented. **Real-photo processing, the pilot, 2–3 epochs and real validation metrics remain BLOCKED by missing documented photo/annotation-use authorization. No fine-tuned TACO checkpoint exists.** Metadata inspection does not clear rights. No test photographs or test split JSON are loaded by these commands. Existing source data, eight labels, split exports, inference settings/environment, pretrained cache and Stage 3D adapter are preserved. The owner's local `config/detection.json` edits remain excluded from commits.
 
 ## Files and behavior
