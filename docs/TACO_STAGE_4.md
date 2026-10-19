@@ -2,6 +2,10 @@
 
 ## Current outcome
 
+**Update under D-042:** [the first real-image run](TACO_STAGE_4_RUN.md) completed two epochs, real coordinate/memory checks, complete checkpoints and same-protocol baseline/final evaluation. The owner-authorized [qualified academic-use claim](TACO_STAGE_4_ACADEMIC_USE.md) is documented without claiming permission or definitive legal clearance. Validation loss fell, but AP deteriorated; the experimental checkpoint is not promoted. Test data/inference/original weights remain preserved. The earlier blocked-rights implementation record below is retained as history, not the current run status.
+
+## Initial implementation outcome (historical)
+
 Owner authorization D-041 supersedes Stage 3D's stop-before-real-data boundary, subject to the owner's explicit image-use condition. This is one continuous implementation stage, not a new assessment phase. Branch `feat/stage4-real-image-training` builds directly on Stage 3D `22bcdbc` (open PR #17), carrying the unmerged Stage 3A–3D work above fetched main `077657c`.
 
 Implementation commit `601bb81` is published in [PR #18 targeting main](https://github.com/Piyaya-hub/BANTAI-Modeling-/pull/18). It remains unmerged; only code/docs are published, with no dataset/model artifacts or implied rights approval.
@@ -23,7 +27,7 @@ The runnable loader, corrected-objective trainer, pilot, progress, complete resu
 
 COCO area is retained as segmentation/object area; it is not replaced with bounding-box area. Boxes remain `[x,y,width,height]` on the original stored raster, with no EXIF transpose, annotation clipping or silent object removal. All 268 train/validation photographs must decode, match recorded file hashes/dimensions/orientation, and preserve all target identities and coordinates through resizing/padding **before any optimizer update**. This geometric check does not substitute for human annotation correctness review.
 
-## Narrow rights check — blocking gate
+## Initial rights check — historical blocking gate
 
 Metadata-only reinspection of the unchanged export on 2026-10-19 found:
 

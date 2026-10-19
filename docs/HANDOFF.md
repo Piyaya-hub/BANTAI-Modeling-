@@ -1,5 +1,17 @@
 # BANTAI Stage 4 handoff
 
+## Completed first real-image run — 2026-10-19
+
+D-042 records the owner's actual non-commercial/local academic declaration and authorizes the existing workflow on a defensible, documented Section 185 claim. [The evidence record](TACO_STAGE_4_ACADEMIC_USE.md) expressly claims no rightsholder permission, institutional approval or definitive clearance; the v2 gate keeps clearance flags false and binds the assessment/corpus. A strictly verified source-JSON formatting change was accepted only because default serialization reconstructs the exact original recorded hash; source/export files were not rewritten.
+
+Actual run `taco-1698bcb46b85435786dd2a199910910f`: **completed two epochs / 442 full-run updates**, plus three discarded pilot steps. Full-run mean losses 14.304753 / 12.103961; validation loss 19.348786 baseline -> 12.133389 final. **AP [0,1] deteriorated from 0.000298934 to 0.000057591**. Fixed score 0.25 diagnostics miss all 75 validation annotations after fine-tuning. Runtime success is not detection-quality acceptance. [Full measured results, commands, class limits, failures and checkpoint location](TACO_STAGE_4_RUN.md).
+
+Real pilot peaks: 2.384 GiB allocated / 2.535 reserved; full run: 2.382 / 2.539 GiB. Lifecycle 449.386 seconds. Native reload of the final `checkpoints/epoch-02` and replay on all 47 validation photos matched every prediction/raw query, metric and mean loss exactly, with zero extra updates. All ten checkpoint bundles/hash lists and final optimizer/RNG state passed audit. Full suite: 160 run, 159 passed/one existing skip. No prior CUDA synthetic investigation was repeated.
+
+**Next action:** review poor detections locally before proposing any longer training or changing resolution/prompts/objective; no further run or optimization was started automatically. Human image/annotation/error review remains pending because no photos were uploaded for agent inspection. Test photos remain unused, model/split/taxonomy/inference/environment preserved, experimental weights private and unpromoted, PR #18 unmerged. Training source is commit `c8c7102`; preserve the ignored rights record and bound assessment bytes for within-budget checkpoint resume. The first experiment has no remaining runtime blocker; it has a failed detection-quality outcome.
+
+## Initial Stage 4 implementation handoff (historical)
+
 Current 2026-10-19: D-041 authorizes real-image fine-tuning and initial validation as one continuous task, conditional on documented photo and annotation/database rights. Branch `feat/stage4-real-image-training` builds on Stage 3D `22bcdbc` (open PR #17, carrying #14–#16; fetched main `077657c`). [Stage 4 implementation, rights scope, commands, resume behavior and evidence](TACO_STAGE_4.md) are available. The loader/trainer/pilot/progress/COCO evaluator and complete optimizer/RNG/sampler checkpoints are implemented. The verified Stage 3D adapter remains unchanged; no native miswired loss is used.
 
 Implementation commit `601bb81` is pushed in [PR #18 targeting main](https://github.com/Piyaya-hub/BANTAI-Modeling-/pull/18), open and unmerged. It carries the unmerged Stage 3A–3D lineage; publishing this code does not publish dataset/model artifacts or clear the rights gate.

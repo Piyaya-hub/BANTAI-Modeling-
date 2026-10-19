@@ -12,7 +12,7 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
-**Stage 4 implements the real-image trainer and initial evaluator**, building directly on Stage 3D's verified adapter. [Commands, complete checkpoint/resume behavior, rights gate and actual evidence](docs/TACO_STAGE_4.md) are available. Generated-image CUDA continuation passes within recorded numerical tolerance. Real-photo processing, the memory pilot, fine-tuning and real validation metrics are blocked until documented photo and annotation/database authorization covers the 221 training and 47 validation images. No TACO-trained checkpoint is claimed; test images, original splits, taxonomy, inference and pretrained weights remain preserved.
+**Stage 4 completed the first local two-epoch real-image fine-tuning run**, using the verified Stage 3D adapter and the [documented owner-authorized academic-use claim](docs/TACO_STAGE_4_ACADEMIC_USE.md). [Measured results and checkpoint location](docs/TACO_STAGE_4_RUN.md): 442 full-run updates, memory about 2.38 GiB allocated, lower loss but **worse validation detection AP**. The experimental checkpoint remains private and unpromoted; test images, splits, taxonomy, inference and pretrained weights remain preserved. [Trainer/resume commands and initial history](docs/TACO_STAGE_4.md) remain available.
 
 **Stage 3D implements the approved training-only encoder-output adapter.** [Synthetic qualification and complete evidence](docs/TACO_STAGE_3D.md) record a bounded **PASS**: all eight corrected optimizer steps, encoder classification/box-head updates, expected empty regression, exact decoder equivalence and model/processor/adapter replay. Architecture, text mapping, native loss coefficients, installed libraries and inference remain unchanged. Peak corrected-case allocator memory was 2.732 GiB allocated / 2.910 GiB reserved; this is not full-resolution or real-data readiness.
 
@@ -82,7 +82,7 @@ Exit codes: 0 for completed requested processing/display; 1 for per-image proces
 
 ## Next step
 
-Resolve the exact [Stage 4 image-use authorization gate](docs/TACO_STAGE_4.md) before running the implemented real-image pilot/trainer. No further standalone assessment stage is needed. Actual-photo geometry, memory and evaluation remain unrun until that gate passes. Earlier preparation and inference follow-ups below are historical context.
+Review [the completed first real-image experiment](docs/TACO_STAGE_4_RUN.md) locally before any further training or promotion: detection AP deteriorated despite lower loss. No additional preparation phase or optimization is started automatically. Earlier preparation and inference follow-ups below are historical context.
 
 Review [TACO audit counts, commands and pending decisions](docs/TACO_PREPARATION.md), particularly excluded/unlabeled objects in mixed images, EXIF coordinate alignment, duplicate IDs and negative boxes. Human annotation-viewer acceptance and a handling policy are needed before any later training-data export. The inference functional-check history follows below.
 
