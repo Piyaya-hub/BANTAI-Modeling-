@@ -25,7 +25,7 @@ from scripts.train_taco import main
 
 def fixture(folder):
     root=folder/'images';root.mkdir()
-    source=folder/'original_annotations.json';source.write_text('{"synthetic_fixture":true}')
+    source=folder/'original_annotations.json';source.write_text(json.dumps({'synthetic_fixture':True}))
     manifest={'schema_version':'bantai.taco-preparation.v1','status':'validated',
               'source':{'sha256':digest(source),'annotations':str(source),
                         'taxonomy_sha256':digest(ROOT/'config/taco_taxonomy.v1.json')},'artifacts':{}}
@@ -53,6 +53,39 @@ def fixture(folder):
 
 
 class DataTests(unittest.TestCase):
+    def test_source_formatting_equivalence_requires_exact_original_hash_reconstruction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);_,context=fixture(folder)
+            source=folder/'original_annotations.json'
+            source.write_text(json.dumps(json.loads(source.read_text()),indent=4))
+            observed=dataset_context(folder)
+            self.assertEqual(observed['source_annotations_sha256'],context['source_annotations_sha256'])
+            self.assertEqual(observed['source_verification'],'exact_recorded_bytes_reconstructed_by_json_dumps')
+            self.assertEqual(observed['observed_source_annotations_sha256'],digest(source))
+            source.write_text(json.dumps({'synthetic_fixture':False},indent=4))
+            with self.assertRaisesRegex(ValueError,'annotation JSON changed'):dataset_context(folder)
+
+    def test_owner_exception_record_preserves_no_clearance_and_binds_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);rp,context=fixture(folder)
+            record=json.loads(rp.read_text())
+            record.update(schema_version='bantai.training-rights.v2',basis_type='owner_authorized_section185_research',
+                workflow_authorized=True,basis_assessment='defensible_limited_use_with_uncertainty',
+                rightsholder_permission='not_claimed',institutional_approval='not_claimed',definitive_legal_clearance='not_claimed',
+                photo_rights_cleared=False,annotation_database_rights_cleared=False,
+                owner_declaration={'non_commercial_academic':True,'local_only':True,
+                    'no_dataset_publication_redistribution_upload':True,'workflow_authorized':True},
+                assessment={'path':'docs/TACO_STAGE_4_ACADEMIC_USE.md','sha256':digest(ROOT/'docs/TACO_STAGE_4_ACADEMIC_USE.md')},
+                factors={k:'Controlled fixture analysis' for k in ('purpose','nature','amount','market')},
+                sources=['https://lawphil.net/statutes/repacts/ra1997/ra_8293_1997.html',
+                    'https://lawphil.net/statutes/repacts/ra2013/ra_10372_2013.html',
+                    'https://github.com/pedropro/TACO/blob/master/README.md'])
+            rp.write_text(json.dumps(record));self.assertFalse(require_rights(rp,context)['record']['photo_rights_cleared'])
+            for field,value in [('workflow_authorized',False),('photo_rights_cleared',True),('institutional_approval','invented'),
+                                ('factors',{}),('assessment',{}),('sources',[])]:
+                bad=dict(record,**{field:value});rp.write_text(json.dumps(bad))
+                with self.subTest(field=field),self.assertRaises(RightsRequired):require_rights(rp,context)
+
     def test_missing_dimension_and_unsafe_source_paths_fail(self):
         for change in ('missing','dimensions','escape'):
             with self.subTest(change=change),tempfile.TemporaryDirectory() as tmp:

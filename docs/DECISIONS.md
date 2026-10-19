@@ -1,5 +1,9 @@
 # Decision register
 
+## Stage 4 owner academic-use declaration — 2026-10-19
+
+D-042: The owner confirms non-commercial academic purpose, local training/evaluation, no publication/redistribution/cloud upload of TACO photos or annotations, and authorizes proceeding on a genuinely documented lawful-use basis if supportable. This is project-owner workflow authorization, not rightsholder permission, institutional approval or definitive legal clearance. The [case-specific Section 185 record](TACO_STAGE_4_ACADEMIC_USE.md) documents a defensible limited-use claim with remaining uncertainty, bound to the exact 221 training and 47 validation images/annotations. The v2 gate records that claim with clearance flags false and third-party authority explicitly not claimed. No new phase, model/loss/precision change, test use, cloud spending, publication or automatic merge is authorized. Existing Stage 4 pilot/training/evaluation proceeds within that scope.
+
 ## Current Stage 4 authorization — 2026-10-19
 
 | ID | Approved decision | Consequence |

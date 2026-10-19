@@ -1,5 +1,7 @@
 """Read-only Stage 4 COCO data and explicit photo-use authorization gate."""
 import copy
+import hashlib
+import json
 import math
 from pathlib import Path
 
@@ -18,13 +20,23 @@ def dataset_context(folder):
     manifest = strict_load(folder/'preparation_manifest.json')
     if manifest['schema_version'] != 'bantai.taco-preparation.v1' or manifest['status'] != 'validated':
         raise ValueError('Require validated Stage 2 export')
-    if digest(manifest['source']['annotations']) != manifest['source']['sha256']:
-        raise ValueError('Original source annotation JSON changed')
+    observed_source=digest(manifest['source']['annotations'])
+    serialization_only=False
+    if observed_source != manifest['source']['sha256']:
+        # Accept only when reconstruction reproduces the EXACT originally hashed
+        # byte stream. Never rewrite sources/exports or accept changed COCO values.
+        reconstructed=json.dumps(strict_load(Path(manifest['source']['annotations']))).encode('utf-8')
+        if hashlib.sha256(reconstructed).hexdigest() != manifest['source']['sha256']:
+            raise ValueError('Original source annotation JSON changed')
+        serialization_only=True
     validate_taxonomy()
     if digest(ROOT/'config/taco_taxonomy.v1.json') != manifest['source']['taxonomy_sha256']:
         raise ValueError('Taxonomy changed')
     context = {'manifest_sha256': digest(folder/'preparation_manifest.json'),
                'source_annotations_sha256': manifest['source']['sha256'], 'splits': {}}
+    if serialization_only:
+        context.update(observed_source_annotations_sha256=observed_source,
+                       source_verification='exact_recorded_bytes_reconstructed_by_json_dumps')
     seen = set()
     for split in ('train', 'validation'):
         path = folder/(split+'.json')
@@ -45,13 +57,41 @@ def require_rights(path, context):
     if path is None or not Path(path).is_file():
         raise RightsRequired('Documented photo AND annotation/database authorization is required; see config/taco_training_rights.example.json')
     record = strict_load(Path(path))
-    if (record.get('schema_version') != 'bantai.training-rights.v1'
-            or record.get('approved') is not True or record.get('dataset') != context
-            or record.get('basis_type') not in ('documented_permission', 'approved_lawful_use')
-            or record.get('scope') != 'local_academic_train_validation_no_publication'
-            or record.get('photo_rights_cleared') is not True
-            or record.get('annotation_database_rights_cleared') is not True):
+    if record.get('dataset') != context or record.get('scope') != 'local_academic_train_validation_no_publication':
         raise RightsRequired('Rights record is incomplete or does not cover this exact train/validation snapshot')
+    if record.get('schema_version') == 'bantai.training-rights.v1':
+        if (record.get('approved') is not True
+                or record.get('basis_type') not in ('documented_permission', 'approved_lawful_use')
+                or record.get('photo_rights_cleared') is not True
+                or record.get('annotation_database_rights_cleared') is not True):
+            raise RightsRequired('Legacy clearance record is incomplete')
+    elif record.get('schema_version') == 'bantai.training-rights.v2':
+        # An exception claim is not permission: retain that distinction explicitly.
+        if (record.get('basis_type') != 'owner_authorized_section185_research'
+                or record.get('workflow_authorized') is not True
+                or record.get('basis_assessment') != 'defensible_limited_use_with_uncertainty'
+                or any(record.get(k) != 'not_claimed' for k in
+                       ('rightsholder_permission','institutional_approval','definitive_legal_clearance'))
+                or any(record.get(k) is not False for k in
+                       ('photo_rights_cleared','annotation_database_rights_cleared'))
+                or record.get('owner_declaration') != {
+                    'non_commercial_academic':True,'local_only':True,'no_dataset_publication_redistribution_upload':True,
+                    'workflow_authorized':True}
+                or set(record.get('factors',{})) != {'purpose','nature','amount','market'}
+                or not all(isinstance(v,str) and v.strip() for v in record['factors'].values())):
+            raise RightsRequired('Owner-authorized exception record is incomplete or misrepresents clearance')
+        assessment=record.get('assessment',{})
+        path=(ROOT/assessment.get('path','')).resolve()
+        if (not path.is_relative_to(ROOT/'docs') or not path.is_file()
+                or digest(path) != assessment.get('sha256')):
+            raise RightsRequired('Exception assessment evidence is missing or changed')
+        required_sources={'https://lawphil.net/statutes/repacts/ra1997/ra_8293_1997.html',
+                          'https://lawphil.net/statutes/repacts/ra2013/ra_10372_2013.html',
+                          'https://github.com/pedropro/TACO/blob/master/README.md'}
+        if not required_sources.issubset(record.get('sources',[])):
+            raise RightsRequired('Exception record requires genuine statutory and dataset-purpose evidence')
+    else:
+        raise RightsRequired('Unsupported rights record schema')
     for field in ('approving_authority', 'approval_date', 'basis_and_evidence', 'obligations'):
         if not isinstance(record.get(field), str) or not record[field].strip() or record[field].startswith('REPLACE'):
             raise RightsRequired('Rights record needs actual '+field)
