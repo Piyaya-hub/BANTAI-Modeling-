@@ -99,6 +99,33 @@ def validate_targets(images, targets):
             seen.add(obj['id'])
 
 
+def valid_image_loss_targets(label, target, original_wh, resized_wh, padded_wh):
+    """Undo HF 4.51.3 annotation padding, preserving native prediction coordinates.
+
+    The processor normalizes annotations to the padded canvas, while Grounding
+    DINO references/predictions are normalized to the valid image. Check the
+    processor result before converting; never repair changed annotation identities.
+    Only boxes change: retain all other processed annotation metadata.
+    """
+    import torch
+    ow, oh = original_wh
+    rw, rh = resized_wh
+    pw, ph = padded_wh
+    expected = label['boxes'].new_tensor([
+        [(x+w/2)/ow, (y+h/2)/oh, w/ow, h/oh]
+        for x,y,w,h in (obj['bbox'] for obj in target['annotations'])
+    ]).reshape(-1, 4)
+    scale = expected.new_tensor([pw/rw, ph/rh, pw/rw, ph/rh])
+    if (label['image_id'].item() != target['image_id']
+            or label['class_labels'].tolist() != [obj['category_id'] for obj in target['annotations']]
+            or label['boxes'].shape != expected.shape
+            or not torch.allclose(label['boxes'], expected/scale, atol=2e-6, rtol=1e-5)):
+        raise ValueError('Preprocessing changed target identity/count or box frame')
+    label['boxes'] = label['boxes'] * scale
+    if not torch.allclose(label['boxes'], expected, atol=2e-6, rtol=1e-5):
+        raise ValueError('Loss targets differ from native valid-image coordinates')
+
+
 def prepare_batch(processor, images, targets, shortest_edge=192, longest_edge=256):
     import torch
     from transformers.models.grounding_dino.modeling_grounding_dino import build_label_maps
@@ -120,16 +147,7 @@ def prepare_batch(processor, images, targets, shortest_edge=192, longest_edge=25
     for i, (image, target, label) in enumerate(zip(images, targets, batch['labels'])):
         mask = batch['pixel_mask'][i]
         resized_w, resized_h = int(mask[0].sum()), int(mask[:,0].sum())
-        expected = []
-        for obj in target['annotations']:
-            x,y,w,h = obj['bbox']
-            expected.append([(x+w/2)*resized_w/image.width/padded_w,
-                             (y+h/2)*resized_h/image.height/padded_h,
-                             w*resized_w/image.width/padded_w,h*resized_h/image.height/padded_h])
-        expected = torch.tensor(expected,dtype=torch.float32).reshape(-1,4)
-        if (label['class_labels'].tolist() != [o['category_id'] for o in target['annotations']]
-                or not torch.allclose(label['boxes'], expected, atol=2e-6, rtol=1e-5)):
-            raise ValueError('Preprocessing changed target identity/count or box frame')
+        valid_image_loss_targets(label, target, image.size, (resized_w,resized_h), (padded_w,padded_h))
         geometry.append({'image_id':target['image_id'], 'original_wh':list(image.size),
                          'resized_wh':[resized_w,resized_h], 'padded_wh':[padded_w,padded_h],
                          'class_labels':label['class_labels'].tolist(), 'boxes_cxcywh':label['boxes'].tolist()})

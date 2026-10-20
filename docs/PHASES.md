@@ -1,5 +1,32 @@
 # Development phases
 
+Stage 4 D-048's **single corrected-target two-epoch restart is complete**:
+442 full-run updates after three discarded pilot steps. Corrected v2 AP
+0.203932 at epoch 1 and 0.084500 at epoch 2, versus 0.111576 pretrained.
+[Results, preflight, limits and evidence](TACO_STAGE_4_CORRECTED_RETRAIN.md).
+Stop for owner review; no further training, test evaluation or promotion.
+
+Latest owner amendment D-047 restores the existing epoch comparison viewer through
+explicit `--gui`, preserving D-046's **terminal-only per-epoch scores** by default.
+Both paths reuse verified saved results without inference or training; `--image-id`
+selects a validation image in GUI mode. Human visual acceptance remains pending.
+
+Current Stage 4 substep: **Step 2 local diagnostic capability and automated analysis
+implemented** (D-045); [native evidence and pending human checks](TACO_STAGE_4_VISUAL_REVIEW.md).
+Sixteen systematic examples cover eight classes; all 47 validation images remain
+available. Saved-record replay preserves provenance, official metrics and strict
+resume. Human object/phrase/readability/error confirmation remains pending. Stop
+after diagnostic review; no new fine-tuning, test access, promotion or publication.
+The Step 1C and earlier current-state statements below are historical records.
+
+Current Stage 4 substep: **Step 1C historical checkpoint reevaluation complete**
+(D-044). [Evaluation-only provenance and corrected results](TACO_STAGE_4_REEVALUATION.md)
+preserve strict resume while comparing the same 47 validation images. Corrected
+pretrained / epoch-1 / epoch-2 AP: 0.111576 / 0.126627 / 0.066215; recall regresses
+and high-score suppression persists. No new training, test access, promotion or
+visual analysis. Step 2 visual comparison is the proposed next action. The initial
+Stage 4 execution findings below are historical and used faulty geometry.
+
 Current stage: **Stage 4 ? Real-Image Fine-Tuning and Initial Evaluation** (D-041/D-042). [The first local real-image experiment](TACO_STAGE_4_RUN.md) completed two epochs, actual source/coordinate/memory checks, complete checkpoints and fixed pretrained-versus-final validation. [The documented academic-use claim](TACO_STAGE_4_ACADEMIC_USE.md) records owner workflow authorization separately from third-party permission or definitive clearance. Runtime gates passed; **detection AP deteriorated despite lower loss**, so no promotion/quality acceptance is claimed. Test photos, taxonomy/splits, inference and base weights remain preserved. No new preparation phase, extended training, cloud spending, publication or merge.
 
 Completed preparation stage: **Stage 3D - Training-Only Encoder-Output Adapter and Synthetic Qualification** (D-040). Acceptance required selected image-conditioned encoder scores/undetached supervised boxes with the original criterion, unchanged decoder reference detachment/architecture/text/coefficients, actual nonempty/empty updates, decoder equivalence, checkpoint/context replay, measured memory and a clear PASS/FAIL. [Stage 3D evidence](TACO_STAGE_3D.md) records a bounded synthetic **PASS**. Installed libraries, inference, original weights, taxonomy and splits remained preserved. Resume/full-resolution/real-data readiness was not established by that stage. Its stop-after-synthetic boundary is now superseded only within D-041's conditional scope; no automatic promotion, cloud spending or merge.

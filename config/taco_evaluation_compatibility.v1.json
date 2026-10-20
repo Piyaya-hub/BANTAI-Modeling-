@@ -1,0 +1,60 @@
+{
+  "schema_version": "bantai.evaluation-compatibility.v1",
+  "purpose": "validation_only_no_training",
+  "owner_authorization": "Stage 4 Step 1C, 2026-10-20",
+  "historical_source_reference": "087e361",
+  "historical_report_sha256": "19f08414f5abebb32f7658683a6211fe881cbb19c373c371bc83bcb991d1409a",
+  "checkpoint_manifests": {
+    "epoch-01": "0a2d9eb77315bb44540639829ec75a0b0e04283a3aa6415098417b8db575c9aa",
+    "epoch-02": "96b1a213e69911a080411c168242101ace4bb9e7910ce29949db122168f8201a"
+  },
+  "historical_sources": {
+    "scripts/train_taco.py": "33c1defb544591cf768aa4237e28423288eb08c5895d6b473fdc96f6d7f7ff94",
+    "scripts/taco_training_data.py": "f0fb6e7e9e3c3c85f2ac2d5966063d670091240dc687006660fa85a5517ed008",
+    "scripts/taco_evaluation.py": "62cf21e1c613a21ee1d8eb8496bcce2591a6435aefcf6183f7a42604cd6453b8",
+    "scripts/training_checkpoint.py": "ae335d08e856be90e631cf81ac68dc6e26f8b9adf88852711b54ff8546901548",
+    "scripts/training_adapter.py": "e19f07a4d7b6d15c433ac82b52291c386f38fe4a942503d51a8bc937f6021d3c",
+    "scripts/training_smoke.py": "bfea034cd8054cc97b38b8e2415a7d687fd0eb0e5d7cc118f8f7e45e63a14df1"
+  },
+  "current_sources": {
+    "scripts/train_taco.py": "33c1defb544591cf768aa4237e28423288eb08c5895d6b473fdc96f6d7f7ff94",
+    "scripts/taco_training_data.py": "969af91d35b35fe7c0784c5fd96df7200148b2ba3c019a093c6fd8d6e8d22451",
+    "scripts/taco_evaluation.py": "d86eb01395696ed1ff625a59d70782f6737d1c2c5b4c6c7360f10ca2afc5f84b",
+    "scripts/training_checkpoint.py": "ae335d08e856be90e631cf81ac68dc6e26f8b9adf88852711b54ff8546901548",
+    "scripts/training_adapter.py": "e19f07a4d7b6d15c433ac82b52291c386f38fe4a942503d51a8bc937f6021d3c",
+    "scripts/training_smoke.py": "3008fbfcc810a08f186b4dc7011a6729a088a4156c55c5ce2727dbab08527642"
+  },
+  "supporting_sources": {
+    "scripts/evaluation_provenance.py": "bb9cae4580b05eff8bf71ac3cec5dbfa762b8436f574bef977020f9c6f9e7f64",
+    "scripts/reevaluate_taco.py": "eee1b60d388988fc7ec81211e6f6b0c003914ed9885f852b49599a8f322cea87",
+    "scripts/configuration.py": "7e44dc2779916fec00d65764b74549f820d7c2c212597394c75fdbb281bac2d9",
+    "scripts/persistence.py": "5d4c9f8b8831f541c616139e7ee5fba0f8563a6b8af45464b79678b6518735fb",
+    "scripts/taco_dataset.py": "0b908f2c05e3564eadd5a0d54ce0f96e31a559e9031d39f690af5941e97cb58a"
+  },
+  "approved_differences": {
+    "scripts/taco_evaluation.py": {
+      "historical_sha256": "62cf21e1c613a21ee1d8eb8496bcce2591a6435aefcf6183f7a42604cd6453b8",
+      "evaluation_sha256": "d86eb01395696ed1ff625a59d70782f6737d1c2c5b4c6c7360f10ca2afc5f84b",
+      "reason": "Step 1B: native normalized prediction decoding by original dimensions; protocol v2 documents corrected frame; scoring/ranking unchanged."
+    },
+    "scripts/taco_training_data.py": {
+      "historical_sha256": "f0fb6e7e9e3c3c85f2ac2d5966063d670091240dc687006660fa85a5517ed008",
+      "evaluation_sha256": "969af91d35b35fe7c0784c5fd96df7200148b2ba3c019a093c6fd8d6e8d22451",
+      "reason": "Step 1B: use verified valid-image loss targets; preserve pixels, categories and source annotations."
+    },
+    "scripts/training_smoke.py": {
+      "historical_sha256": "bfea034cd8054cc97b38b8e2415a7d687fd0eb0e5d7cc118f8f7e45e63a14df1",
+      "evaluation_sha256": "3008fbfcc810a08f186b4dc7011a6729a088a4156c55c5ce2727dbab08527642",
+      "reason": "Step 1B: shared padded-to-valid target conversion with original-coordinate oracle."
+    }
+  },
+  "processor_source_sha256": {
+    "models/grounding_dino/image_processing_grounding_dino.py": "25c2c59f9b776f8c8711f2ba55ab85427634054e386cff6d481af49f857f15ad",
+    "models/grounding_dino/processing_grounding_dino.py": "4d107c8a22610d738e604b76799e0c099bea3b2a411e79840ee8e7b1ab3188c9"
+  },
+  "baseline_record_sha256": "510ee29d14d0acc7b9072e17296ee645642a4885d1edf9b10757ff9cdea4efe7",
+  "validation_counts": {
+    "images": 47,
+    "annotations": 75
+  }
+}

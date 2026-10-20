@@ -1,5 +1,126 @@
 # BANTAI Stage 4 handoff
 
+## Controlled corrected-target restart completed — 2026-10-20
+
+D-048's single two-epoch run completed, exit 0: three discarded pilot steps,
+442 full-run updates, no historical resume or further training. See
+[complete corrected-retrain results and curves](TACO_STAGE_4_CORRECTED_RETRAIN.md).
+Corrected v2 AP / AR100: pretrained 0.111576 / 0.363077; new epoch 1
+0.203932 / 0.396766; new epoch 2 0.084500 / 0.211229. Epoch 2 regresses despite
+lower corrected-target validation loss. Both new checkpoints remain experimental.
+
+Preflight: 202 tests passed, three explicit skips, including all eight coordinate
+tests passing; exact pretrained baseline replay and all 268 source/geometry
+checks passed before any update. Ten new checkpoint bundles and 471 protected
+file hashes passed; optimizer states are at step 442. Settings, rights
+uncertainties, dataset, owner detection edits, source code and historical evidence
+are preserved. No test access, dependency changes, uploads, promotion or Git
+operations. New run: `runs/training/taco-312e568703a54f98a7c8f4b87b29cd39/`;
+experiment: `runs/training/corrected-retrain-72650648148549ccb8aa8a176f9c5b0b/`.
+Next action is owner review. A further single-variable experiment is a proposal,
+not authorization; no automatic continuation.
+
+## Explicit GUI opt-in — 2026-10-20
+
+D-047 restores the existing four-panel viewer through `--gui` while retaining
+D-046's terminal-only default. From PowerShell at the repository root:
+`.\.venv-training\Scripts\python.exe -B .\scripts\taco_visual_review.py --gui --image-id 42`.
+The all-validation selector includes 42, 113, 200, 31, 1096, 252 and 1014.
+Saved-result verification remains mandatory. Fresh GUI analysis JSON records
+display status separately; original artifacts and all modelling settings remain
+unchanged. No commits, pushes or merges. Human photo-level review remains pending.
+
+Verification: 18 software tests passed; the actual default command printed the
+verified metrics and exited 0. Native TkAgg replay checked all 16 representatives
+(including all seven requested IDs), shared zoom/pan, tables/highlighting,
+diagnostic controls and all-validation navigation with zero guarded model,
+training or image-export calls. Evidence:
+`runs/training/step2-review-be0b248ac2554160a06eac179cb6cc9b/native-runtime.json`.
+The explicit `--gui --image-id 42` entry check passed and persisted `closed` in
+`runs/training/step2-review-2901e7965fe9474584bf20a760f6e005/analysis.json`.
+
+## Owner correction: terminal epoch output — 2026-10-20
+
+D-046 supersedes the Step 2 epoch comparison GUI request: the owner wants only
+terminal output per epoch with the updated scores. The diagnostic window was
+closed normally. `taco_visual_review.py` now verifies saved provenance and prints
+pretrained/epoch-1/epoch-2 AP, AP50, AP75, AR100, corrected-target validation loss,
+score median/P99/maximum and counts >=0.25. Default execution opens no GUI, reads
+no photographs, performs no inference/training and creates no new report files.
+Run `.venv-training/Scripts/python.exe -B scripts/taco_visual_review.py`.
+Prior GUI evidence is historical; it is no longer the owner-requested workflow.
+
+## Step 2 diagnostic replay — 2026-10-20
+
+D-045 authorizes controlled local-only saved-result visual diagnostics and initial
+error analysis. [Workflow, commands, selection, measured findings and pending human
+checks](TACO_STAGE_4_VISUAL_REVIEW.md). Four synchronized TkAgg views, source hashes,
+category/query/score labels, separate raw phrases, copyable tables, all-900 access
+and full-validation navigation are implemented without inference/model loading.
+
+Sixteen deterministic representatives cover all eight classes and contrasting
+outcomes. Same-class IoU-0.50 matches at diagnostic .05 are 28/17/14 of 75; at .25,
+epoch models hide 17/14 otherwise matching retained candidates. Wrapper matches
+fall 9->1->1, can matches 2->1->0, styrofoam matches 4->2->0. These are annotation
+comparisons, not confirmed visual errors/physical counts. Unmatched predictions
+are not automatically false positives. Human feedback/annotation completeness and
+readability remain pending; the separate interactive owner window may remain open.
+
+Final analysis: `runs/training/step2-review-cce4f3dcac4c4c788cc8cab5957d396e/`.
+Actual native replay checked all 16 representatives, synchronized coordinates,
+tables, zoom/pan propagation, empty views and clean closure without image exports.
+Fourteen new tests pass; safe full suite 201 tests, 198 passed/three skipped. No
+training, test access, source/data/checkpoint changes, commit or promotion. Proposed
+future training is a controlled corrected-target restart after human review, not an
+approved run or automatic continuation. Stop after this diagnostic deliverable.
+
+## Step 1C historical reevaluation — 2026-10-20
+
+D-044 authorizes a separate evaluation-only provenance pathway and unchanged
+validation-split reevaluation. [Design, commands, qualification and full results](TACO_STAGE_4_REEVALUATION.md).
+Exact historical artifact/source anchors, reviewed Step 1B old/new source pairs,
+current code/native sources, corpus/rights and model/processor/tokenizer/adapter
+compatibility pass. Strict training-resume verification remains unchanged and
+still rejects the corrected context for both checkpoints.
+
+Corrected pretrained / epoch-1 / epoch-2 AP: **0.111576 / 0.126627 / 0.066215**;
+AR100: **0.363077 / 0.275363 / 0.235395**. Epoch-1 higher aggregate AP coexists with
+lower recall; epoch 2 regresses. All score/category outputs match historical ones
+exactly; neither trained checkpoint has a score >=0.25. Small-object AP stays zero.
+Recalculated valid-target losses differ from historical padded-target losses.
+
+Successful private record: `runs/training/step1c-evaluation-3d24a67e1fe041e5a8acf56a26406db4/`.
+94 validation photo reads, zero updates/test access/state restoration; guarded
+runtime calls all zero. Nineteen new tests pass; full safe suite 187 tests,
+184 passed/three skipped. Existing sources, artifacts, owner edits and packages
+are preserved. No commit, push, merge, promotion or visual analysis occurred.
+
+Next proposed action is Step 2 local visual comparison, requiring its own scope
+authorization. The Step 1B historical reevaluation blocker below is now resolved
+only through the separate evaluation contract; training resume is not relaxed.
+
+## Step 1B coordinate correction — 2026-10-20
+
+D-043 authorizes only the confirmed target/decoder corrections, independent tests
+and validation-only comparison. [Implementation, evidence and limitations](TACO_STAGE_4_COORDINATES.md):
+native valid-image targets and original-size decoding now pass eight independent
+regressions; original functions fail them. Broader suite: 168 tests, 165 passed,
+three skipped (one privilege limitation, two prohibited toy optimizer fixtures).
+
+Corrected pretrained validation on the same 47 images/75 annotations: AP
+0.111576016, AP50 0.158252880, AP75 0.135975042, AR100 0.363077235. All 42,300 query
+scores/categories exactly match historical baseline; geometry alone changed the
+measurement. New private evidence is under
+`runs/training/step1b-evaluation-c8b127d8bf364c7dbb735795cd81c06d/`.
+
+Epoch-1/2 artifact hashes pass, but their exact-source/protocol contracts reject
+the corrected implementation. Those reevaluations are stopped without bypass or
+manifest rewriting. Next owner decision: explicit evaluation-only provenance
+handling for historical weights, preserving strict training-resume checks.
+Earlier reported AP/loss below are historical measurements with incorrect geometry.
+No new optimizer updates, test access, Step 2 analysis, promotion or PR merge.
+Owner detection edits, original weights/data and environments remain preserved.
+
 ## Completed first real-image run — 2026-10-19
 
 D-042 records the owner's actual non-commercial/local academic declaration and authorizes the existing workflow on a defensible, documented Section 185 claim. [The evidence record](TACO_STAGE_4_ACADEMIC_USE.md) expressly claims no rightsholder permission, institutional approval or definitive clearance; the v2 gate keeps clearance flags false and binds the assessment/corpus. A strictly verified source-JSON formatting change was accepted only because default serialization reconstructs the exact original recorded hash; source/export files were not rewritten.

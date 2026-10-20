@@ -1,5 +1,89 @@
 # Decision register
 
+## Controlled corrected-target restart — 2026-10-20
+
+D-048: The owner authorizes exactly one fresh two-epoch Stage 4 experiment from
+the original pinned pretrained weights, using corrected valid-image box targets.
+Mandatory coordinate/software/source/data/rights/runtime/baseline preflight must
+pass before optimizer updates. Preserve all other historical settings: 221/47
+train/validation images, batch 1, 256/384 resize, 384-square padding, FP32,
+AdamW 1e-5/1e-4, clip 1, seed 42, frozen vision/text backbones, eight-class prompt,
+native Stage 3D adapter/loss, 900 queries and corrected COCO protocol v2.
+Use the three-step real-image pilot, discard its weights/state, then perform
+442 full-run updates. No augmentation, scheduler, accumulation, extra epochs,
+test access, dataset/configuration changes, historical resume, dependency changes,
+uploads, publication, checkpoint promotion or automatic Git operations.
+Compare pretrained, both corrected-protocol historical results, and both new
+epochs; retain losses, AP/recall, fixed-threshold diagnostics, score distributions,
+memory/timing, checkpoint integrity and preservation evidence in
+[the corrected-retrain report](TACO_STAGE_4_CORRECTED_RETRAIN.md).
+Stop after epoch 2/final validation and await owner review.
+
+## Explicit opt-in validation viewer — 2026-10-20
+
+D-047: The owner authorizes restoring the existing four-panel TACO viewer through
+`taco_visual_review.py --gui`, preserving D-046's terminal-only default.
+Optional `--image-id` selects a validation image directly. Reuse verified saved
+predictions, ground truth, zoom/pan, labels, scores, raw-phrase tables and diagnostic
+controls. No inference/training, protocol/configuration changes, annotated-image
+exports, commits, pushes or merges are authorized by this task.
+
+## Terminal-only epoch scores — 2026-10-20
+
+D-046: The owner rejects the epoch diagnostic display and requests terminal output
+for each epoch showing updated scores. This supersedes the Step 2 GUI workflow,
+without changing the existing functional-inference viewer. Close the diagnostic
+window and use verified saved epoch metrics/score distributions in the terminal.
+No new training authorization, inference, threshold change or resume exception is
+implied. Prior GUI implementation/evidence remains historical and is not launched.
+
+## Stage 4 Step 2 local visual diagnostics — 2026-10-20
+
+D-045: The owner authorizes a standalone local-only four-view validation replay,
+systematic representative selection, annotation-relative IoU/classification/miss/
+duplicate/confidence diagnostics and initial visual review. Reuse verified saved
+records and the approved evaluation-only provenance pathway. Keep raw phrases
+separate from assigned classes; diagnostic thresholds do not alter official metrics.
+Preserve all user work, inference, strict resume, checkpoints, taxonomy, splits,
+originals and environments. No training, optimizer restoration/updates, test access,
+downloads, dependency changes, exports/publication, promotion or automatic commits.
+
+[Actual evidence](TACO_STAGE_4_VISUAL_REVIEW.md) distinguishes automated annotation
+associations and native runtime checks from pending human photo-level judgments.
+Recommendations for a future corrected-target restart/resolution/score investigation
+remain proposals requiring later authorization. No further experiment is started.
+
+## Stage 4 Step 1C evaluation-only provenance — 2026-10-20
+
+D-044: The owner explicitly authorizes a separate historical checkpoint evaluation
+path that independently verifies original manifests/artifacts/provenance, exact
+reviewed current source differences, model/processor/tokenizer/adapter and corpus/
+rights compatibility. Preserve strict training-resume verification; never restore
+optimizer/RNG/training position, update weights, access test data, publish private
+artifacts, promote a checkpoint or automatically commit/push/merge. Qualify using
+synthetic fixtures before reevaluating unchanged epoch-1/2 validation models.
+
+[Completed evidence](TACO_STAGE_4_REEVALUATION.md) records corrected metrics, preserved
+historical evidence, unchanged strict resume rejection and zero guarded forbidden
+operations. Step 2 visual comparison is recommended, not started or implicitly
+approved. Corrected evaluation does not repair historical training targets.
+
+## Stage 4 Step 1B coordinate correction — 2026-10-20
+
+D-043: The owner authorizes correction of valid-image target normalization and
+native prediction decoding, independent regression tests and validation-only
+comparison of pretrained/epoch-1/epoch-2 models. Preserve image processing, adapter,
+architecture, loss, scoring policy, taxonomy, splits, checkpoints, owner edits and
+environments. No optimizer updates, test access, publication, promotion, automatic
+merge or Step 2 visual analysis. Stop checkpoint comparison if integrity/source
+binding blocks it; do not falsify provenance or disable checks.
+
+[Actual Step 1B evidence](TACO_STAGE_4_COORDINATES.md): corrections/tests pass;
+pretrained reevaluation completed; epoch comparisons blocked by unchanged
+exact-source/protocol checks. An evaluation-only provenance contract for historical
+weights is a proposal requiring approval, not an implemented exception or permission
+to retrain. Historical run artifacts remain unchanged.
+
 ## Stage 4 owner academic-use declaration — 2026-10-19
 
 D-042: The owner confirms non-commercial academic purpose, local training/evaluation, no publication/redistribution/cloud upload of TACO photos or annotations, and authorizes proceeding on a genuinely documented lawful-use basis if supportable. This is project-owner workflow authorization, not rightsholder permission, institutional approval or definitive legal clearance. The [case-specific Section 185 record](TACO_STAGE_4_ACADEMIC_USE.md) documents a defensible limited-use claim with remaining uncertainty, bound to the exact 221 training and 47 validation images/annotations. The v2 gate records that claim with clearance flags false and third-party authority explicitly not claimed. No new phase, model/loss/precision change, test use, cloud spending, publication or automatic merge is authorized. Existing Stage 4 pilot/training/evaluation proceeds within that scope.

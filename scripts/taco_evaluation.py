@@ -7,7 +7,8 @@ import time
 from .training_smoke import LABELS, move_batch, checked_loss, validate_predictions
 from .taco_training_data import get_batch
 
-PROTOCOL = {'version': 'bantai.taco-evaluation.v1', 'class_score': 'mean_ordinary_subword_sigmoid',
+PROTOCOL = {'version': 'bantai.taco-evaluation.v2', 'box_frame': 'valid_image_normalized_cxcywh',
+            'class_score': 'mean_ordinary_subword_sigmoid',
             'query_class': 'single_argmax', 'score_filter': 0.0, 'max_predictions_per_image': 100,
             'nms': False, 'iou': 'COCO_0.50:0.05:0.95', 'maxDets': [1,10,100],
             'qualitative_threshold': 0.25, 'qualitative_iou': 0.5,
@@ -32,12 +33,13 @@ def decode_predictions(outputs, batch, geometry, tokenizer):
         ordinary=torch.ones_like(ids,dtype=torch.bool)
         for special in tokenizer.all_special_ids + [tokenizer.convert_tokens_to_ids('.')]:
             ordinary &= ids != special
-        ow,oh = frame['original_wh']; rw,rh = frame['resized_wh']; pw,ph = frame['padded_wh']
+        ow,oh = frame['original_wh']
         kept = 0
         for query in order.tolist():
             cx,cy,w,h = boxes[query].tolist()
-            x1,x2 = max(0.,min(ow,(cx-w/2)*pw*ow/rw)), max(0.,min(ow,(cx+w/2)*pw*ow/rw))
-            y1,y2 = max(0.,min(oh,(cy-h/2)*ph*oh/rh)), max(0.,min(oh,(cy+h/2)*ph*oh/rh))
+            # Native predictions already exclude padding; scale by original size.
+            x1,x2 = max(0.,min(ow,(cx-w/2)*ow)), max(0.,min(ow,(cx+w/2)*ow))
+            y1,y2 = max(0.,min(oh,(cy-h/2)*oh)), max(0.,min(oh,(cy+h/2)*oh))
             valid = x2>x1 and y2>y1
             selected = (scores[query,:len(ids)] > PROTOCOL['raw_phrase_token_threshold']) & ordinary
             # Ordinary text only, retaining incomplete/unmapped raw phrases honestly.

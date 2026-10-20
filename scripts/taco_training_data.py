@@ -6,7 +6,8 @@ import math
 from pathlib import Path
 
 from .configuration import ROOT, strict_load
-from .training_smoke import LABELS, PROMPT, digest, validate_taxonomy, validate_encoder_capacity
+from .training_smoke import (LABELS, PROMPT, digest, validate_taxonomy,
+                             validate_encoder_capacity, valid_image_loss_targets)
 from .taco_dataset import bbox_issues, valid_id, image_path
 
 
@@ -170,12 +171,7 @@ def collate(processor, samples, shortest=256, longest=384):
             raise ValueError('Prompt/category span mismatch')
         mask = batch['pixel_mask'][i]
         rw, rh = int(mask[0].sum()), int(mask[:, 0].sum())
-        expected = [[(x+w/2)*rw/image.width/pw, (y+h/2)*rh/image.height/ph,
-                     w*rw/image.width/pw, h*rh/image.height/ph]
-                    for x,y,w,h in (a['bbox'] for a in target['annotations'])]
-        if (label['class_labels'].tolist() != [a['category_id'] for a in target['annotations']]
-                or not torch.allclose(label['boxes'], torch.tensor(expected).reshape(-1,4), atol=2e-6, rtol=1e-5)):
-            raise ValueError('Processor changed target identity/count/coordinates')
+        valid_image_loss_targets(label, target, image.size, (rw,rh), (pw,ph))
         geometry.append({'image_id': target['image_id'], 'original_wh': list(image.size),
                          'resized_wh': [rw,rh], 'padded_wh': [pw,ph]})
     return batch, geometry

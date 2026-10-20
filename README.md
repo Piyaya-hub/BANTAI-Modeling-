@@ -12,6 +12,39 @@ Execution is intended for the owner’s Windows computer, preferring GPU with CP
 
 ## Current state
 
+**Controlled corrected-target restart completed (D-048).** One fresh two-epoch
+run from the unchanged pretrained snapshot improved corrected-protocol AP to
+0.203932 at epoch 1, then regressed to 0.084500 at epoch 2 (pretrained: 0.111576).
+Exactly 442 updates plus three discarded pilot steps; no promotion or further
+training. [Full comparison, loss curves, preflight and preservation evidence](docs/TACO_STAGE_4_CORRECTED_RETRAIN.md).
+Await owner review.
+
+**Latest owner preference: terminal-only epoch scores.** Run
+`.venv-training/Scripts/python.exe -B scripts/taco_visual_review.py` for the verified
+saved scores of pretrained, epoch 1 and epoch 2. The epoch diagnostic GUI workflow
+is also available explicitly with `--gui --image-id 42`; no new inference or
+training is performed. Without `--gui`, the terminal-only default is unchanged.
+
+**Stage 4 Step 2 adds local four-view diagnostic replay and initial annotation
+analysis.** [Commands, representative sampling, findings and pending human
+confirmation](docs/TACO_STAGE_4_VISUAL_REVIEW.md) compare the three saved model
+states without inference. Native Windows replay/software checks passed; photo-level
+judgments remain pending. No new training, test access or promotion occurred.
+The Step 1C/earlier stage boundaries below describe their historical scope.
+
+**Stage 4 Step 1C completed historical checkpoint reevaluation.** The separate
+[evaluation-only provenance path and results](docs/TACO_STAGE_4_REEVALUATION.md)
+preserve strict training resume. Corrected pretrained / epoch-1 / epoch-2 AP is
+0.111576 / 0.126627 / 0.066215, with lower recall after training and persistent
+score suppression. No training, promotion or Step 2 visual analysis occurred.
+The Step 1B evaluation blockage below is historical and now resolved for evaluation.
+
+**Stage 4 Step 1B corrects target/prediction coordinate frames.** [Correction and
+validation evidence](docs/TACO_STAGE_4_COORDINATES.md) records pretrained AP
+0.111576 on the same validation set; prior metrics below used incorrect geometry.
+Saved epoch reevaluation is blocked by its exact-source contract, preserved intact.
+No further training or Step 2 visual analysis occurred.
+
 **Stage 4 completed the first local two-epoch real-image fine-tuning run**, using the verified Stage 3D adapter and the [documented owner-authorized academic-use claim](docs/TACO_STAGE_4_ACADEMIC_USE.md). [Measured results and checkpoint location](docs/TACO_STAGE_4_RUN.md): 442 full-run updates, memory about 2.38 GiB allocated, lower loss but **worse validation detection AP**. The experimental checkpoint remains private and unpromoted; test images, splits, taxonomy, inference and pretrained weights remain preserved. [Trainer/resume commands and initial history](docs/TACO_STAGE_4.md) remain available.
 
 **Stage 3D implements the approved training-only encoder-output adapter.** [Synthetic qualification and complete evidence](docs/TACO_STAGE_3D.md) record a bounded **PASS**: all eight corrected optimizer steps, encoder classification/box-head updates, expected empty regression, exact decoder equivalence and model/processor/adapter replay. Architecture, text mapping, native loss coefficients, installed libraries and inference remain unchanged. Peak corrected-case allocator memory was 2.732 GiB allocated / 2.910 GiB reserved; this is not full-resolution or real-data readiness.
