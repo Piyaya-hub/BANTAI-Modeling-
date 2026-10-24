@@ -1,0 +1,13 @@
+{
+  "schema_version": "bantai.training-rights.v1",
+  "approved": false,
+  "basis_type": "REPLACE: documented_permission or approved_lawful_use",
+  "approving_authority": "REPLACE with actual rightsholder or approving institutional/legal authority",
+  "approval_date": "REPLACE with actual date",
+  "basis_and_evidence": "REPLACE with documented basis and evidence reference covering every train/validation photo and annotations/database",
+  "obligations": "REPLACE with actual attribution, notices, restrictions and retention requirements",
+  "photo_rights_cleared": false,
+  "annotation_database_rights_cleared": false,
+  "scope": "local_academic_train_validation_no_publication",
+  "dataset": {}
+}

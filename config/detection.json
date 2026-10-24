@@ -7,9 +7,10 @@
     "use_safetensors": true,
     "disable_custom_kernels": true
   },
-  "prompt": "a garbage pile. an individual discarded item. a group of individual litter.",
-  "threshold": 0.35,
-  "text_threshold": 0.25,
+  "prompt": "Cigarette butts and discarded cigarettes. plastic bottle. plastic bag. Plastic wrappers and packaging. Thin plastic films. Beverage cans. Disposable plastic cups. Discarded Styrofoam pieces",
+  "threshold": 0.45,
+  "text_threshold": 0.40,
+  
   "settings_status": "proposed_unvalidated",
   "device": "auto",
   "dtype": "float32",

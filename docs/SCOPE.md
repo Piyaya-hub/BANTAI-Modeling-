@@ -10,7 +10,19 @@ This repository is exclusively for AI modelling and computer vision: pretrained 
 
 ## Approved initial direction
 
-Current D-036 authorizes [TACO Stage 2 strict-clean conversion and splitting](TACO_STAGE_2.md) after representative annotation review. This supersedes the Stage 1 export/split stop boundary below only. Whole-image exclusions preserve known excluded objects as quarantine, with no assumed ignore-region semantics. Grounding DINO fine-tuning, new data downloads, dependency/model changes and inference changes remain outside this stage.
+D-042 additionally records the owner-authorized [limited academic-use claim](TACO_STAGE_4_ACADEMIC_USE.md) and execution of the existing two-epoch workflow. [Actual real-image results](TACO_STAGE_4_RUN.md) establish runtime completion, with poor detection metrics and no promotion. This does not grant third-party permission or definitive clearance, change taxonomy/splits/inference, authorize test use or start another phase. The prior conditional gate below is historical for this completed experiment.
+
+Current D-041 authorizes [Stage 4 real-image training and initial validation](TACO_STAGE_4.md) as one continuous implementation task, using the verified Stage 3D adapter and unchanged strict-clean eight-class train/validation splits. Actual-photo processing is conditional on documented permission or an approved lawful-use basis covering photos and annotations/database. Until cleared, complete runnable code/checks and report the blocking approval. No test-photo use, cloud spending/upload, publication, inference/base-weight change, split/taxonomy replacement or automatic promotion/merge is authorized. Earlier stage boundaries below are historical.
+
+Historical D-040 authorized [Stage 3D training-only encoder-output adaptation and synthetic qualification](TACO_STAGE_3D.md). The approved tensor-routing correction uses the same criterion/coefficients and unchanged decoder initialization/architecture. That stage prohibited installed-library patches, inference/environment changes, original-weight overwrite, taxonomy/split/data modification, real-photo training, cloud spending or automatic checkpoint promotion, and stopped after synthetic qualification. D-041 now defines the conditional real-data scope above.
+
+D-039 authorized the completed [Stage 3C investigation](TACO_STAGE_3C.md), with its prior stop-before-method-change boundary now superseded only for this explicitly approved adapter.
+
+D-038 authorized the completed [Stage 3B isolated environment and synthetic smoke](TACO_STAGE_3B.md), preserved unchanged. Source photos/annotations, strict-clean splits and inference environment remain protected.
+
+D-037 authorized the completed [Stage 3A technical assessment](TACO_STAGE_3A.md). Dataset expansion, ignore/auxiliary taxonomy policies and rights handling remain unresolved proposals.
+
+D-036 authorized the completed [TACO Stage 2 strict-clean conversion and splitting](TACO_STAGE_2.md) after representative annotation review. This superseded the Stage 1 export/split stop boundary below only. Its whole-image quarantine policy and validated reference export remain unchanged.
 
 Additional owner-authorized preparation now covers auditing/visualizing the existing external TACO dataset under the eight object labels in [the versioned taxonomy](../config/taco_taxonomy.v1.json). This leaves inference categories/behavior intact and creates no training examples, final splits, downloads or fine-tuning. [TACO evidence and pending handling decisions](TACO_PREPARATION.md) define this bounded exception to the earlier stop-before-optimization boundary.
 

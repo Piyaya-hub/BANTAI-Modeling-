@@ -232,3 +232,7 @@ __marimo__/
 /data/taco/
 /BANTAI-Datasets/
 /exports/taco/
+
+# Isolated Stage 3B training environment and synthetic checkpoints/reports
+/.venv-training/
+/runs/training/

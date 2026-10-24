@@ -1,6 +1,142 @@
 # Development phases
 
-Current preparation stage: **Fine-Tuning Preparation Stage 2 - Dataset Conversion and Splitting** (D-036). Acceptance requires a versioned strict whole-image policy, complete quarantine/annotation traceability, eight-class COCO with original xywh geometry/external image references, seeded duplicate-aware multi-label image splits, loss/coverage reports, source preservation and independent reconstruction validation. See [implementation and actual results](TACO_STAGE_2.md). Structural/source validation passed; licensing, trainer compatibility and low evaluation coverage remain pending. Stop before Grounding DINO loading/fine-tuning; no merge.
+## Current Stage 4 wrap-up: D-059
+
+The post-validation investigation series D-043–D-058 is complete. D-059 authorizes
+documentation synchronization, guarded CPU verification and one focused commit/push
+to `feat/stage4-real-image-training` for PR #18. It authorizes no new model execution,
+checkpoint promotion, PR merge or future stage. Remaining owner-only actions are
+optional human visual review, a PR #18 review/merge decision, or future stage authorization.
+
+[D-057](TACO_STAGE_4_576_TRAINING.md) completed one 384/576 scale-matched pilot and
+two-epoch run (3 discarded pilot +442 full updates). [D-058](TACO_STAGE_4_576_TRAJECTORY.md)
+added exactly188 inference-only forwards across four existing E2 checkpoints,
+reusing saved endpoints. Cigarette gains and class regressions appeared across
+several sampled intervals; their exact unobserved optimizer updates remain unknown.
+All50 corrected bundles across five runs remain experimental and private.
+
+### Stage 4 benchmark progression
+
+Same47 validation images /75 GT boxes, corrected COCO v2. Seven-class AP excludes
+`plastic_bag`. Cigarette coverage is any qualifying same-class query among all900,
+score >=0.05 and IoU >=0.50, with nonexclusive GT matching; it is not COCO recall.
+
+| State | Input scale | AP | AR100 | Seven-class AP | Cigarette coverage |
+| --- | --- | --- | --- | --- | --- |
+| Pretrained | 256/384 | 0.111576 | 0.363077 | 0.093769 | 1/24 |
+| Pretrained (D-056) | 384/576 | 0.147847 | 0.426109 | 0.095418 | 3/24 |
+| D-048 seed 42 E1 | 256/384 | 0.203932 | 0.396766 | 0.136242 | 2/24 |
+| D-055 inference-only scaling | 256/384 trained → 384/576 evaluated | 0.247003 | 0.474763 | 0.152161 | 5/24 |
+| D-057 scale-matched E1, step 221 | 384/576 | 0.249891 | 0.488141 | 0.181629 | 8/24 |
+| D-058 mid-Epoch-2 audit, step 350 | 384/576 | 0.262337 | 0.428890 | 0.218249 | 14/24 |
+| D-057 scale-matched E2, step 442 | 384/576 | 0.170508 | 0.370118 | 0.190859 | 15/24 |
+
+The step350 AP maximum does not establish a selected checkpoint or generalization;
+E1 has stronger AR100 and E2 improves cigarette coverage while regressing elsewhere.
+Validation selection bias, rare-class sensitivity and pending human confirmation remain.
+[D-042](TACO_STAGE_4_ACADEMIC_USE.md) records owner academic-use authorization
+separately from external permission, institutional approval and definitive legal clearance.
+[Final handoff and inventory](HANDOFF.md). Private local artifact links in detailed
+reports do not imply dataset/checkpoint publication; absent private helper tests skip explicitly.
+
+## Historical phase and investigation records
+
+Earlier current-state labels and stop notices below refer to their original substeps.
+D-059 supersedes their publication stops only for the focused scripts/tests/reports commit.
+
+Stage4 D-056 **multi-checkpoint resolution replication completed**.
+[Results and scope](TACO_STAGE_4_RESOLUTION_REPLICATION.md) compare six saved
+states with locked bins; D-055 was not rerun. No training or follow-up experiment
+is authorized. Stop for owner review.
+
+
+Stage4 D-055 **single retry completed**: all gates passed and47-image high-scale
+inference finished. [Results and limits](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
+show partial recovery and persistent class/tiny-object failures. No training,
+promotion or follow-up is authorized; stop for owner review. Earlier stop is historical.
+
+
+Stage4 D-055 **stopped at its mandatory software gate**.
+[Failure, preservation evidence and prepared correction](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md).
+No CPU real-image geometry, CUDA baseline, memory pilot or full comparison ran.
+No automatic retry; stop for owner review.
+
+
+Stage4 D-054 **small-object and classification audit is complete**.
+[Full validation measurements and proposal](TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md)
+confirm actual aspect-ratio resizing and separate tiny-object coverage from
+large-object class failures. No new inference/training; the fixed-weight scale
+comparison is a proposal only. Stop for owner review.
+
+
+Stage4 D-053 **per-object analysis and opt-in saved GUI are complete**.
+[Report, 20-image diagnostics and command](TACO_STAGE_4_PER_OBJECT_REVIEW.md)
+separate drawing-cap exclusions, thresholds, ranks and candidate coverage.
+No new experiment or inference; stop for human review.
+
+
+Stage 4 D-052 **cross-seed analysis and visual-review preparation are complete**.
+[Nine-state report and saved-viewer command](TACO_STAGE_4_CROSS_SEED_ANALYSIS.md)
+separate verified metrics/matching from pending human photo confirmation.
+No new training or inference; no next experiment is authorized. Stop for owner review.
+
+
+Stage 4 D-051's **paired seed-123 replication is complete**: exactly two runs,
+884 full updates plus six discarded pilot updates. The 1e-5 seed-42 AP collapse
+does not recur; 5e-6 regresses at seed 123 instead. Two seeds do not establish
+statistical superiority. [Full report and next proposal](TACO_STAGE_4_SEED_REPLICATION.md).
+Stop for owner review; no third-seed run, optimization, test use or promotion.
+
+Stage 4 D-050's **single LR 5e-6 experiment is complete**: three discarded pilot
+updates, 442 full-run updates and two final epoch validations. AP is
+0.137099 / 0.145952; the previous strongest 1e-5 epoch-1 result remains preserved.
+[Comparison and limitations](TACO_STAGE_4_LR_EXPERIMENT.md). Stop for owner review;
+no new seed run, optimization, test evaluation or checkpoint promotion is approved.
+
+Stage 4 D-049's **corrected-run diagnostic investigation is complete**.
+[Report and ranked experiment proposals](TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md)
+separate measured class-assignment/coverage changes from unproven optimization
+causes. No new training or inference; stop for owner review and authorization of
+any further experiment. Human photo-level confirmation remains pending.
+
+Stage 4 D-048's **single corrected-target two-epoch restart is complete**:
+442 full-run updates after three discarded pilot steps. Corrected v2 AP
+0.203932 at epoch 1 and 0.084500 at epoch 2, versus 0.111576 pretrained.
+[Results, preflight, limits and evidence](TACO_STAGE_4_CORRECTED_RETRAIN.md).
+Stop for owner review; no further training, test evaluation or promotion.
+
+Latest owner amendment D-047 restores the existing epoch comparison viewer through
+explicit `--gui`, preserving D-046's **terminal-only per-epoch scores** by default.
+Both paths reuse verified saved results without inference or training; `--image-id`
+selects a validation image in GUI mode. Human visual acceptance remains pending.
+
+Current Stage 4 substep: **Step 2 local diagnostic capability and automated analysis
+implemented** (D-045); [native evidence and pending human checks](TACO_STAGE_4_VISUAL_REVIEW.md).
+Sixteen systematic examples cover eight classes; all 47 validation images remain
+available. Saved-record replay preserves provenance, official metrics and strict
+resume. Human object/phrase/readability/error confirmation remains pending. Stop
+after diagnostic review; no new fine-tuning, test access, promotion or publication.
+The Step 1C and earlier current-state statements below are historical records.
+
+Current Stage 4 substep: **Step 1C historical checkpoint reevaluation complete**
+(D-044). [Evaluation-only provenance and corrected results](TACO_STAGE_4_REEVALUATION.md)
+preserve strict resume while comparing the same 47 validation images. Corrected
+pretrained / epoch-1 / epoch-2 AP: 0.111576 / 0.126627 / 0.066215; recall regresses
+and high-score suppression persists. No new training, test access, promotion or
+visual analysis. Step 2 visual comparison is the proposed next action. The initial
+Stage 4 execution findings below are historical and used faulty geometry.
+
+Current stage: **Stage 4 ? Real-Image Fine-Tuning and Initial Evaluation** (D-041/D-042). [The first local real-image experiment](TACO_STAGE_4_RUN.md) completed two epochs, actual source/coordinate/memory checks, complete checkpoints and fixed pretrained-versus-final validation. [The documented academic-use claim](TACO_STAGE_4_ACADEMIC_USE.md) records owner workflow authorization separately from third-party permission or definitive clearance. Runtime gates passed; **detection AP deteriorated despite lower loss**, so no promotion/quality acceptance is claimed. Test photos, taxonomy/splits, inference and base weights remain preserved. No new preparation phase, extended training, cloud spending, publication or merge.
+
+Completed preparation stage: **Stage 3D - Training-Only Encoder-Output Adapter and Synthetic Qualification** (D-040). Acceptance required selected image-conditioned encoder scores/undetached supervised boxes with the original criterion, unchanged decoder reference detachment/architecture/text/coefficients, actual nonempty/empty updates, decoder equivalence, checkpoint/context replay, measured memory and a clear PASS/FAIL. [Stage 3D evidence](TACO_STAGE_3D.md) records a bounded synthetic **PASS**. Installed libraries, inference, original weights, taxonomy and splits remained preserved. Resume/full-resolution/real-data readiness was not established by that stage. Its stop-after-synthetic boundary is now superseded only within D-041's conditional scope; no automatic promotion, cloud spending or merge.
+
+Completed **Stage 3C - Training Loss and Gradient Investigation** (D-039). Evidence is [TACO_STAGE_3C.md](TACO_STAGE_3C.md): pinned-source tracing, controlled counts/empty cases, matching/mask/normalization and update diagnostics, and causal factor isolation. Diagnostic hypotheses were not optimized in Stage 3C; D-040 separately authorized the implemented training-only correction.
+
+Completed **Stage 3B - Training Environment and Synthetic Smoke Test** (D-038). Acceptance required an independent pinned environment, actual synthetic native-loss forward/backward/optimizer execution, all-eight prompt/COCO geometry/batching checks, measured GPU peaks, exact model/processor save-reload and source/inference preservation. [Actual Stage 3B evidence](TACO_STAGE_3B.md) records a bounded lifecycle pass and a failed undersized-input attempt. That pass is preserved; it is not a real-data readiness decision.
+
+Completed **Stage 3A - Grounding DINO Tiny Training Compatibility and Dataset Expansion Assessment** (D-037), assessment only. Evidence is [TACO_STAGE_3A.md](TACO_STAGE_3A.md): exact-version loading/loss/text/COCO/persistence review, explicit excluded/unlabeled semantics, conditional recovery counts, analytical hardware assessment, rights gaps, proposed smoke/evaluation gates and owner decisions. Its source-only/unrun statements are historical; Stage 3B execution does not clear rights or expansion decisions.
+
+Completed preparation stage: **Fine-Tuning Preparation Stage 2 - Dataset Conversion and Splitting** (D-036). Acceptance requires a versioned strict whole-image policy, complete quarantine/annotation traceability, eight-class COCO with original xywh geometry/external image references, seeded duplicate-aware multi-label image splits, loss/coverage reports, source preservation and independent reconstruction validation. See [implementation and actual results](TACO_STAGE_2.md). Structural/source validation passed; licensing and low evaluation coverage remain pending. Its strict-clean export is preserved as the reference; training qualification remains unrun.
 
 Historical Stage 1 preparation authorization: **TACO Dataset Harmonization and Annotation Visualization** (D-035). Audit and visualize the existing external COCO source under the eight approved object labels, preserving excluded annotations and all metadata. Acceptance evidence is [TACO_PREPARATION.md](TACO_PREPARATION.md): versioned taxonomy, reproducible JSON/CSV audit, native sampled annotation viewing, source hashes and focused checks. This is separate from the inference pipeline and does not authorize final dataset splits, training exports, downloads, fine-tuning or broader Phase 3 optimization. Coordinate/exclusion/repair decisions remain pending. The earlier inference-phase records below are preserved history.
 

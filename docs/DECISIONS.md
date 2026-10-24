@@ -1,5 +1,280 @@
 # Decision register
 
+## D-059 Stage 4 wrap-up and focused publication — 2026-10-24
+
+The owner authorizes closing the Stage 4 post-validation investigation series
+D-043–D-058, synchronizing README/phase status through D-057/D-058, running
+guarded fast unit/CPU checks, and publishing the explicitly listed scripts,
+tests, reports and two SVG assets in one focused D-045–D-059 commit on
+`feat/stage4-real-image-training` to update PR #18. No PR merge or checkpoint
+promotion is authorized. [Final wrap-up state and inventory](HANDOFF.md).
+
+This authorization supersedes earlier per-investigation publication stops only
+within that allowlist. Preserve all runs, work, exports, data, environments,
+rights records and50 corrected checkpoint bundles. No GPU/model execution,
+training/inference, test-split/photo access or checkpoint modifications.
+Local ARGON handoff and concept-proposal planning documents remain uncommitted.
+Private helper-dependent tests explicitly skip when their unpublished work files
+are absent; no private audit artifacts are added to Git.
+
+The D-042 Section185 owner academic-use record remains distinct from external
+permission, institutional approval and definitive legal clearance. Optional human
+visual review, PR review/merge and future stages remain owner decisions, not
+automatic follow-up actions. Higher sampled validation AP does not select a model.
+
+## D-058 mid-Epoch-2 384/576 trajectory audit — 2026-10-24
+
+Owner authorized inference-only evaluation of D-057 step250/300/350/400 on47
+validation images,188 forwards total, reusing saved step0/221/442 endpoints.
+Observed status: **completed**. 188 validation forwards completed; all three gates passed. Cigarette same-class trajectory [8, 10, 11, 14, 14, 15]; large-bin same-class trajectory [21, 18, 16, 15, 15, 14]. No checkpoint selection or promotion.
+[Trajectory report, flip ledger and limitations](TACO_STAGE_4_576_TRAJECTORY.md).
+Audit `scale576-trajectory-c84b9d9344e64578ba1f2fb85f353d0c`. Validation checkpoint inspection is diagnostic and
+introduces selection bias; it is not a generalization claim or selection rule.
+No training/backward, train-photo/test access, core/GUI/dependency changes,
+exports, checkpoint promotion or Git publication. Stop for owner review.
+
+## D-057 controlled 384/576 training — 2026-10-23
+
+Owner authorized one3-step discarded pilot plus442 full updates from original
+SNAPSHOT at seed42/LR1e-5/FP32/frozen backbones,221 train/47 validation. Only
+the two trainer CLI bound values change512→576; defaults remain256/384.
+Observed outcome: **completed**; 3 discarded pilot +442 full updates completed.
+All five gates passed;231 software tests,zero failures/errors (three skips).
+Epoch1 AP0.249891/AR1000.488141 narrowly exceeds D-0550.247003/0.474763;
+Epoch2 regresses to0.170508/0.370118 despite cigarette same-class coverage
+improving5→8→15/24 at0.05 and seven-class AP excluding bag rising.
+Ten new bundles verified; final optimizer step442 across558 parameters.
+All1766 protected hashes matched after execution; no checkpoint is promoted.
+[Full gates, results and limits](TACO_STAGE_4_576_TRAINING.md).
+Audit `scale576-experiment-0b2a846e659a429cbe8a65c1ca0444e1`. No retry, promotion, test access, dependency/GUI changes,
+annotated exports or Git publication. Stop for owner review.
+
+## Multi-checkpoint resolution replication — 2026-10-23
+
+D-056: The owner authorizes inference-only256/384 vs384/576 for unchanged
+Pretrained and seed123/LR1e-5/E2 on47 validation images/75 GT, at most188 forwards.
+Reuse D-055 seed42/E1 outputs read-only, without GPU repetition. Require guarded
+software, fresh protected/source hashes, both exact low baselines before any
+high pass, then both high evaluations. Fixed weights/FP32/900 queries/prompt/
+taxonomy/COCO v2 and locked14/10/15/36 bins. No updates/backward, train-photo/test
+access, core/GUI/dependency changes, exports, promotion or Git publication.
+[Completed results and qualification](TACO_STAGE_4_RESOLUTION_REPLICATION.md)
+show shared small-bin coverage gains, checkpoint-dependent raw AP and positive
+bag-excluded AP deltas in all three states. No further experiment is authorized;
+stop for owner review.
+
+## D-055 single retry authorized and completed — 2026-10-23
+
+The owner explicitly authorizes one retry from Gate1, preserving the original
+stopped attempt `resolution-experiment-629229adf1c6480d930aac79250d18f8`.
+The isolated pointer records that retry consumed and zero retries remaining.
+All five gates and the47-image384/576 pass completed on the fixed42/1e-5/E1
+checkpoint. [Measured results and limits](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
+record improved aggregate AP, partial small-object recovery, persistent <4px
+failures and three larger-object regressions. No updates/backward, training-photo
+reads, test access, core/GUI edits, promotions or Git publication. All next steps
+remain proposals; stop for owner review. The initial failure record below is
+historical and its no-retry statement is superseded by this explicit grant.
+
+## Controlled inference-only resolution comparison — 2026-10-23
+
+D-055: The owner authorizes one fixed seed42/LR1e-5/E1 validation comparison:
+256/384 with384-square pad versus384/576 with576-square pad. Require software,
+artifact/source, CPU geometry, exact CUDA baseline and one-image CUDA pilot gates,
+in that order. Stop immediately at any failed gate; no fallback or parameter
+changes. Use an isolated work harness and focused resolution tests; core training,
+evaluation and GUI files remain untouched. No updates/backward, train-photo/test
+access, promotion, exports, dependencies or Git publication. All proposals remain
+unimplemented. [Actual stopped attempt and cause](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md):
+the software gate failed due to harness guard scoping; no real inference ran.
+Prepared fixes are unqualified and no retry is authorized by this stopped record.
+
+
+## Small-object and classification audit — 2026-10-22
+
+D-054: The owner authorizes a read-only full-validation audit of actual256/384
+preprocessing and384-square padding, all75 resized GT boxes and nine saved model
+states. Separate size-associated localization, class assignment, score/rank
+effects and annotation uncertainty; preserve the original20-image manifest and
+existing GUI. Record current owner-supplied image777 observations separately.
+Rank resolution/classification/data-quality directions as proposals only;
+[report evidence and one next experiment](TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md).
+No new training or model inference without separate authorization, optimizer
+updates, model/data/protocol/GUI/dependency changes, test access, promotion,
+exports, uploads or Git publication. Stop for owner review after verification.
+
+
+## Per-object saved detection investigation — 2026-10-22
+
+D-053: The owner authorizes diagnostic-only per-GT analysis for image777 and the
+existing20-image review using verified saved predictions. Preserve the four-panel
+GUI, terminal-only defaults and explicit saved-run selection. Add an opt-in
+annotation selector, GT highlight/zoom and complete overlap tables; compare all
+four seed/LR runs with unchanged pretrained baseline and same-run E1/E2.
+Preserve the original manifest and add separate machine evidence. No training,
+inference, optimizer/model/data/protocol/dependency changes, test use, promotion,
+exports or automatic Git operations. Verify software and native Windows GUI;
+[report findings](TACO_STAGE_4_PER_OBJECT_REVIEW.md), separate automated diagnostics
+from human material/annotation confirmation, then stop for human review. No
+training recommendation is authorized solely from image777.
+
+
+## Cross-seed stability analysis — 2026-10-22
+
+D-052: The owner authorizes saved-result analysis and visual-verification preparation
+across pretrained and both epochs of four seed/LR runs (42/123, 1e-5/5e-6).
+Preserve corrected COCO v2, original artifacts, owner changes and existing viewer
+defaults. Prepare 12–20 validation examples and a local review manifest; permit
+only the minimal explicit saved-run viewer extension. Separate automated
+diagnostics from pending human confirmation. Compare the four possible research
+directions as proposals only. No new training, inference, test evaluation, model
+or dataset changes, dependency upgrades, promotion, exports, publication or Git
+publication. Stop after [the report and review preparation](TACO_STAGE_4_CROSS_SEED_ANALYSIS.md)
+for owner review; no additional experiment is authorized.
+
+## Paired seed-123 replication — 2026-10-22
+
+D-051: The owner authorizes exactly two fresh two-epoch runs at seed 123:
+A with LR 1e-5 and B with LR 5e-6. Preserve all other corrected experiment
+settings, original pretrained initialization, 221/47 corpus, eight-class prompt,
+Stage 3D adapter, valid-image targets, native loss, frozen backbones, FP32,
+batch 1, 256/384 resize, 384-square padding, weight decay 1e-4 and clip 1.
+Add minimal configurable `--seed` support with default 42, propagating it to
+Python/NumPy/CPU/CUDA RNGs, restart and epoch shuffling; record/test its exact
+behavior without changing strict resume verification or old manifests.
+Each run independently discards its three-step pilot, restarts from the pinned
+pretrained model and performs 442 full updates (884 full + six pilot total).
+Stop on critical preflight/integrity failure, and after both final validations.
+No test access, model/data/inference changes, extra experiments, dependencies,
+uploads, promotion or automatic Git operations. Compare both seeds/rates and
+recommend further work only as proposals in [the replication report](TACO_STAGE_4_SEED_REPLICATION.md).
+
+## Controlled learning-rate experiment — 2026-10-21
+
+D-050: The owner authorizes exactly one fresh two-epoch experiment at learning
+rate 5e-6, changing only learning rate from the corrected 1e-5 reference run.
+Retain original pretrained weights, corrected targets, Stage 3D adapter, native
+loss, 221/47 corpus/splits, eight-class prompt/taxonomy, seed 42, batch 1, frozen
+backbones, FP32, 256/384 resize, 384-square padding, AdamW weight decay 1e-4,
+clip 1, no augmentation/scheduler and corrected COCO v2 evaluation. Use three
+discarded pilot steps, then exactly 442 full-run updates, stopping for safety
+failures. Add minimal configurable learning-rate support if necessary, retain
+default 1e-5, bind the chosen rate in settings/checkpoint context and test its
+actual delivery to AdamW. Preflight must pass before updates. No historical
+resume, test access, data/prompt/model/inference changes, dependency changes,
+promotion, uploads, automatic tuning or Git operations. Compare all five
+pretrained/reference/new states in [the LR experiment report](TACO_STAGE_4_LR_EXPERIMENT.md).
+Stop after epoch 2/final validation for owner review.
+
+## Corrected-run diagnostic investigation — 2026-10-20/21
+
+D-049: The owner authorizes diagnostic-only investigation of corrected epoch 1
+versus epoch 2 using verified saved results and the existing local visual viewer.
+Verify comparability, score distributions/ranking, class assignment, localization,
+losses/gradients and representative validation cases. Preserve source files,
+configuration, data, checkpoints, strict resume and corrected COCO settings.
+No training, optimizer updates, test access, promotion, dependency changes,
+uploads or automatic Git operations. Report confirmed observations separately
+from hypotheses and rank single-variable experiments as proposals only. See
+[corrected diagnostics and next experiment proposal](TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md).
+Stop for owner review; no further experiment is approved by this decision.
+
+## Controlled corrected-target restart — 2026-10-20
+
+D-048: The owner authorizes exactly one fresh two-epoch Stage 4 experiment from
+the original pinned pretrained weights, using corrected valid-image box targets.
+Mandatory coordinate/software/source/data/rights/runtime/baseline preflight must
+pass before optimizer updates. Preserve all other historical settings: 221/47
+train/validation images, batch 1, 256/384 resize, 384-square padding, FP32,
+AdamW 1e-5/1e-4, clip 1, seed 42, frozen vision/text backbones, eight-class prompt,
+native Stage 3D adapter/loss, 900 queries and corrected COCO protocol v2.
+Use the three-step real-image pilot, discard its weights/state, then perform
+442 full-run updates. No augmentation, scheduler, accumulation, extra epochs,
+test access, dataset/configuration changes, historical resume, dependency changes,
+uploads, publication, checkpoint promotion or automatic Git operations.
+Compare pretrained, both corrected-protocol historical results, and both new
+epochs; retain losses, AP/recall, fixed-threshold diagnostics, score distributions,
+memory/timing, checkpoint integrity and preservation evidence in
+[the corrected-retrain report](TACO_STAGE_4_CORRECTED_RETRAIN.md).
+Stop after epoch 2/final validation and await owner review.
+
+## Explicit opt-in validation viewer — 2026-10-20
+
+D-047: The owner authorizes restoring the existing four-panel TACO viewer through
+`taco_visual_review.py --gui`, preserving D-046's terminal-only default.
+Optional `--image-id` selects a validation image directly. Reuse verified saved
+predictions, ground truth, zoom/pan, labels, scores, raw-phrase tables and diagnostic
+controls. No inference/training, protocol/configuration changes, annotated-image
+exports, commits, pushes or merges are authorized by this task.
+
+## Terminal-only epoch scores — 2026-10-20
+
+D-046: The owner rejects the epoch diagnostic display and requests terminal output
+for each epoch showing updated scores. This supersedes the Step 2 GUI workflow,
+without changing the existing functional-inference viewer. Close the diagnostic
+window and use verified saved epoch metrics/score distributions in the terminal.
+No new training authorization, inference, threshold change or resume exception is
+implied. Prior GUI implementation/evidence remains historical and is not launched.
+
+## Stage 4 Step 2 local visual diagnostics — 2026-10-20
+
+D-045: The owner authorizes a standalone local-only four-view validation replay,
+systematic representative selection, annotation-relative IoU/classification/miss/
+duplicate/confidence diagnostics and initial visual review. Reuse verified saved
+records and the approved evaluation-only provenance pathway. Keep raw phrases
+separate from assigned classes; diagnostic thresholds do not alter official metrics.
+Preserve all user work, inference, strict resume, checkpoints, taxonomy, splits,
+originals and environments. No training, optimizer restoration/updates, test access,
+downloads, dependency changes, exports/publication, promotion or automatic commits.
+
+[Actual evidence](TACO_STAGE_4_VISUAL_REVIEW.md) distinguishes automated annotation
+associations and native runtime checks from pending human photo-level judgments.
+Recommendations for a future corrected-target restart/resolution/score investigation
+remain proposals requiring later authorization. No further experiment is started.
+
+## Stage 4 Step 1C evaluation-only provenance — 2026-10-20
+
+D-044: The owner explicitly authorizes a separate historical checkpoint evaluation
+path that independently verifies original manifests/artifacts/provenance, exact
+reviewed current source differences, model/processor/tokenizer/adapter and corpus/
+rights compatibility. Preserve strict training-resume verification; never restore
+optimizer/RNG/training position, update weights, access test data, publish private
+artifacts, promote a checkpoint or automatically commit/push/merge. Qualify using
+synthetic fixtures before reevaluating unchanged epoch-1/2 validation models.
+
+[Completed evidence](TACO_STAGE_4_REEVALUATION.md) records corrected metrics, preserved
+historical evidence, unchanged strict resume rejection and zero guarded forbidden
+operations. Step 2 visual comparison is recommended, not started or implicitly
+approved. Corrected evaluation does not repair historical training targets.
+
+## Stage 4 Step 1B coordinate correction — 2026-10-20
+
+D-043: The owner authorizes correction of valid-image target normalization and
+native prediction decoding, independent regression tests and validation-only
+comparison of pretrained/epoch-1/epoch-2 models. Preserve image processing, adapter,
+architecture, loss, scoring policy, taxonomy, splits, checkpoints, owner edits and
+environments. No optimizer updates, test access, publication, promotion, automatic
+merge or Step 2 visual analysis. Stop checkpoint comparison if integrity/source
+binding blocks it; do not falsify provenance or disable checks.
+
+[Actual Step 1B evidence](TACO_STAGE_4_COORDINATES.md): corrections/tests pass;
+pretrained reevaluation completed; epoch comparisons blocked by unchanged
+exact-source/protocol checks. An evaluation-only provenance contract for historical
+weights is a proposal requiring approval, not an implemented exception or permission
+to retrain. Historical run artifacts remain unchanged.
+
+## Stage 4 owner academic-use declaration — 2026-10-19
+
+D-042: The owner confirms non-commercial academic purpose, local training/evaluation, no publication/redistribution/cloud upload of TACO photos or annotations, and authorizes proceeding on a genuinely documented lawful-use basis if supportable. This is project-owner workflow authorization, not rightsholder permission, institutional approval or definitive legal clearance. The [case-specific Section 185 record](TACO_STAGE_4_ACADEMIC_USE.md) documents a defensible limited-use claim with remaining uncertainty, bound to the exact 221 training and 47 validation images/annotations. The v2 gate records that claim with clearance flags false and third-party authority explicitly not claimed. No new phase, model/loss/precision change, test use, cloud spending, publication or automatic merge is authorized. Existing Stage 4 pilot/training/evaluation proceeds within that scope.
+
+## Current Stage 4 authorization — 2026-10-19
+
+| ID | Approved decision | Consequence |
+| --- | --- | --- |
+| D-041 | Owner authorizes real-image fine-tuning and initial validation directly on Stage 3D's verified adapter as one continuous implementation task, conditional on verified permission or an appropriately approved lawful-use basis for source photos and annotations/database. | Implement loader, full resumable checkpoints, progress, real-memory pilot and bounded 2–3 epochs with fixed pretrained/validation comparison; preserve eight labels/splits, inference/environment and original weights. If rights remain unresolved, finish runnable software and identify exact approval before processing actual photos. No test-photo use, cloud spending/upload/publication, promotion or PR merge. Earlier synthetic-only boundaries are superseded within this scope. |
+
+Implementation/evidence: [Stage 4](TACO_STAGE_4.md). Software and generated-image qualification are recorded separately from real-photo gates. Missing rights evidence currently blocks actual photo processing/training; no permission, real-data outcome or benchmark is invented. The fixed initial protocol/settings in the implementation are bounded engineering choices, not measured optimal defaults or a taxonomy/architecture decision.
+
 ## Historical Phase 0 decisions — retained record
 
 Source: the project owner's Phase 0 task instructions. These entries preserve their original wording; they are not all current instructions. D-002 is refined by D-007/D-014; D-003's Phase 0-only task state is superseded by D-020; D-004's preserved original ignore rules now permit additive exclusions under D-019. No entry is experimental evidence.
@@ -156,3 +431,27 @@ Unresolved preparation decisions: excluded/unlabeled/crowd handling for later tr
 D-036 (2026-10-18): The owner reports representative annotations visually reviewed and authorizes non-destructive strict-clean conversion and seeded image-level train/validation/test splitting of existing external TACO. Use the eight-class taxonomy/order, default proposed 70/15/15 ratios and seed 42, preserve original metadata/source identity, quarantine whole missing/unaligned/invalid/mixed/unlabeled images, and report losses/bias. Do not clip boxes, repair duplicated source annotation IDs, assume trainer ignore flags, copy photos, download data, change dependencies/inference or load/fine-tune Grounding DINO. This supersedes D-035's export/split stop only. No merge. See [Stage 2 evidence](TACO_STAGE_2.md).
 
 Implementation choices within this scope: hold non-identity/ambiguous EXIF cases in addition to dimension mismatches; coassign exact/perceptual candidate photograph groups; propagate dirty exact-peer quarantine and hold conflicting exact-peer annotations; preserve full source records alongside unique export annotation IDs. These choices do not approve source repairs or confirm that all near duplicates were found. Licensing, trainer compatibility, small evaluation classes and strict-clean sampling bias remain pending readiness decisions. The existing three final inference categories remain unchanged.
+
+## Stage 3A assessment authorization
+
+D-037 (2026-10-18): The owner authorizes review of completed Stage 2 and a technical assessment of exact pinned Grounding DINO Tiny training implementation, excluded/unlabeled handling, existing-dataset recovery, GPU/cloud feasibility, licensing and a small smoke/evaluation proposal. Preserve strict-clean exports, eight-label taxonomy, original sources and inference environment/pipeline. No fine-tuning, taxonomy modification or replacement training export is authorized. See [assessment, primary sources and pending gates](TACO_STAGE_3A.md).
+
+Proposals, not approvals: use Transformers 4.51.3's native loss with a separate PyTorch trainer/environment; qualify missing SciPy/evaluation dependencies separately; retain strict-clean as the first smoke reference; review coordinates before expansion; investigate auxiliary supervision of known excluded categories while keeping unresolved unlabeled photos quarantined; prefer approximately 24 GB GPU headroom. Rights clearance, runtime memory/backward/save-reload qualification, provider/budget, auxiliary taxonomy/ignore semantics and future versioned expansion/evaluation remain owner decisions. No training readiness or model quality is established by this assessment.
+
+## Stage 3B synthetic training authorization
+
+D-038 (2026-10-18): The owner authorizes a separate reproducible training environment, required dependencies including SciPy, and bounded synthetic-only PyTorch forward/backward/optimizer checks using the exact pinned Grounding DINO Tiny and Transformers 4.51.3 native loss. Verify all-eight prompt mapping, COCO preprocessing/batching, actual GPU peaks and model/processor saving/reloading. Preserve functioning inference `.venv`, pipeline/settings, source photos/annotations, taxonomy and strict-clean splits. No TACO photo training, cloud uploads/spending, replacement exports or real-data fine-tuning. See [actual implementation and evidence](TACO_STAGE_3B.md).
+
+Recorded implementation choices for this software qualification only: FP32 batch 2, frozen vision/BERT, 192/256 input edges, 900 queries and unchanged native loss. The earlier 128/192 attempt failed spatial top-k capacity and remains preserved; there is no automatic model/device fallback. The successful small synthetic run is not an approved real-data hyperparameter configuration or evidence that full training fits 6 GB. Native encoder regression lacks gradients and encoder classification dominates the loss; investigating/correcting that behavior, real-data readiness, rights, resume/evaluation design, taxonomy/ignore policies and expansion remain future decisions. No library version/weight replacement or hidden loss patch is approved by this result.
+
+## Stage 3C loss investigation authorization
+
+D-039 (2026-10-18): The owner authorizes tracing pinned native encoder/decoder losses and controlled synthetic target-count/empty experiments in `.venv-training`, with masks, matching, normalization, gradient/update and memory diagnostics. Preserve environments, inference, original checkpoint, taxonomy and splits. Do not train on real TACO, patch Transformers, silently change coefficients/architecture or spend on cloud resources. Explain any proposed correction with supporting evidence and request approval before implementing a substantive training-method change. See [actual results and next-stage proposal](TACO_STAGE_3C.md).
+
+Investigation findings, not an adopted correction within Stage 3C: native encoder supervision uses a detached box copy and recomputed learned-query/pre-encoder text scores. Selected proposal tensors with the same criterion show expected image-conditioned scores and encoder-head gradient paths; Stage 3C hypothesis terms are diagnostic only and never optimized. Native source, weights, loss and Stage 3B implementation remain unchanged. Its proposed Stage 3D required separate approval, recorded below. Rights, evaluator/resume design, resolution memory, excluded annotations and dataset coverage remain independent prerequisites.
+
+## Stage 3D adapter authorization and outcome
+
+D-040 (2026-10-19): The owner explicitly approves the separate training-only encoder-output adapter and synthetic qualification using Stage 3C findings. Supply selected image-conditioned encoder proposal scores and undetached supervised boxes to the existing native loss; preserve detached decoder reference initialization, pretrained architecture/base weights, query count, text mapping and coefficients. Verify actual gradients/updates, empty paths, decoder equivalence, checkpoint/adapter reconstruction, memory and regression evidence. No installed-library modification/monkey patch, inference change, real TACO training, data/taxonomy/split modification, cloud spending or automatic promotion. Stop/report if invariants cannot be preserved, and stop after Stage 3D synthetic qualification.
+
+Actual Stage 3D outcome is a bounded synthetic PASS, detailed in [evidence](TACO_STAGE_3D.md). Every corrected case has two optimizer steps, finite values, intended encoder updates and exact decoder equivalence; empty regression is correctly zero. Experimental model/processor weights and explicit adapter context reload exactly. The checkpoint is weights/context only with `resume_supported=false`; no inference promotion or real-data readiness is approved by this outcome. Real-data trainer/resume/evaluator design, rights, coverage/leakage and intended-resolution memory remain future prerequisites.

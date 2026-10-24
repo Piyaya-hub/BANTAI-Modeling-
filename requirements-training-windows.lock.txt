@@ -1,0 +1,4 @@
+# Stage 3B: separate Python 3.11.9 Windows environment only.
+# Reuse exact recorded inference pins without installing into inference .venv.
+-r requirements-windows.lock.txt
+scipy==1.15.3

@@ -1,0 +1,8 @@
+{
+  "schema_version": "bantai.visual-review-anchors.v1",
+  "purpose": "saved_validation_replay_no_inference",
+  "owner_authorization": "Stage 4 Step 2 local diagnostic review",
+  "step1c_record_sha256": "cfc32cff83ad40531ef9ae99f13728c6b36508148c6d4f1824c93f0eb760be36",
+  "baseline_record_sha256": "510ee29d14d0acc7b9072e17296ee645642a4885d1edf9b10757ff9cdea4efe7",
+  "baseline_evaluation_sha256": "cbaf8342029ddbe27bed843f8ddcbe0931fe6150bcb51fa2d7fe08b849d46081"
+}
