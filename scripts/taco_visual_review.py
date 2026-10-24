@@ -88,6 +88,9 @@ def prepare_review(evaluation_record,baseline_record,historical_run,dataset,righ
 def show_review(dataset,models,record,folder,image_id=None):
     """Run the existing viewer and persist its separate display outcome."""
     from .taco_comparison_gui import ComparisonWindow
+    if record.get('per_object_diagnostic'):
+        from .taco_object_gui import PerObjectWindow
+        ComparisonWindow=PerObjectWindow
     window=None
     record['display_status']='pending'
     atomic_json(folder/'analysis.json',record,replace=True)
@@ -95,6 +98,8 @@ def show_review(dataset,models,record,folder,image_id=None):
         if image_id is not None and image_id not in {r['id'] for r in dataset.images}:
             raise ValueError(f'Image ID {image_id} is not in the validation split')
         window=ComparisonWindow(dataset,models,record['representative_sample'],folder)
+        if 'saved_run_choice' in record:
+            window.set_saved_configuration(record['saved_run_choice'],record['saved_configuration'])
         if image_id is not None:
             window.scope.set('all validation')
             window.selected.set(str(image_id))
@@ -126,10 +131,26 @@ def main(argv=None):
     mode.add_argument('--analyze-only',action='store_true')
     mode.add_argument('--gui',action='store_true',help='Open the existing four-panel saved validation viewer')
     p.add_argument('--image-id',type=int,help='Start GUI at this validation image ID (requires --gui)')
+    p.add_argument('--saved-review',type=Path,help='Explicit cross-seed saved-review manifest; leaves historical defaults unchanged')
+    p.add_argument('--run-choice',help='Run key from --saved-review (seed and learning rate)')
+    p.add_argument('--per-object',action='store_true',help='Explicit saved-review GUI: inspect each GT using all eligible saved queries')
     args=p.parse_args(argv)
+    if args.per_object and not (args.gui and args.saved_review):
+        p.error('--per-object requires --gui and --saved-review')
+    if bool(args.saved_review) != bool(args.run_choice):
+        p.error('--saved-review and --run-choice must be used together')
     if args.image_id is not None and not args.gui:
         p.error('--image-id requires --gui')
-    if args.analyze_only or args.gui:
+    if args.saved_review:
+        from .taco_saved_review import load_saved_review
+        dataset,models,record=load_saved_review(args.saved_review,args.run_choice,args.dataset,args.rights)
+        if args.per_object:record['per_object_diagnostic']=True
+        folder=ROOT/'runs/training'/('saved-review-'+uuid.uuid4().hex);folder.mkdir()
+        atomic_json(folder/'analysis.json',record)
+        print(folder,flush=True)
+        print('Verified saved run: '+args.run_choice+'; no new inference or training.',flush=True)
+        if args.gui:show_review(dataset,models,record,folder,args.image_id)
+    elif args.analyze_only or args.gui:
         dataset,models,record,folder=prepare_review(args.evaluation_record,args.baseline_record,args.historical_run,
             args.dataset,args.rights,args.sample_size)
         print(folder,flush=True)

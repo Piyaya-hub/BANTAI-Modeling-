@@ -9,6 +9,7 @@ import argparse
 import gc
 import importlib.metadata
 import json
+import math
 import os
 from pathlib import Path
 import random
@@ -50,10 +51,20 @@ def load_model(path, device):
     return model.to(device), processor, EncoderOutputAdapter(model,processor.tokenizer)
 
 
-def make_optimizer(model):
+def make_optimizer(model, learning_rate=1e-5):
     import torch
+    if not math.isfinite(learning_rate) or learning_rate<=0:
+        raise ValueError('Learning rate must be finite and positive')
     return torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
-                            lr=1e-5,weight_decay=1e-4,foreach=False)
+                            lr=learning_rate,weight_decay=1e-4,foreach=False)
+
+
+def seed_rngs(seed, device):
+    """Seed all training RNGs; epoch shuffling uses the same seed explicitly."""
+    import numpy as np
+    import torch
+    random.seed(seed);np.random.seed(seed);torch.manual_seed(seed)
+    if device=='cuda':torch.cuda.manual_seed_all(seed)
 
 
 def memory(device):
@@ -122,14 +133,20 @@ def main(argv=None):
     parser.add_argument('--resume',type=Path,help='Complete Stage 4 checkpoint folder; continuation creates a new run')
     parser.add_argument('--epochs',type=int,choices=(2,3),default=2)
     parser.add_argument('--batch-size',type=int,choices=(1,2),default=1)
+    parser.add_argument('--learning-rate',type=float,default=1e-5)
+    parser.add_argument('--seed',type=int,default=42)
     parser.add_argument('--shortest-edge',type=int,default=256)
     parser.add_argument('--longest-edge',type=int,default=384)
     parser.add_argument('--pilot-steps',type=int,choices=range(2,6),default=3)
     parser.add_argument('--checkpoint-every',type=int,default=50)
     parser.add_argument('--device',choices=('cuda','cpu'),default='cuda')
     args=parser.parse_args(argv)
-    if not 192<=args.shortest_edge<=args.longest_edge<=512 or args.checkpoint_every<1:
-        parser.error('Require 192 <= shortest <= longest <= 512, positive checkpoint interval')
+    if not 0<=args.seed<2**32:
+        parser.error('Seed must be an integer in [0, 2**32) for NumPy compatibility')
+    if not math.isfinite(args.learning_rate) or args.learning_rate<=0:
+        parser.error('Learning rate must be finite and positive')
+    if not 192<=args.shortest_edge<=args.longest_edge<=576 or args.checkpoint_every<1:
+        parser.error('Require 192 <= shortest <= longest <= 576, positive checkpoint interval')
     context=dataset_context(args.dataset)
     if args.write_context:
         atomic_json(args.write_context,context)
@@ -153,16 +170,15 @@ def main(argv=None):
             raise ValueError('Stage 4 requires isolated pycocotools==2.0.10')
         # Configure before initializing CUDA; do not silently enable AMP/TF32.
         os.environ['CUBLAS_WORKSPACE_CONFIG']=':4096:8'
-        import numpy as np
         import torch as torch_module
         torch=torch_module
         torch.set_num_threads(4)
         torch.backends.cuda.matmul.allow_tf32=False
         torch.backends.cudnn.allow_tf32=False
-        random.seed(42);np.random.seed(42);torch.manual_seed(42)
+        seed_rngs(args.seed,args.device)
         if args.device=='cuda':
             if not torch.cuda.is_available():raise RuntimeError('CUDA unavailable; no silent CPU fallback')
-            torch.cuda.manual_seed_all(42);torch.cuda.reset_peak_memory_stats()
+            torch.cuda.reset_peak_memory_stats()
             report['gpu']={'name':torch.cuda.get_device_name(),'total_bytes':torch.cuda.get_device_properties(0).total_memory,
                            'capability':list(torch.cuda.get_device_capability()),'torch_cuda':torch.version.cuda}
             smi=subprocess.run(['nvidia-smi','--query-gpu=name,driver_version,memory.total','--format=csv'],
@@ -176,9 +192,9 @@ def main(argv=None):
                   'protocol':PROTOCOL,'packages':report['environment']['packages'],
                   'runtime':{key:report['environment'][key] for key in ('python','platform')},
                   'gpu':report.get('gpu'),
-                  'optimizer':{'name':'AdamW','lr':1e-5,'weight_decay':1e-4,'foreach':False,'clip_norm':1.},
+                  'optimizer':{'name':'AdamW','lr':args.learning_rate,'weight_decay':1e-4,'foreach':False,'clip_norm':1.},
                   'precision':'fp32','frozen':'vision_and_text_backbones','augmentation':'none',
-                  'scheduler':'none','seed':42,'workers':0,'padding':'fixed_longest_edge_square'}
+                  'scheduler':'none','seed':args.seed,'workers':0,'padding':'fixed_longest_edge_square'}
         if args.resume:
             candidate=dict(contract,adapter_context=strict_load(args.resume/'training_adapter.json'))
             verify_checkpoint(args.resume,candidate)
@@ -200,7 +216,7 @@ def main(argv=None):
             evidence=strict_load(args.resume/'experiment_evidence.json')
             if evidence['baseline']['base_snapshot_sha256']!=source or evidence['pilot']['status']!='passed':
                 raise ValueError('Missing qualified pilot or unchanged baseline evidence')
-            optimizer=make_optimizer(model)
+            optimizer=make_optimizer(model,args.learning_rate)
             position=restore_training(args.resume,model,processor,adapter,optimizer,contract)
             total_batches=(len(train)+args.batch_size-1)//args.batch_size
             if (not 0<=position['epoch']<args.epochs or not 0<=position['next_batch']<=total_batches
@@ -213,7 +229,7 @@ def main(argv=None):
             baseline['base_snapshot_sha256']=source
             atomic_json(run/'baseline.json',baseline)
             publish('real_image_memory_pilot')
-            optimizer=make_optimizer(model)
+            optimizer=make_optimizer(model,args.learning_rate)
             if args.device=='cuda':torch.cuda.reset_peak_memory_stats()
             # Prefer object-dense training photos for this bounded wiring/memory pilot.
             order=sorted(range(len(train)),key=lambda i:(-len(train.objects[train.images[i]['id']]),train.images[i]['id']))
@@ -234,10 +250,10 @@ def main(argv=None):
             del batch
             model=optimizer=adapter=None;gc.collect()
             if args.device=='cuda':torch.cuda.empty_cache()
+            seed_rngs(args.seed,args.device)
             model,processor,adapter=load_model(SNAPSHOT,args.device)
-            random.seed(42);np.random.seed(42);torch.manual_seed(42)
-            if args.device=='cuda':torch.cuda.manual_seed_all(42)
-            optimizer=make_optimizer(model)
+            seed_rngs(args.seed,args.device)
+            optimizer=make_optimizer(model,args.learning_rate)
             position={'epoch':0,'next_batch':0,'global_step':0}
         atomic_json(run/'baseline.json',evidence['baseline'],replace=(run/'baseline.json').exists())
         atomic_json(run/'pilot.json',evidence['pilot'],replace=(run/'pilot.json').exists())
@@ -245,7 +261,7 @@ def main(argv=None):
         from tqdm import tqdm
         publish('bounded_training')
         for epoch in range(position['epoch'],args.epochs):
-            batches=epoch_batches(len(train),args.batch_size,42,epoch)
+            batches=epoch_batches(len(train),args.batch_size,args.seed,epoch)
             start_batch=position['next_batch'] if epoch==position['epoch'] else 0
             if not 0<=start_batch<=len(batches):raise ValueError('Invalid resume sampler position')
             rows=[]

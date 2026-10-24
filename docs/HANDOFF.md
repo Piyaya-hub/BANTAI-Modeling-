@@ -1,5 +1,279 @@
 # BANTAI Stage 4 handoff
 
+## Final Stage 4 wrap-up and publication identity (D-059) — 2026-10-24
+
+D-043–D-058 investigations are complete. D-059 authorizes this focused
+documentation/scripts/tests publication on `feat/stage4-real-image-training`
+to update PR #18, without merging it or promoting any checkpoint. README and
+PHASES now include the seven-row corrected-protocol benchmark progression and
+links to [D-057 training](TACO_STAGE_4_576_TRAINING.md) and
+[D-058 trajectory results](TACO_STAGE_4_576_TRAJECTORY.md).
+
+Publication base SHA: `c79d513e8990701f85db0cfe5a0acf4408de1d56`.
+The wrap-up SHA is the single commit containing this entry, resolved with
+`git log -1 --format=%H -- docs/HANDOFF.md`; its exact SHA and verified remote
+branch status are reported to the owner after push. A commit cannot contain
+its own SHA in its committed text. PR #18 remains open for owner review/merge.
+
+### Preserved corrected checkpoint inventory
+
+Each run retains eight periodic step bundles plus E1/E2 bundles:10 per run,
+50 total. D-059 performs no checkpoint/model execution or modifications.
+
+| Experiment | Training scale | Seed / LR | Private training run | Bundles |
+| --- | --- | --- | --- | --- |
+| D-048 corrected reference | 256/384 | 42 /1e-5 | `taco-312e568703a54f98a7c8f4b87b29cd39` | 10 |
+| D-050 lower LR | 256/384 | 42 /5e-6 | `taco-dd541c3972834a64a16771df44a7e891` | 10 |
+| D-051 paired replication | 256/384 | 123 /1e-5 | `taco-4bf521d7529e4fa4b168b96786020844` | 10 |
+| D-051 paired replication | 256/384 | 123 /5e-6 | `taco-e7e4008e98a241e19047e14645f06ec1` | 10 |
+| D-057 scale-matched | 384/576 | 42 /1e-5 | `taco-896e2f44146d4d54aee518e6087908ca` | 10 |
+
+All remain experimental. Step350 has the highest sampled eight-class AP0.262337,
+but lower AR100 than E1 and fewer correctly covered large objects; it is not
+selected or promoted. Cigarette gains do not establish overall generalization.
+The owner Section185 academic-use record (D-042) is not external permission,
+institutional approval or definitive legal clearance.
+
+### Verification and owner-only next actions
+
+The D-059 guarded fast unit/CPU suite ran234 tests:219 passed,15 documented
+skips,zero failures/errors. All three trajectory fixtures and the local scale,
+seed/LR and saved-review fixtures passed. Protected file metadata (59,827 files)
+matched before/after verification;50 corrected bundles remain across five runs.
+All212 relative links across the14 authorized Markdown files resolve locally
+(18 link to retained private artifacts). Staging/link/whitespace evidence is
+recorded in this publication's commit message and final owner handoff. Live
+optimizer-step and model-execution fixtures are excluded; no GPU/model runs.
+Private helper-dependent tests skip explicitly on checkouts lacking `work/`.
+Detailed report links to local audit artifacts remain private and are not
+published with the scripts/tests/reports. `runs/`, `work/`, `exports/`, `data/`,
+`BANTAI-Datasets/`, environments and rights records remain untouched and unstaged.
+`ARGON_RESEARCH_HANDOFF.md` and `BANTAI_CONCEPT_PROPOSAL.md` remain local,
+unstaged planning references.
+
+Only the owner may elect optional human visual review, decide PR #18 review/merge,
+or authorize a future stage. No further experiment, model selection, promotion,
+test evaluation or merge follows automatically from this wrap-up.
+
+## D-058 mid-Epoch-2 384/576 trajectory audit — 2026-10-24
+
+Owner authorized inference-only evaluation of D-057 step250/300/350/400 on47
+validation images,188 forwards total, reusing saved step0/221/442 endpoints.
+Observed status: **completed**. 188 validation forwards completed; all three gates passed. Cigarette same-class trajectory [8, 10, 11, 14, 14, 15]; large-bin same-class trajectory [21, 18, 16, 15, 15, 14]. No checkpoint selection or promotion.
+[Trajectory report, flip ledger and limitations](TACO_STAGE_4_576_TRAJECTORY.md).
+Audit `scale576-trajectory-c84b9d9344e64578ba1f2fb85f353d0c`. Validation checkpoint inspection is diagnostic and
+introduces selection bias; it is not a generalization claim or selection rule.
+No training/backward, train-photo/test access, core/GUI/dependency changes,
+exports, checkpoint promotion or Git publication. Stop for owner review.
+
+## D-057 controlled 384/576 training — 2026-10-23
+
+Owner authorized one3-step discarded pilot plus442 full updates from original
+SNAPSHOT at seed42/LR1e-5/FP32/frozen backbones,221 train/47 validation. Only
+the two trainer CLI bound values change512→576; defaults remain256/384.
+Observed outcome: **completed**; 3 discarded pilot +442 full updates completed.
+All five gates passed;231 software tests,zero failures/errors (three skips).
+Trainer `taco-896e2f44146d4d54aee518e6087908ca` completed both221-image epochs.
+Epoch1 AP0.249891/AR1000.488141 vs D-0550.247003/0.474763; Epoch2 AP0.170508/
+AR1000.370118. Cigarette same-class coverage at0.05 is5→8→15/24; image777
+0→1→5/7. Epoch2 improves small-bin coverage but loses ten previously correct
+GTs and large-bin coverage, with bag AP collapsing on only two GTs.
+Ten bundles verified; final optimizer step442 across558 parameters and exact
+seed42 image order. Full allocated/reserved peaks3.55/3.93 GiB. All1766 protected
+hashes matched after execution. Seven-state metrics CSV,1500-row per-object
+CSV/JSON and full training/gradient/transition summaries are in the audit.
+[Full gates, results and limits](TACO_STAGE_4_576_TRAINING.md).
+Audit `scale576-experiment-0b2a846e659a429cbe8a65c1ca0444e1`. No retry, promotion, test access, dependency/GUI changes,
+annotated exports or Git publication. Stop for owner review.
+
+## D-056 multi-checkpoint resolution replication completed — 2026-10-23
+
+[Full three-model report](TACO_STAGE_4_RESOLUTION_REPLICATION.md).
+Run `resolution-replication-adf0cda0193041e38be1380b29b3e50b` passed all four gates and exactly188 real forwards:
+47 low +47 high for Pretrained and123/1e-5/E2. Both low baselines exactly match
+saved full predictions/raw queries/metrics/loss. D-05542/E1 was read-only.
+
+Pretrained AP0.111576→0.147847;123/E2 AP0.152880→0.140163. D-055 reference remains
+0.203932→0.247003. Seven-class AP excluding bag rises in all three. At .05,
+cigarette same coverage1→3,2→5,6→10/24;123/E2 reaches19/24 at floor0, not an
+operating-threshold endorsement. Image777 GT279/280 gain same-class at .05,
+GT284 retains it and GT278 becomes wrong-only. Common gain GT497; common
+new-wrong GT67/278; no regression shared by all three. Partial scale effect,
+not uniform AP superiority or a complete classification/tiny-object repair.
+
+229 software tests:215 passed,14 documented skips; all four resolution fixtures
+passed. All1521 fresh protected hashes matched after model execution;40 checkpoint
+bundles verified, both D-055 attempts unchanged. Model hashes unchanged; exactly
+188 validation-photo reads, zero backward/updates/train-photo/test access.
+225-row paired75-GT×3-model CSV/JSON and full summary archived locally. No
+core/GUI/config/dependency changes, annotated exports, publication or promotion.
+Stop for owner review; next-step proposals are unexecuted.
+
+## D-055 single retry completed — 2026-10-23
+
+[Full measured report](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md).
+Run `resolution-experiment-9cebf39b0982405d8dfdd954ae2dbed1` passed all five gates and exactly47 high-scale
+validation forwards, after47 exact baseline forwards and one image777 pilot.
+AP0.203932→0.247003; AR1000.396766→0.474763. At .05/.50, same-class coverage
+28→33/75 (eight gains,three losses); any coverage49→56. The original4–<8px bin
+improves any/same4/1→8/4, but <4px remains0/14. Cigarette any/same2/2→8/5;
+image777 gains localization but no qualifying same-class result at .05.
+Regressions GT60/88/250 are all originally larger objects. No automatic promotion.
+
+Software228 run,214 passed,14 documented skips; all three resolution tests passed.
+Exact full baseline predictions/raw queries/metrics/loss and unchanged parameter
+hash verified. All1497 fresh protected hashes matched after execution;40 checkpoint
+bundles retained. GPU inference fit does not prove high-scale training fit.
+Private artifacts include both-scale geometry, baseline replay, pilot, high
+evaluation,75-row paired CSV/JSON and fixed-bin/transition summary. Original
+failed attempt is unchanged; retry count is consumed. Zero updates/backward,
+training-photo/test access, annotated exports, dependency/core/GUI changes or Git
+publication. Proposed human class/annotation review and one-checkpoint replication
+remain unexecuted. Stop for owner review; earlier stopped notice is historical.
+
+## D-055 stopped at software gate — 2026-10-23
+
+[Resolution attempt report](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md).
+Attempt `resolution-experiment-629229adf1c6480d930aac79250d18f8` ran no real model inference, backward or optimizer steps.
+The guarded228-test suite reported1 failure,89 errors and13 skips; all three new
+resolution fixtures passed, but the overall gate failed. The harness erroneously
+blocked synthetic fixture image saves and omitted an indirect gradient fixture
+from exclusions. Corrected work-only guards are prepared but were not rerun.
+All later gates, metrics, memory pilot and47-image comparison remain unattempted.
+Read-only post-stop verification found579 prior-anchor files unchanged
+and verified40 checkpoint bundles;221 training photos were not read or rehashed.
+Core/GUI/config source remains unchanged. Stop per owner gate rule; a fresh
+attempt requires explicit owner authorization. No commits/pushes/merges occurred.
+
+
+## Small-object/classification audit completed — 2026-10-22
+
+D-054: [Full audit and proposed next experiment](TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md)
+verified actual CPU preprocessing/masks for all47 validation images and75 boxes,
+then analyzed all nine saved states. Image777 content is350×256, not384-square.
+Small resized boxes strongly associate with poor candidate coverage;20 pretrained
+and21–27 trained annotations/state have any-class IoU>=.50 without correct-class
+coverage at .05. Cans/wrappers have persistent class-related failures; cigarette
+failures mostly lack qualifying any-class coverage. Causation remains unproven.
+
+Nine focused checks passed;40 checkpoint bundles and800 protected files verified.
+Original GUI, manifests, datasets, weights and current owner source changes are
+unchanged. Initial owner image777 observations are recorded separately from
+automated results. The single proposed experiment is fixed-weight inference-only
+256/384 versus384/576 on the preserved42/1e-5/E1 checkpoint, with GPU fit unmeasured.
+It has not run or been authorized. No new training/inference or Git publication.
+Stop for owner review; no additional experiment is approved.
+
+
+## Per-object saved diagnostics completed — 2026-10-22
+
+D-053: [Per-object report and exact GUI command](TACO_STAGE_4_PER_OBJECT_REVIEW.md)
+covers all eight image777 GT annotations and46 GT annotations in the unchanged
+20-image review. Nine saved states are compared at all900/top100 ×0/.05/.25;
+complete JSON/CSV evidence is separate from the original review manifest.
+The explicit --per-object saved GUI supports GT selection/navigation, highlights,
+zoom, complete overlap tables and a scrollable GT/model summary. Default GUI and
+terminal routing are unchanged. For seed123/1e-5/E2, GT284 is hidden by the five-box
+cap, while other missing GT have score or candidate-coverage limitations.
+All29 focused tests and native checks of four object-mode choices plus standard
+mode passed; the 20-image subset rendered. Human identity/annotation judgement
+remains pending. No training, inference, dataset/metrics changes or Git operations.
+Stop for human review; no experiment is authorized.
+
+
+## Cross-seed analysis and visual-review preparation completed — 2026-10-22
+
+D-052 is analysis only. [Full cross-seed report](TACO_STAGE_4_CROSS_SEED_ANALYSIS.md)
+recomputes all nine saved COCO metric records, checks all 40 checkpoint bundles,
+and compares class AP/AR, same/any candidate coverage, fixed-score diagnostics,
+incorrect-class assignments and descriptive two-seed ranges. Cigarette/film
+AP and AR improve over pretrained in all eight states; wrapper/can/Styrofoam
+recall is lower throughout. LR/epoch AP rankings reverse by seed.
+
+Twenty validation images and specific human questions are prepared in the local
+review manifest. The report gives the exact PowerShell command and four run
+keys. Explicit `--saved-review`/`--run-choice` reuses the four-panel viewer;
+historical default replay and strict training verification remain unchanged.
+All four saved choices and the actual terminal CLI passed; native replay rendered
+all 20 examples and closed normally with zero exports. All 22 focused tests passed.
+Human photo/material/annotation acceptance is pending. Recommended next action
+is human data-quality review; a third paired seed remains a proposal, not
+authorization. No new training/inference, test evaluation, promotion or Git
+publication occurred. Stop for owner review.
+
+
+## Paired seed-123 replication completed — 2026-10-22
+
+D-051's A (1e-5/123) and B (5e-6/123) both completed and passed integrity audits:
+884 full updates plus six discarded pilot updates, no extra runs. A AP improves
+0.140478→0.152880; B AP regresses 0.137919→0.113018, reversing the seed-42
+epoch pattern. Both rates change best AP epoch across seeds. This weakens a
+general lower-LR prevention claim; two seeds do not establish superiority.
+
+Configurable `--seed` defaults to 42 and retains the LR interface. Five seed
+regression tests passed; guarded discovery passed 211 tests with three documented
+skips. Original data, weights, driver/runtime, native adapter, rights gate and
+exact baseline passed. Both full starts have identical RNG/parameter hashes and
+442-image ordering; pilot-release checks passed. Twenty checkpoint bundles and
+756 protected files passed, including unchanged A artifacts after B.
+Study: `runs/training/seed123-pair-10acabc298064547bfab6d119a109359/`.
+A: `runs/training/taco-4bf521d7529e4fa4b168b96786020844/` (AP/AR100 E2
+0.152880/0.274295). B: `runs/training/taco-e7e4008e98a241e19047e14645f06ec1/`
+(AP/AR100 E2 0.113018/0.291915). Both use seed 123.
+[Replication report](TACO_STAGE_4_SEED_REPLICATION.md) includes the full cross-seed
+deltas, class/coverage/score/loss tables, runtime caveats and evidence.
+The original 42/1e-5/E1 remains strongest measured AP/AR100 and is not promoted.
+Only these two runs were executed; a third paired seed 456 is a proposal only.
+Stop for owner review, with no promotion, test access or Git operations.
+
+## Controlled LR-only experiment completed — 2026-10-22
+
+D-050's one fresh two-epoch LR 5e-6 comparison completed, exit 0, with exactly
+442 full-run updates after three discarded pilot updates. New E1 AP/AR100:
+0.137099/0.330432; E2: 0.145952/0.302977. Lower LR avoids the previous aggregate
+AP collapse and beats the 1e-5 E2 result, but does not preserve the stronger 1e-5
+E1 result (0.203932/0.396766). Same-class all900 coverage still falls 32→30.
+No checkpoint is promoted. The next seed-only replication is a proposal only.
+
+Guarded preflight passed: 206 tests, three documented skips, all 268 source/
+geometry checks, exact pretrained baseline agreement and unchanged runtime/data/
+rights. Four new LR tests passed. Actual optimizer groups and both saved epoch
+optimizer states confirm 5e-6, with states at 221/442. Ten immutable bundles and
+all 612 protected file hashes passed; seeded training coverage is exact.
+Run: `runs/training/taco-dd541c3972834a64a16771df44a7e891/`.
+Evidence: `runs/training/lr5e6-7d3cd8dad9064aa9949fb2da4bf421c0/`.
+[LR report](TACO_STAGE_4_LR_EXPERIMENT.md) contains all five model states, per-class
+AP/AP50/recall/coverage, score sweeps, losses, numeric curves and preservation.
+The same run continued after a long pre-update wall-clock gap; lifecycle timing
+is not an active-compute benchmark. No optimizer state or weights were resumed
+from an earlier fine-tuned checkpoint. Historical
+source-pinned TACO replay policies remain unchanged and reject the new trainer
+fingerprint; normal BANTAI inference is unchanged. Training has stopped after
+epoch 2/final validation. Await owner review, without promotion, test access,
+further optimization or Git operations.
+
+## Corrected-run diagnostics completed — 2026-10-21
+
+D-049's [diagnostic report](TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md) explains the
+observed E1→E2 regression using saved validation results, without new inference
+or training. Any-class all900 coverage at IoU >=0.50 rises 55→57 annotations;
+same-class coverage falls 36→30. Bags/styrofoam lose useful class assignments
+despite retained well-aligned boxes; cups also lose AP. Score shifts are mixed.
+Overfitting, forgetting and excessive learning rate are not established causes.
+
+Forty-five existing tests and three local diagnostic fixtures passed. Native
+corrected-run replay checked 20 representative images, overlays, raw phrases,
+zoom/pan and navigation; human photo-level confirmation remains pending.
+Evidence: `runs/training/corrected-diagnostics-629e30fb299f442698de14650b279c6c/`.
+The continuation rechecked 603 prior protected files: 602 still match; the owner's
+production detection configuration changed before continuation and is preserved
+with its exact current hash recorded separately. Training/model/data/checkpoint
+identities remain unchanged. No existing source file was edited for this task.
+
+The report ranks a fresh two-epoch LR-only comparison (1e-5→5e-6) first as a
+proposal. No next experiment is implemented or authorized. Stop for owner review;
+no test access, checkpoint promotion, uploads, commits, pushes or merges.
+
 ## Controlled corrected-target restart completed — 2026-10-20
 
 D-048's single two-epoch run completed, exit 0: three discarded pilot steps,

@@ -1,5 +1,82 @@
 # BANTAI Modeling
 
+**Stage 4 investigations are complete through D-058; D-059 authorizes their focused publication to PR #18.**
+[D-057 scale-matched training](docs/TACO_STAGE_4_576_TRAINING.md) completed at
+384/576 in FP32. [D-058 trajectory audit](docs/TACO_STAGE_4_576_TRAJECTORY.md)
+found progressive cigarette gains alongside larger-object class regressions.
+All 50 corrected checkpoint bundles across five runs remain private and experimental.
+No checkpoint is promoted, PR merge is not authorized, and further experiments require owner authorization.
+
+## Stage 4 benchmark progression
+
+All rows use the same 47 validation images / 75 GT boxes and corrected COCO v2
+protocol. Seven-class AP excludes `plastic_bag`; cigarette counts are nonexclusive
+same-class GT coverage over all 900 queries at score >=0.05 and IoU >=0.50,
+not official COCO recall or calibrated correctness.
+
+| State | Input scale | AP | AR100 | Seven-class AP | Cigarette coverage |
+| --- | --- | --- | --- | --- | --- |
+| Pretrained | 256/384 | 0.111576 | 0.363077 | 0.093769 | 1/24 |
+| Pretrained (D-056) | 384/576 | 0.147847 | 0.426109 | 0.095418 | 3/24 |
+| D-048 seed 42 E1 | 256/384 | 0.203932 | 0.396766 | 0.136242 | 2/24 |
+| D-055 inference-only scaling | 256/384 trained → 384/576 evaluated | 0.247003 | 0.474763 | 0.152161 | 5/24 |
+| D-057 scale-matched E1, step 221 | 384/576 | 0.249891 | 0.488141 | 0.181629 | 8/24 |
+| D-058 mid-Epoch-2 audit, step 350 | 384/576 | 0.262337 | 0.428890 | 0.218249 | 14/24 |
+| D-057 scale-matched E2, step 442 | 384/576 | 0.170508 | 0.370118 | 0.190859 | 15/24 |
+
+Step 350 has the highest sampled eight-class AP, while E1 retains higher AR100.
+Inspecting intermediate checkpoints on this small validation set is a diagnostic
+audit with selection bias, not a checkpoint-selection rule or proof of generalization.
+See the [wrap-up handoff](docs/HANDOFF.md) for the five-run inventory and owner-only next actions.
+The [D-042 Section 185 academic-use record](docs/TACO_STAGE_4_ACADEMIC_USE.md)
+is owner workflow authorization, not external permission, institutional approval or definitive legal clearance.
+Detailed reports retain links to private local audit artifacts; these artifacts and
+optional `work/` helper tests are not distributed. Tests requiring absent private
+helpers skip explicitly. The baseline inference configuration remains unchanged.
+
+## Historical Stage 4 investigation notices
+
+Earlier status and stop notices below describe their respective completed substeps;
+D-059 is the current documentation/publication authorization.
+
+**D-056 replication completed.** [Three-model resolution report](docs/TACO_STAGE_4_RESOLUTION_REPLICATION.md)
+finds shared small-bin/cigarette coverage gains but checkpoint-dependent raw AP.
+Both new baselines reproduced exactly;188 inference-only forwards completed.
+No training/promotion or core/GUI changes; stop for owner review.
+
+
+**D-055 retry completed.** [Resolution comparison](docs/TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
+improved fixed-checkpoint AP0.203932→0.247003, with partial small-object recovery
+and three regressions. All gates passed; no training, promotion or core/GUI changes.
+Stop for owner review. The initial stopped-attempt notice below is historical.
+
+
+**D-055 stopped before model execution.** [Resolution attempt report](docs/TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
+records a software-gate failure caused by the isolated runner's guard scoping.
+No new inference or resolution result exists. Corrected guards await owner
+review and authorization for a fresh attempt.
+
+
+**Small-object/classification audit completed.** [Report](docs/TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md)
+verifies actual preprocessing for all47 validation images, measures75 resized
+GT boxes and compares nine saved model states. Small-size association and
+well-localized class errors coexist; a fixed-weight scale comparison remains
+a proposal. No new model inference or training; stop for owner review.
+
+
+**Per-object saved detection review is ready.** [Report and GUI command](docs/TACO_STAGE_4_PER_OBJECT_REVIEW.md)
+add opt-in GT selection/zoom and full overlap diagnostics for image777 and the
+existing20 review images. Default viewer behavior is preserved. No new training
+or inference; human annotation/material confirmation remains pending.
+
+
+**Stage 4 cross-seed analysis and review preparation are complete.**
+[The report](docs/TACO_STAGE_4_CROSS_SEED_ANALYSIS.md) compares all nine saved
+states, per-class stability and failure patterns, with 20 human-review examples
+and commands for selecting verified saved runs in the four-panel viewer.
+No new experiment ran; human confirmation and owner review remain pending.
+
+
 BANTAI is an academic intelligent-agent project for street-issue detection and hotspot prioritization. Its broader proposal includes roadside garbage, potholes, road-surface damage, incident management, and frequency-based hotspot prioritization.
 
 This repository's initial development scope is **trash detection on still images only**. The approved starting model is **GroundingDINO-T (Swin-T / Tiny configuration)**, evaluated through pretrained text-guided inference. Hugging Face Transformers is the selected inference library. Phase 2A has recorded the exact checkpoint/processor revision, settings, installed dependencies and basic Windows runtime readiness. Prompt/category quality and thresholds remain unvalidated; publication of the plan does not establish their acceptance or readiness. Training, alternative models, and integration require later decisions based on evaluation evidence.
@@ -11,6 +88,24 @@ The three required output categories are **Garbage Pile**, **Individual Litter**
 Execution is intended for the owner’s Windows computer, preferring GPU with CPU fallback. Owner-supplied Command Prompt output now reports Windows 10 build 19045.6466, a GTX 1660 Ti with 6144 MiB VRAM, driver 472.19, and about 5235–5236 MiB free at the time of the query. This replaces the earlier RTX 2080 Super assumption. Git works. After the initial Store-alias/launcher issue, supplied output confirms Python 3.11.9 x64 installation, a successful local clone and `.venv` reporting Python 3.11.9. Supplied checks now show CPU/CUDA tensor results of 2.0, CUDA available, capability (7,5), matching direct library imports and no broken requirements. Native TkAgg rendering/normal return, checkpoint/processor metadata, official driver-reference comparison and exact dependency/source capture are also confirmed. Phase 2A technical preparation checks are complete; subsequent Phase 2C Windows CUDA execution is recorded separately below, with accuracy unmeasured; see the [preflight record](docs/PHASE_2A_READINESS.md). Checkpoint metadata reports Apache-2.0, non-gated access and safetensors at immutable revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`; future model and processor loading must use that same revision.
 
 ## Current state
+
+**Paired seed-123 replication completed (D-051).** Exactly two two-epoch runs
+completed: 1e-5 AP 0.140478→0.152880; 5e-6 AP 0.137919→0.113018.
+This reverses the seed-42 epoch pattern and weakens a general lower-LR remedy
+claim. [Cross-seed comparison and preservation evidence](docs/TACO_STAGE_4_SEED_REPLICATION.md).
+No further experiment or promotion; await owner review.
+
+**Controlled LR 5e-6 experiment completed (D-050).** One two-epoch run reached AP
+0.137099 / 0.145952, reducing the earlier epoch-2 AP regression but falling short
+of the 1e-5 epoch-1 AP 0.203932. Correct-class candidate coverage still declines.
+[Five-state comparison, curves and preservation evidence](docs/TACO_STAGE_4_LR_EXPERIMENT.md).
+No further training or checkpoint promotion; await owner review.
+
+**Corrected-run performance investigation completed (D-049).**
+[Diagnostics and proposed next controlled experiment](docs/TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md)
+show that epoch 2 retains good spatial candidates but loses correct-class
+coverage, especially for bags/styrofoam. Score changes are mixed; the optimization
+cause remains unresolved. Saved-result analysis only; await owner review.
 
 **Controlled corrected-target restart completed (D-048).** One fresh two-epoch
 run from the unchanged pretrained snapshot improved corrected-protocol AP to

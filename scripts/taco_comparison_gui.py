@@ -77,7 +77,7 @@ class ComparisonWindow:
             toolitems=tuple(item for item in NavigationToolbar2Tk.toolitems if item[0]!='Save')
         self.toolbar=DiagnosticToolbar(self.canvas,plot);self.toolbar.update()
         self.scroll_connection=self.canvas.mpl_connect('scroll_event',self.wheel_zoom)
-        notebook=ttk.Notebook(details);notebook.pack(fill='both',expand=True)
+        notebook=ttk.Notebook(details);notebook.pack(fill='both',expand=True);self.notebook=notebook
         self.tables={}
         columns=('identity','rank','evaluation_class','score','raw_phrase','bbox_xywh','best_GT','IoU')
         for name in ('ground_truth',)+MODELS:
@@ -107,6 +107,21 @@ class ComparisonWindow:
         self.ids=ids;self.selector['values']=[str(i) for i in ids]
         if self.selected.get() not in [str(i) for i in ids]:self.selected.set(str(ids[0]))
         self.render()
+
+    def set_saved_configuration(self,choice,configuration):
+        """Expose actual recorded context for explicit saved-run replay only."""
+        import tkinter as tk
+        from tkinter import ttk
+        self.root.title('BANTAI saved validation review — '+choice)
+        frame=ttk.Frame(self.notebook);self.notebook.add(frame,text='Saved configuration')
+        text=tk.Text(frame,wrap='none',height=6)
+        y=ttk.Scrollbar(frame,orient='vertical',command=text.yview)
+        x=ttk.Scrollbar(frame,orient='horizontal',command=text.xview)
+        text.configure(yscrollcommand=y.set,xscrollcommand=x.set)
+        text.grid(row=0,column=0,sticky='nsew');y.grid(row=0,column=1,sticky='ns');x.grid(row=1,column=0,sticky='ew')
+        frame.rowconfigure(0,weight=1);frame.columnconfigure(0,weight=1)
+        text.insert('1.0',choice+'\n'+json.dumps(configuration,indent=2,ensure_ascii=False))
+        text.configure(state='disabled')
 
     def navigate(self,offset):
         position=self.ids.index(int(self.selected.get()));self.selected.set(str(self.ids[(position+offset)%len(self.ids)]));self.render()

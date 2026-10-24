@@ -1,5 +1,184 @@
 # Decision register
 
+## D-059 Stage 4 wrap-up and focused publication — 2026-10-24
+
+The owner authorizes closing the Stage 4 post-validation investigation series
+D-043–D-058, synchronizing README/phase status through D-057/D-058, running
+guarded fast unit/CPU checks, and publishing the explicitly listed scripts,
+tests, reports and two SVG assets in one focused D-045–D-059 commit on
+`feat/stage4-real-image-training` to update PR #18. No PR merge or checkpoint
+promotion is authorized. [Final wrap-up state and inventory](HANDOFF.md).
+
+This authorization supersedes earlier per-investigation publication stops only
+within that allowlist. Preserve all runs, work, exports, data, environments,
+rights records and50 corrected checkpoint bundles. No GPU/model execution,
+training/inference, test-split/photo access or checkpoint modifications.
+Local ARGON handoff and concept-proposal planning documents remain uncommitted.
+Private helper-dependent tests explicitly skip when their unpublished work files
+are absent; no private audit artifacts are added to Git.
+
+The D-042 Section185 owner academic-use record remains distinct from external
+permission, institutional approval and definitive legal clearance. Optional human
+visual review, PR review/merge and future stages remain owner decisions, not
+automatic follow-up actions. Higher sampled validation AP does not select a model.
+
+## D-058 mid-Epoch-2 384/576 trajectory audit — 2026-10-24
+
+Owner authorized inference-only evaluation of D-057 step250/300/350/400 on47
+validation images,188 forwards total, reusing saved step0/221/442 endpoints.
+Observed status: **completed**. 188 validation forwards completed; all three gates passed. Cigarette same-class trajectory [8, 10, 11, 14, 14, 15]; large-bin same-class trajectory [21, 18, 16, 15, 15, 14]. No checkpoint selection or promotion.
+[Trajectory report, flip ledger and limitations](TACO_STAGE_4_576_TRAJECTORY.md).
+Audit `scale576-trajectory-c84b9d9344e64578ba1f2fb85f353d0c`. Validation checkpoint inspection is diagnostic and
+introduces selection bias; it is not a generalization claim or selection rule.
+No training/backward, train-photo/test access, core/GUI/dependency changes,
+exports, checkpoint promotion or Git publication. Stop for owner review.
+
+## D-057 controlled 384/576 training — 2026-10-23
+
+Owner authorized one3-step discarded pilot plus442 full updates from original
+SNAPSHOT at seed42/LR1e-5/FP32/frozen backbones,221 train/47 validation. Only
+the two trainer CLI bound values change512→576; defaults remain256/384.
+Observed outcome: **completed**; 3 discarded pilot +442 full updates completed.
+All five gates passed;231 software tests,zero failures/errors (three skips).
+Epoch1 AP0.249891/AR1000.488141 narrowly exceeds D-0550.247003/0.474763;
+Epoch2 regresses to0.170508/0.370118 despite cigarette same-class coverage
+improving5→8→15/24 at0.05 and seven-class AP excluding bag rising.
+Ten new bundles verified; final optimizer step442 across558 parameters.
+All1766 protected hashes matched after execution; no checkpoint is promoted.
+[Full gates, results and limits](TACO_STAGE_4_576_TRAINING.md).
+Audit `scale576-experiment-0b2a846e659a429cbe8a65c1ca0444e1`. No retry, promotion, test access, dependency/GUI changes,
+annotated exports or Git publication. Stop for owner review.
+
+## Multi-checkpoint resolution replication — 2026-10-23
+
+D-056: The owner authorizes inference-only256/384 vs384/576 for unchanged
+Pretrained and seed123/LR1e-5/E2 on47 validation images/75 GT, at most188 forwards.
+Reuse D-055 seed42/E1 outputs read-only, without GPU repetition. Require guarded
+software, fresh protected/source hashes, both exact low baselines before any
+high pass, then both high evaluations. Fixed weights/FP32/900 queries/prompt/
+taxonomy/COCO v2 and locked14/10/15/36 bins. No updates/backward, train-photo/test
+access, core/GUI/dependency changes, exports, promotion or Git publication.
+[Completed results and qualification](TACO_STAGE_4_RESOLUTION_REPLICATION.md)
+show shared small-bin coverage gains, checkpoint-dependent raw AP and positive
+bag-excluded AP deltas in all three states. No further experiment is authorized;
+stop for owner review.
+
+## D-055 single retry authorized and completed — 2026-10-23
+
+The owner explicitly authorizes one retry from Gate1, preserving the original
+stopped attempt `resolution-experiment-629229adf1c6480d930aac79250d18f8`.
+The isolated pointer records that retry consumed and zero retries remaining.
+All five gates and the47-image384/576 pass completed on the fixed42/1e-5/E1
+checkpoint. [Measured results and limits](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
+record improved aggregate AP, partial small-object recovery, persistent <4px
+failures and three larger-object regressions. No updates/backward, training-photo
+reads, test access, core/GUI edits, promotions or Git publication. All next steps
+remain proposals; stop for owner review. The initial failure record below is
+historical and its no-retry statement is superseded by this explicit grant.
+
+## Controlled inference-only resolution comparison — 2026-10-23
+
+D-055: The owner authorizes one fixed seed42/LR1e-5/E1 validation comparison:
+256/384 with384-square pad versus384/576 with576-square pad. Require software,
+artifact/source, CPU geometry, exact CUDA baseline and one-image CUDA pilot gates,
+in that order. Stop immediately at any failed gate; no fallback or parameter
+changes. Use an isolated work harness and focused resolution tests; core training,
+evaluation and GUI files remain untouched. No updates/backward, train-photo/test
+access, promotion, exports, dependencies or Git publication. All proposals remain
+unimplemented. [Actual stopped attempt and cause](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md):
+the software gate failed due to harness guard scoping; no real inference ran.
+Prepared fixes are unqualified and no retry is authorized by this stopped record.
+
+
+## Small-object and classification audit — 2026-10-22
+
+D-054: The owner authorizes a read-only full-validation audit of actual256/384
+preprocessing and384-square padding, all75 resized GT boxes and nine saved model
+states. Separate size-associated localization, class assignment, score/rank
+effects and annotation uncertainty; preserve the original20-image manifest and
+existing GUI. Record current owner-supplied image777 observations separately.
+Rank resolution/classification/data-quality directions as proposals only;
+[report evidence and one next experiment](TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md).
+No new training or model inference without separate authorization, optimizer
+updates, model/data/protocol/GUI/dependency changes, test access, promotion,
+exports, uploads or Git publication. Stop for owner review after verification.
+
+
+## Per-object saved detection investigation — 2026-10-22
+
+D-053: The owner authorizes diagnostic-only per-GT analysis for image777 and the
+existing20-image review using verified saved predictions. Preserve the four-panel
+GUI, terminal-only defaults and explicit saved-run selection. Add an opt-in
+annotation selector, GT highlight/zoom and complete overlap tables; compare all
+four seed/LR runs with unchanged pretrained baseline and same-run E1/E2.
+Preserve the original manifest and add separate machine evidence. No training,
+inference, optimizer/model/data/protocol/dependency changes, test use, promotion,
+exports or automatic Git operations. Verify software and native Windows GUI;
+[report findings](TACO_STAGE_4_PER_OBJECT_REVIEW.md), separate automated diagnostics
+from human material/annotation confirmation, then stop for human review. No
+training recommendation is authorized solely from image777.
+
+
+## Cross-seed stability analysis — 2026-10-22
+
+D-052: The owner authorizes saved-result analysis and visual-verification preparation
+across pretrained and both epochs of four seed/LR runs (42/123, 1e-5/5e-6).
+Preserve corrected COCO v2, original artifacts, owner changes and existing viewer
+defaults. Prepare 12–20 validation examples and a local review manifest; permit
+only the minimal explicit saved-run viewer extension. Separate automated
+diagnostics from pending human confirmation. Compare the four possible research
+directions as proposals only. No new training, inference, test evaluation, model
+or dataset changes, dependency upgrades, promotion, exports, publication or Git
+publication. Stop after [the report and review preparation](TACO_STAGE_4_CROSS_SEED_ANALYSIS.md)
+for owner review; no additional experiment is authorized.
+
+## Paired seed-123 replication — 2026-10-22
+
+D-051: The owner authorizes exactly two fresh two-epoch runs at seed 123:
+A with LR 1e-5 and B with LR 5e-6. Preserve all other corrected experiment
+settings, original pretrained initialization, 221/47 corpus, eight-class prompt,
+Stage 3D adapter, valid-image targets, native loss, frozen backbones, FP32,
+batch 1, 256/384 resize, 384-square padding, weight decay 1e-4 and clip 1.
+Add minimal configurable `--seed` support with default 42, propagating it to
+Python/NumPy/CPU/CUDA RNGs, restart and epoch shuffling; record/test its exact
+behavior without changing strict resume verification or old manifests.
+Each run independently discards its three-step pilot, restarts from the pinned
+pretrained model and performs 442 full updates (884 full + six pilot total).
+Stop on critical preflight/integrity failure, and after both final validations.
+No test access, model/data/inference changes, extra experiments, dependencies,
+uploads, promotion or automatic Git operations. Compare both seeds/rates and
+recommend further work only as proposals in [the replication report](TACO_STAGE_4_SEED_REPLICATION.md).
+
+## Controlled learning-rate experiment — 2026-10-21
+
+D-050: The owner authorizes exactly one fresh two-epoch experiment at learning
+rate 5e-6, changing only learning rate from the corrected 1e-5 reference run.
+Retain original pretrained weights, corrected targets, Stage 3D adapter, native
+loss, 221/47 corpus/splits, eight-class prompt/taxonomy, seed 42, batch 1, frozen
+backbones, FP32, 256/384 resize, 384-square padding, AdamW weight decay 1e-4,
+clip 1, no augmentation/scheduler and corrected COCO v2 evaluation. Use three
+discarded pilot steps, then exactly 442 full-run updates, stopping for safety
+failures. Add minimal configurable learning-rate support if necessary, retain
+default 1e-5, bind the chosen rate in settings/checkpoint context and test its
+actual delivery to AdamW. Preflight must pass before updates. No historical
+resume, test access, data/prompt/model/inference changes, dependency changes,
+promotion, uploads, automatic tuning or Git operations. Compare all five
+pretrained/reference/new states in [the LR experiment report](TACO_STAGE_4_LR_EXPERIMENT.md).
+Stop after epoch 2/final validation for owner review.
+
+## Corrected-run diagnostic investigation — 2026-10-20/21
+
+D-049: The owner authorizes diagnostic-only investigation of corrected epoch 1
+versus epoch 2 using verified saved results and the existing local visual viewer.
+Verify comparability, score distributions/ranking, class assignment, localization,
+losses/gradients and representative validation cases. Preserve source files,
+configuration, data, checkpoints, strict resume and corrected COCO settings.
+No training, optimizer updates, test access, promotion, dependency changes,
+uploads or automatic Git operations. Report confirmed observations separately
+from hypotheses and rank single-variable experiments as proposals only. See
+[corrected diagnostics and next experiment proposal](TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md).
+Stop for owner review; no further experiment is approved by this decision.
+
 ## Controlled corrected-target restart — 2026-10-20
 
 D-048: The owner authorizes exactly one fresh two-epoch Stage 4 experiment from
