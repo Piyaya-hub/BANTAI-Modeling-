@@ -1,24 +1,28 @@
 # Development phases
 
-## Current Stage 4 wrap-up: D-059
+## Current Stage 4 wrap-up: D-068
 
-The post-validation investigation series D-043–D-058 is complete. D-059 authorizes
-documentation synchronization, guarded CPU verification and one focused commit/push
-to `feat/stage4-real-image-training` for PR #18. It authorizes no new model execution,
-checkpoint promotion, PR merge or future stage. Remaining owner-only actions are
-optional human visual review, a PR #18 review/merge decision, or future stage authorization.
+The post-validation investigation series is complete through D-067. D-068 authorizes
+documentation synchronization, guarded CPU software verification and a focused
+commit/push to `feat/stage4-real-image-training` for PR #18. It authorizes no GPU,
+training/inference, checkpoint access/modification, promotion, PR merge or future stage.
+Private runs/work/exports/data, rights records, the official taxonomy and six core
+training SOURCES remain unchanged and unstaged. Remaining owner actions are optional
+saved visual review, a PR review/merge decision, or future explicit authorization.
 
 [D-057](TACO_STAGE_4_576_TRAINING.md) completed one 384/576 scale-matched pilot and
 two-epoch run (3 discarded pilot +442 full updates). [D-058](TACO_STAGE_4_576_TRAJECTORY.md)
 added exactly188 inference-only forwards across four existing E2 checkpoints,
 reusing saved endpoints. Cigarette gains and class regressions appeared across
 several sampled intervals; their exact unobserved optimizer updates remain unknown.
-All50 corrected bundles across five runs remain experimental and private.
+D-060 through D-067 add saved replay, integration and controlled negative results;
+all 64 bundles across nine checkpoint-producing runs remain experimental/private.
+D-067 records the final verification; D-068 does not re-open the bundles.
 
 ### Stage 4 benchmark progression
 
 Same47 validation images /75 GT boxes, corrected COCO v2. Seven-class AP excludes
-`plastic_bag`. Cigarette coverage is any qualifying same-class query among all900,
+`plastic_bag`. Cigarette coverage is any qualifying same-class query among all 900,
 score >=0.05 and IoU >=0.50, with nonexclusive GT matching; it is not COCO recall.
 
 | State | Input scale | AP | AR100 | Seven-class AP | Cigarette coverage |
@@ -30,19 +34,45 @@ score >=0.05 and IoU >=0.50, with nonexclusive GT matching; it is not COCO recal
 | D-057 scale-matched E1, step 221 | 384/576 | 0.249891 | 0.488141 | 0.181629 | 8/24 |
 | D-058 mid-Epoch-2 audit, step 350 | 384/576 | 0.262337 | 0.428890 | 0.218249 | 14/24 |
 | D-057 scale-matched E2, step 442 | 384/576 | 0.170508 | 0.370118 | 0.190859 | 15/24 |
+| D-061 blend_350_442_2575 | 384/576 | 0.265563 | 0.403085 | 0.231365 | 15/24 |
 
-The step350 AP maximum does not establish a selected checkpoint or generalization;
-E1 has stronger AR100 and E2 improves cigarette coverage while regressing elsewhere.
+**D-061 blend_350_442_2575 is the best measured official eight-class validation state.**
+Its COCO v2 AP is0.265563 with no NMS/remapping; its separate correct-class
+candidate coverage is38/75 at 0.05/IoU.50/all 900, not official COCO recall.
+It is not promoted or wired into `scripts/detect_images.py`. E1 has stronger AR100.
 Validation selection bias, rare-class sensitivity and pending human confirmation remain.
 [D-042](TACO_STAGE_4_ACADEMIC_USE.md) records owner academic-use authorization
 separately from external permission, institutional approval and definitive legal clearance.
 [Final handoff and inventory](HANDOFF.md). Private local artifact links in detailed
 reports do not imply dataset/checkpoint publication; absent private helper tests skip explicitly.
 
+### D-060 through D-067 closure
+
+- [D-060](TACO_SAVED_REVIEW_384_576.md): saved 384/576 standard/per-object GUI replay, all 47 validation images, legacy choices preserved.
+- [D-061](TACO_STAGE_4_576_WEIGHT_INTEGRATION.md): four measured weight averages; the 25/75 step 350/442 blend is best measured official AP, with no promotion.
+- [D-062](TACO_STAGE_4_576_LR_DECAY.md): negative cosine result, endpoint AP 0.221592 and cigarettes 10/24 versus the best blend's 15/24.
+- [D-063](TACO_STAGE_4_NMS_AUDIT.md): diagnostic NMS and saved-prediction audit; official no-NMS protocol unchanged.
+- [D-064](TACO_STAGE_4_576_CLASS_BALANCED.md): negative/partial pure-film-damping recovery, best sampled AP 0.258631, endpoint0.242594; combined objective not met.
+- [D-065](TACO_STAGE_4_MATERIAL_HIERARCHY.md): diagnostic material/polymer remapping plus containment. The superseded backbone attempt stopped after 10 updates, no new bundles; no success is claimed.
+- [D-066](TACO_STAGE_4_576_CIGARETTE_BOOST.md): negative LR-boost result, endpoint/blend AP 0.250675/0.257129, cigarettes 14/24 and Image 777 4/7.
+- [D-067](TACO_STAGE_4_576_SCORE_CALIBRATION.md): negative auxiliary-objective result, AP 0.245944/0.251234, Image 777 4/7; Image 833 cigarette FP at 0.05 increased 12 ->21/20.
+
+Post-NMS and mapped 4/3-category numbers are diagnostic results for different
+conditions/tasks, never substitutes for official eight-class AP/coverage.
+Recommended saved **display** settings: threshold **0.10 or higher**, plus
+**`agnostic IoU 0.50 + containment 0.80`**. Select explicitly; raw/.05 defaults
+remain for backward compatibility. Suppression can hide distinct true objects;
+this is not a production operating point or a change to evaluation/inference.
+
+Verify software with `.venv-training\Scripts\python.exe -B scripts\verify_stage4_guarded.py`.
+It blocks model/CUDA/backward/updates and keeps generated fixtures/logs outside
+protected directories. Native GUI checks from D-060–D-067 are historical evidence;
+D-068 does not rerun photos or the model. Human visual acceptance remains pending.
+
 ## Historical phase and investigation records
 
 Earlier current-state labels and stop notices below refer to their original substeps.
-D-059 supersedes their publication stops only for the focused scripts/tests/reports commit.
+D-068 supersedes earlier publication stops only for the focused scripts/tests/reports commit.
 
 Stage4 D-056 **multi-checkpoint resolution replication completed**.
 [Results and scope](TACO_STAGE_4_RESOLUTION_REPLICATION.md) compare six saved

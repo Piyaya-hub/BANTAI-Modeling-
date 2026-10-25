@@ -1,11 +1,15 @@
 # BANTAI Modeling
 
-**Stage 4 investigations are complete through D-058; D-059 authorizes their focused publication to PR #18.**
-[D-057 scale-matched training](docs/TACO_STAGE_4_576_TRAINING.md) completed at
-384/576 in FP32. [D-058 trajectory audit](docs/TACO_STAGE_4_576_TRAJECTORY.md)
-found progressive cigarette gains alongside larger-object class regressions.
-All 50 corrected checkpoint bundles across five runs remain private and experimental.
-No checkpoint is promoted, PR merge is not authorized, and further experiments require owner authorization.
+**Stage 4 is complete through D-067; D-068 authorizes synchronization and commit/push to PR #18 on `feat/stage4-real-image-training`.**
+The best measured **official eight-class validation state** is D-061
+`blend_350_442_2575`: COCO v2 **AP 0.265563**, without NMS or taxonomy remapping.
+Its separate eight-class candidate coverage is **38/75** GTs, 15/24 cigarettes
+and 5/7 Image-777 cigarettes at score >=0.05 and IoU >=0.50, over all 900 queries
+with non-exclusive matching. The 38/75 count is not an official COCO recall metric.
+This experimental in-memory weight blend is **not promoted and not wired into
+`scripts/detect_images.py`**. All 64 saved checkpoint bundles remain private;
+D-067 records their verification, and D-068 does not open or modify them.
+No GPU/model execution, further experiment, merge or promotion is authorized by D-068.
 
 ## Stage 4 benchmark progression
 
@@ -23,21 +27,55 @@ not official COCO recall or calibrated correctness.
 | D-057 scale-matched E1, step 221 | 384/576 | 0.249891 | 0.488141 | 0.181629 | 8/24 |
 | D-058 mid-Epoch-2 audit, step 350 | 384/576 | 0.262337 | 0.428890 | 0.218249 | 14/24 |
 | D-057 scale-matched E2, step 442 | 384/576 | 0.170508 | 0.370118 | 0.190859 | 15/24 |
+| D-061 blend_350_442_2575 (best measured official AP) | 384/576 | 0.265563 | 0.403085 | 0.231365 | 15/24 |
 
-Step 350 has the highest sampled eight-class AP, while E1 retains higher AR100.
-Inspecting intermediate checkpoints on this small validation set is a diagnostic
-audit with selection bias, not a checkpoint-selection rule or proof of generalization.
-See the [wrap-up handoff](docs/HANDOFF.md) for the five-run inventory and owner-only next actions.
+D-061 has the highest measured official eight-class AP; E1 retains higher AR100.
+Inspection/averaging on this small validation set retains selection bias and does
+not establish generalization or checkpoint promotion. Diagnostic post-NMS AP and
+mapped 4/3-category AP describe different conditions/tasks and must not replace
+the official eight-class results above. [Full wrap-up and next actions](docs/HANDOFF.md).
 The [D-042 Section 185 academic-use record](docs/TACO_STAGE_4_ACADEMIC_USE.md)
 is owner workflow authorization, not external permission, institutional approval or definitive legal clearance.
 Detailed reports retain links to private local audit artifacts; these artifacts and
 optional `work/` helper tests are not distributed. Tests requiring absent private
 helpers skip explicitly. The baseline inference configuration remains unchanged.
 
+## D-060 through D-067 outcomes
+
+Negative results below mean the intended quality objective was not achieved;
+they are retained evidence, not successful optimization or an invitation to retry.
+
+| Decision | Recorded outcome |
+| --- | --- |
+| [D-060 saved replay](docs/TACO_SAVED_REVIEW_384_576.md) | Saved 384/576 endpoint/trajectory review, both GUI modes, all 47 validation images; historical 256/384 choices preserved. |
+| [D-061 weight integration](docs/TACO_STAGE_4_576_WEIGHT_INTEGRATION.md) | Four averages evaluated; 25/75 step 350/442 blend gives best official AP 0.265563 and raw eight-class coverage38/75. No promotion. |
+| [D-062 cosine continuation](docs/TACO_STAGE_4_576_LR_DECAY.md) | **Negative:** endpoint AP 0.221592 and cigarette coverage 10/24, below the best blend and its15/24. |
+| [D-063 NMS audit](docs/TACO_STAGE_4_NMS_AUDIT.md) | Saved-only class-aware/agnostic diagnostic suppression; official no-NMS metrics unchanged. |
+| [D-064 pure-film damping](docs/TACO_STAGE_4_576_CLASS_BALANCED.md) | **Negative/partial recovery:** AP 0.258631/0.242594/0.257303 at350/442/blend; cigarette coverage 13/14/13 of24. Did not preserve the desired combined gains. |
+| [D-065 material hierarchy](docs/TACO_STAGE_4_MATERIAL_HIERARCHY.md) | Reversible specific/material/polymer views and containment NMS; mapped metrics are diagnostic. The superseded backbone-unfreeze attempt stopped after 10 updates with zero new bundles; it is not a successful result. |
+| [D-066 cigarette LR boost](docs/TACO_STAGE_4_576_CIGARETTE_BOOST.md) | **Negative:** endpoint/blend AP 0.250675/0.257129, cigarettes 14/24 and Image 777 4/7, below the prior blend's 15/24 and 5/7. |
+| [D-067 score objective](docs/TACO_STAGE_4_576_SCORE_CALIBRATION.md) | **Negative:** endpoint/blend AP 0.245944/0.251234, Image 777 4/7; Image 833 cigarette FP at 0.05 increased 12 ->21/20. Strict F1 at 0.10 fell 0.162921 ->0.116129/0.121622. |
+
+For saved visual review, the recommended **display-only** starting settings are
+**threshold 0.10 or higher** and **`agnostic IoU 0.50 + containment 0.80`**.
+Select these explicitly in the toolbar; historical raw-query/.05 defaults remain.
+They reduce clutter and can hide distinct/low-score objects, including cigarettes;
+they do not change official metrics or establish a production operating threshold.
+The [saved replay guide](docs/TACO_SAVED_REVIEW_384_576.md) gives launch commands
+and the optional `--box-top-k 15` setting. Human visual acceptance remains pending.
+
+Run CPU software verification without model execution or private-artifact writes:
+
+```powershell
+& .\.venv-training\Scripts\python.exe -B .\scripts\verify_stage4_guarded.py
+```
+
+Logs and generated fixtures go to the printed system-temporary directory.
+
 ## Historical Stage 4 investigation notices
 
 Earlier status and stop notices below describe their respective completed substeps;
-D-059 is the current documentation/publication authorization.
+D-068 is the current documentation/publication authorization; older notices retain historical scope.
 
 **D-056 replication completed.** [Three-model resolution report](docs/TACO_STAGE_4_RESOLUTION_REPLICATION.md)
 finds shared small-bin/cigarette coverage gains but checkpoint-dependent raw AP.

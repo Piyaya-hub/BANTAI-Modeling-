@@ -1,5 +1,109 @@
 # Decision register
 
+## D-068 final Stage 4 synchronization and publication - 2026-10-25
+
+Owner authorizes synchronizing D-060 through D-067 and committing/pushing only the
+focused docs, scripts and tests to `origin/feat/stage4-real-image-training` for
+PR #18. No merge, promotion, GPU, training or inference. The 64 checkpoint bundles,
+private runs/work/exports/data, rights records, official taxonomy and six core
+training SOURCES are excluded from edits/staging; unrelated research/proposal docs
+remain unstaged. The earlier stopped backbone implementation is retained as
+experimental software/history, not as a completed or qualified training result.
+
+**Best measured official eight-class validation state: D-061
+`blend_350_442_2575`, AP 0.265563, no NMS or remapping.** Its separate raw
+eight-class candidate coverage is 38/75 at score >=0.05, IoU >=0.50, all 900 queries,
+with non-exclusive matching; this count is not COCO recall. It is not promoted and
+not wired into `scripts/detect_images.py`. D-062 cosine decay, D-064 pure-film
+damping, D-066 cigarette LR boosting and D-067 auxiliary score calibration are
+retained as negative results for their combined objectives, including partial
+gains and regressions. D-060 replay, D-063 NMS and D-065 material/polymer views are
+diagnostic capabilities, not changes to the official benchmark. [Synchronized
+outcomes and limits](../README.md#d-060-through-d-067-outcomes).
+
+Recommended saved-review **display-only** settings: threshold **0.10 or higher**,
+plus **`agnostic IoU 0.50 + containment 0.80`**. Select explicitly; historical
+raw/.05 defaults remain. Suppression can hide distinct or low-score true objects;
+post-NMS or mapped-category numbers must not replace official eight-class AP and
+raw candidate coverage. No production operating threshold is established.
+
+D-068 verification: 278 tests, 262 passed, 16 documented skips, zero failures or
+errors, using `scripts/verify_stage4_guarded.py`. Fifteen training-execution fixtures
+are excluded; one Windows symlink fixture lacks privileges. Detector loading/
+forward, CUDA initialization, backward and optimizer steps are blocked. Generated
+fixtures/logs go to the system temporary directory; protected-directory writes are
+guarded and none occurred. D-067's recorded bundle/native-GUI evidence is retained
+without rerunning model/photo checks or re-opening checkpoints. Relative public
+Markdown links and `git diff --check` are checked before commit; private artifact
+links remain intentionally local. Human visual acceptance and the PR merge
+decision remain with the owner; no follow-up experiment is implied.
+
+## D-067 positive-confidence / absent-class auxiliary objective - 2026-10-25
+
+Owner authorized exactly92 updates at steps351..442 from verified D-057 step350 with exact model/AdamW/RNG restore, unchanged native adapter/loss and frozen backbones/text. The isolated objective selects each GT query by detached argmax(IoU+mean ordinary-subword probability), sums weighted positive BCE (cigarette1.5, other.75, film0), and sums absent-class p>.03 selected-query mean penalties weighted10. LR8e-6 on67 batches,1e-6 on25 pure-film batches. Native checked_loss passes before augmentation, finite gradients/encoder updates and clip norm1 are audited. FP32/TF32-off384/576 and original sampler suffix remain fixed. Two complete new bundles and94 validation forwards completed; all62 prior plus2 new bundles verified (64 total), six core files unchanged. No reference GPU reruns, test access, commit, push, merge or promotion.
+
+Endpoint official AP0.245944; prespecified25/75 original350/new442 blend AP0.251234, versus previous integrated0.265563. Cigarette coverage is15/24 and15/24; Image777 4/7 and4/7. At score.10, strict eight-class F1 is0.116129/0.121622; Image833 cigarette FP counts are0/0. Full official/material/polymer metrics, strict matching at.05/.08/.10/.12/.15/.20, Image777 GT278..284 scores/ranks/IoUs and Image833 FP audit are in the [D-067 report](TACO_STAGE_4_576_SCORE_CALIBRATION.md). This is one diagnostic validation experiment; higher confidence is not calibrated correctness or a promoted checkpoint.
+
+The new saved choice is `42 / 1e-5 @ 384/576 (score-calibrated vs integrated)`, with prior D061 integration, cal_442 and cal_blend_2575. Both GUI modes retain taxonomy/NMS controls and support explicit top15; all47 validation IDs remain accessible. All12 prior choices are preserved. Guarded suite: 278 tests, 262 passed, 16 documented skips, zero failures/errors. Two native Tk cases pass all15 taxonomy/NMS combinations, navigation/GT selection/zoom/pan at777/top15 with no model/GPU/state/export execution. Human visual acceptance remains pending. Next authorized action is saved visual review; no further experiment or promotion follows automatically.
+
+The combined confidence/suppression objective is not achieved: Image833 cigarette FP at.05 increases from12 in the prior integration to21/20, and maximum cigarette scores rise to0.099080/0.090432 from0.078764. Only GT280 on Image777 has a qualifying cigarette query above.10 in either new state; none exceed.15. No promotion is supported by this result.
+
+## D-066 late-Epoch-2 cigarette boost - 2026-10-25
+
+Owner authorized exactly92 updates at steps351..442 from verified D-057 step350 (epoch1/next_batch129), restoring exact model/AdamW/RNG. Original sampler suffix contains11 cigarette images (LR1.5e-5),25 pure-film images (LR1e-7),56 other images (LR5e-6), with no resampling or loss/architecture/core-source changes. Two47-image validations completed94 forwards: endpoint and prespecified50/50 new-endpoint/original-constant442 blend; no reference GPU reruns or test access. Complete new step400 and step442 bundles were saved; all60 prior plus2 new verified (62 total). No commit, push, merge or promotion.
+
+Negative result for cigarette improvement: endpoint AP0.250675 and blend0.257129, both below prior integrated0.265563. Both new states cover14/24 cigarettes and4/7 on Image777, versus prior integration15/24 and5/7. Raw standard first15 coverage is2/7 for both, versus prior3/7; topK15 does not guarantee all cigarettes are drawn. Four-material diagnostic AP is0.307638/0.306513, versus prior0.309859; these mapped tasks are separate from official eight-class detection. Peak allocated VRAM3.550GiB. Full official/material/polymer metrics, all24-cigarette and GT278..284 score/rank/IoU ledgers, locked bins and launch commands are in the [D-066 report](TACO_STAGE_4_576_CIGARETTE_BOOST.md).
+
+The new local choice is `42 / 1e-5 @ 384/576 (cigarette-boost vs integrated)`; panels are prior integration, new endpoint and new50/50 blend. Both GUI modes retain D-065 taxonomy/NMS controls and accept `--box-top-k 15`. Existing11 manifest choices are unchanged. Guarded suite: 273 tests, 257 passed, 16 documented skips, zero failures/errors. Two native Tk cases passed all15 taxonomy/NMS combinations at Image777, top15, all47 IDs and navigation/zoom/pan; no replay model/GPU/weight-state/export operations. Human visual acceptance remains pending.
+
+Integrity exception retained transparently: the controller initially stopped after completing all updates/forwards because an older saved-GUI analysis.json changed concurrently from pending to closed and added photo-read count16. Reconstructing its pending form matches the exact pre-run hash, proving all other fields identical. All model/data/checkpoint files and six core bytes are unchanged. The stopped record, before/after hashes and reconstruction proof are retained; protected_after.unchanged remains false, with the verified display-only exception recorded separately. No historical file was rewritten and no training/inference was repeated. Next authorized action is owner saved visual review; no further experiment or promotion follows automatically.
+
+## D-065 diagnostic material/hazard hierarchy - 2026-10-25
+
+The owner's latest attached authorization replaces the earlier top-backbone-unfreezing request with saved-prediction-only Architecture A: specific object classes -> deterministic 4-material or 3-polymer-grouped category mapping -> optional diagnostic NMS -> matching/replay. No model loading/execution, CUDA initialization, backward or optimizer updates in this hierarchy task. Official eight-class taxonomy, six core SOURCES and all 60 checkpoint bundles are byte-for-byte unchanged; all seven saved official metric dictionaries reproduce exactly on CPU. No test.json/test-photo access, commit, push, merge or promotion.
+
+Both Tk viewers now have reversible Taxonomy view and five NMS choices, retaining official eight-class/raw defaults. Mapped labels retain specific subtype and hazard flag; class-aware suppression and GT agreement use mapped IDs. Greedy containment suppresses at IoU >= .50 OR IoMin >= .80. Audit: seven states x three taxonomies x three suppression settings = 63 diagnostic COCO cases, plus strict one-to-one matching at .05/.07/.10/.12, non-exclusive coverage, Image 777/GT259/cigarettes, the fixed ten D-058 regressions and raw 4784 versus Stage-2 538 category support. Paper has zero Stage-2 support; Food waste/Organic has eight raw, zero Stage-2 annotations. Neither receives invented validated metrics.
+
+Integrated blend: raw eight-class AP 0.265563 and coverage 38/75; raw four-material AP 0.309859 and 55/75. Four-material class-aware containment yields AP 0.313529 and 49/75, with strict TP/FP/FN 49/597/26 at .05. It suppresses nested q4 under q0 and gives GT259 material agreement, while reducing cigarette coverage from 15/24 to 14/24 (Image 777 remains 5/7). Material-task AP is not an improvement to official eight-class detection. Four-material grouping covers nine fixed plastic regressions; polymer grouping additionally accepts the Styrofoam confusion. [Complete report, artifacts, caveats and PowerShell commands](TACO_STAGE_4_MATERIAL_HIERARCHY.md).
+
+Verification: 267 guarded tests, 251 passed, 16 documented skips, zero failures/errors. Four native Windows Tk cases pass all 15 taxonomy/NMS combinations in both modes at Image 777, all 47 validation IDs and navigation/zoom/pan; two focused final cases verify per-annotation hazard columns. All 60 bundles verified before/after; prior protected files and replay manifest unchanged. Human visual acceptance remains pending. Next authorized action is saved visual review; no training or promotion follows automatically.
+
+Historical interruption is retained separately: the earlier vision-unfreeze attempt stopped after ten completed optimizer updates and eleven training forwards, zero validation forwards and zero new checkpoint bundles, on a zero stage-3 probe gradient. Its stopped private record is `runs/training/taco-vision-unfreeze-9452eb4dc47044a9a76cb232fe921b45/record.json`; it was not resumed and contributes no hierarchy results.
+
+## D-064 pure-plastic-film-damped Epoch-2 continuation - 2026-10-25
+
+Owner authorized exactly 221 updates from the verified D-057 E1 step 221 model/AdamW/RNG state. LR 1e-6 applies only to 61 pure-film batches; LR 1e-5 to 160 other batches, including all 30 cigarette images, with original ordering/loss/architecture. Three 47-image validations (CB350, CB442, in-memory 25/75 blend) completed 141 forwards; historical references were not rerun. All 55 prior and 5 new bundles verified (60 total); six core files and protected prior artifacts preserved. No test access, commit, push, merge or promotion.
+
+CB Step 350 AP **0.258631**, Step 442 **0.242594**, and CB 25/75 blend **0.257303**. Cigarette coverage is 13/24, 14/24, 13/24; Image 777 coverage 4/7 for all three. The fixed ten-regression retention is 4/10, 2/10, 2/10; the nine-large subset is 3/9, 2/9, 2/9. This is partial recovery, not preservation of all desired gains. The requested fixed ten-loss set contains nine >=16-pixel objects and one 8--<16 object; both denominators are reported. [Full comparison, ledger and GUI commands](TACO_STAGE_4_576_CLASS_BALANCED.md). Next authorized action: owner inspects saved results; no further experiment or promotion follows automatically.
+
+D-064 verification: 255 guarded tests, 239 passed, 16 documented skips, zero failures/errors. Four native Tk cases passed, each checking all three NMS options; all 47 image IDs selectable, correct labels, navigation and zoom/pan. No saved JSON changes or model/GPU execution during replay. Human visual acceptance remains pending.
+
+## D-063 diagnostic NMS in saved replay - 2026-10-25
+
+Owner authorized an explicit saved-GUI-only NMS selector and saved-prediction audit. Default none preserves historical behavior; optional class-aware/class-agnostic modes greedily suppress passing queries at inclusive IoU>=0.50. Filtering is image-wide, after source/score selection and before standard top K, or before per-GT matching in object mode. No model/GPU execution, core SOURCES edits, official protocol/metric updates, checkpoint changes, commit, push or merge.
+
+All five saved 384/576 states were audited at 0.05/0.07 for remaining boxes, first 10/15 GT/cigarette coverage, and separately labeled post-NMS diagnostic COCO metrics. Agnostic NMS can trade correct-class coverage for fewer boxes. For the blend at 0.05/K 10, raw/class-aware/agnostic coverage is 30/31/27 of 75 GTs; cigarettes 10/11/11 of 24. Original official metric dictionaries reproduce exactly on CPU and remain unchanged. [Full audit, scope distinctions and exact GUI commands](TACO_STAGE_4_NMS_AUDIT.md).
+
+All 55 checkpoint bundles and 1703 protected files verified unchanged; the six core bytes and no-NMS official protocol are identical. Guarded suite: 235 passed, 16 documented skips, zero failures/errors. Native runtime evidence is recorded separately; human visual confirmation remains pending.
+
+Native verification: 24 Tk cases passed at Image 777, covering both GUI modes, all NMS choices, both score floors and top K 10/15. Defaults, selector callbacks, tables/boxes, raw restoration, navigation and zoom/pan passed. No model/GPU/weight/export operations or saved JSON mutations occurred. Human visual confirmation remains pending.
+
+## D-062 controlled Epoch-2 cosine continuation - 2026-10-25
+
+Owner authorized continuation from D-057 E1 step 221 using the exact restored model/AdamW/RNG state, 221 updates only and two validation evaluations (94 forwards). LR decays per step from 5e-6 to 1e-6. The six core SOURCES files stay byte-for-byte unchanged; the isolated continuation module reuses their verified functions. Five complete new bundles were saved; all 50 original plus5 new bundles verified, and protected prior artifacts preserved. No test access, reference GPU rerun, commit, push, merge or promotion.
+
+Cosine step 350 AP **0.217172**; step 442 AP **0.221592**, above constant-LR E2 0.170508 but below E1 0.249891 and D-061 blend 0.265563. Endpoint cigarette coverage is 10/24 overall and 3/7 on Image 777; large-bin coverage 14/36. Passing queries at 0.05: 1133 across 47 images and 28 on Image 777, versus constant E2 1118/29. This is a negative/mixed diagnostic result for the combined preservation-and-clutter hypothesis, with unchanged validation selection bias. [Complete evidence and exact GUI commands](TACO_STAGE_4_576_LR_DECAY.md). Next authorized action: owner reviews saved results; no additional training or checkpoint promotion is implied.
+
+## D-061 384/576 weight integration - 2026-10-25
+
+Owner authorized exactly four inference-only in-memory FP32 parameter averages of D-057 step221/350/442, evaluated on the unchanged47 validation images, maximum188 forwards. Existing D-056/D-057/D-058 references are reused. Zero backward, optimizer updates, training-photo reads and test access; no checkpoint promotion, commit, push or merge.
+
+Highest integrated eight-class AP: `blend_350_442_2575` **0.265563**, versus step350 0.262337 and E2 0.170508. All900/.05 same-class coverage: 38/75 objects, 15/24 cigarettes, and 5/7 Image777 cigarettes. This selects a diagnostic replay view only and retains validation selection bias. All50 saved checkpoint bundles verified before/after; frozen persisted tensors are bitwise identical; only558 canonical trainable tensors enter averaging. The first47-image result was retained after a cleanup guard stop; remaining states ran in isolated processes, with no repeated inference and CUDA context release between states. [Complete evidence and GUI commands](TACO_STAGE_4_576_WEIGHT_INTEGRATION.md).
+
+## D-060 Saved 384/576 visual GUI replay ? 2026-10-24
+
+Owner authorized saved-JSON replay for D-056/D-057/D-058 in standard and per-object modes, retaining all four 256/384 choices. No GPU, training or detector inference is authorized by this task. The local augmented manifest adds endpoint and step-350 choices; checkpoint JSON context/position and anchored evaluations bind their identity. No checkpoint promotion or merge. [Implementation, verification and exact commands](TACO_SAVED_REVIEW_384_576.md).
+
 ## D-059 Stage 4 wrap-up and focused publication — 2026-10-24
 
 The owner authorizes closing the Stage 4 post-validation investigation series

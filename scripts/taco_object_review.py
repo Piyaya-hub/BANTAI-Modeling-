@@ -1,6 +1,7 @@
 """Non-exclusive per-GT candidate diagnostics over validated saved rows."""
 from .taco_error_analysis import iou
 from .training_smoke import LABELS
+from .taco_material_hierarchy import row_label, map_row
 
 
 def eligible_rows(rows, threshold=.05, source='all 900 (diagnostic)'):
@@ -13,14 +14,17 @@ def eligible_rows(rows, threshold=.05, source='all 900 (diagnostic)'):
 
 
 def candidate(row, ann):
-    return {'query_id':row['query_id'], 'predicted_class':LABELS[row['category_id']],
+    return {**{k:row[k] for k in ('specific_class','hazard_flag','material','specific_category_id','mapped_category','taxonomy_scheme') if k in row},
+            'query_id':row['query_id'], 'predicted_class':row_label(row),
             'category_id':row['category_id'], 'score':row['score'],
             'iou':iou(row['bbox'], ann['bbox']), 'bbox':list(row['bbox']),
             'raw_phrase':row['raw_phrase'], 'rank':row['rank'], 'retained':row['retained'],
             'same_class_as_annotation':row['category_id'] == ann['category_id']}
 
 
-def annotation_review(ann, rows, threshold=.05, source='all 900 (diagnostic)'):
+def annotation_review(ann, rows, threshold=.05, source='all 900 (diagnostic)', taxonomy='8-specific'):
+    if taxonomy!='8-specific':
+        ann=map_row(ann,taxonomy);rows=[map_row(r,taxonomy) for r in rows]
     group = eligible_rows(rows, threshold, source)
     overlaps = sorted((candidate(r,ann) for r in group),
                       key=lambda r:(-r['iou'],-r['score'],r['query_id']))
@@ -37,7 +41,7 @@ def annotation_review(ann, rows, threshold=.05, source='all 900 (diagnostic)'):
             'localized_without_correct_class_at_threshold' if any_coverage else
             'no_qualifying_localization_at_threshold')
     return {'annotation_id':ann['id'], 'image_id':ann['image_id'],
-            'ground_truth_class':LABELS[ann['category_id']], 'bbox':list(ann['bbox']),
+            'ground_truth_class':row_label(ann), 'bbox':list(ann['bbox']),
             'threshold':threshold, 'source':source, 'iou_threshold':.5,
             'stored_queries':len(rows), 'eligible_queries':len(group),
             'best_any':best_any, 'best_same':best_same,
