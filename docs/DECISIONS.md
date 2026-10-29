@@ -1,5 +1,111 @@
 # Decision register
 
+## D-071 Stage 5 High-Resolution Adaptation and Model Soup - 2026-10-28
+
+Owner requested accuracy maximization for 9-class waste detection incorporating paper (Option A).
+1. Scale & Soup Analysis: Evaluating Stage 5 Run 1 at target 384/576 canvas scale lifted Combined AP from 0.135663 to 0.153029. Testing Model Soups revealed blend_2575 (25% Epoch 1 + 75% Epoch 2) as champion, achieving Combined AP 0.171262 and AP50 0.210596 while recovering styrofoam representation (0.148515) and maintaining paper AP (0.374468 overall, 0.473670 annex).
+2. High-Resolution Fine-Tuning: Executed bounded 1-epoch (307 updates) training run stage5-paper-558bcc18d6cf4556a966d8cfc320c968 directly at 384/576 scale, LR 5e-6, warm-started from verified blend_2575 weights. Peak VRAM was ~3,306 MiB on GTX 1660 Ti.
+3. Breakthrough Performance:
+   - Combined 65 AP reached 0.202020 (AP50: 0.246182, AR100: 0.335380).
+   - Legacy 47 AP reached 0.226047 (AP50: 0.263987, approaching Stage 4's 0.265).
+   - Paper AP reached 0.421508 overall, and 0.586443 on the 18-image Annex.
+   - Significant per-class gains: drink_can (0.6564), plastic_bottle (0.2525), cigarette (0.1115), plastic_cup (0.3198).
+4. Model Soup: A 20/80 blend of blend_2575 and High-Res Epoch 1 achieved 0.194258 Combined AP and retained styrofoam piece AP at 0.148515.
+5. Interactive Review & Post-Processing: taco_stage5_visual_review.py updated with 4-panel comparison (Ground Truth, Baseline, Stage 5 Run 1, Stage 5 High-Res) and interactive Overlap NMS filter (IoU 0.50 + IoMin 0.80).
+6. Software integrity: 286 tests passed, 1 skipped, zero failures. No test split access or unauthorized checkpoint promotion.
+
+## D-070 execution: two-epoch Stage 5 fine-tuning - 2026-10-28
+
+The owner-requested command completed on feat/stage5-paper-category at its
+256/384 default, LR 1e-5, two epochs from the bitwise-verified D-061 champion blend.
+Exactly 614 training updates and 336 validation forwards completed; no unreported
+pilot updates, test.json/test-photo access, commit/push/merge or promotion. Native
+FP32/TF32-off loss/architecture and the six core Stage 4 SOURCES remain unchanged.
+
+At the same 256/384 scale: combined nine-class AP 0.057617 ->0.113571 ->0.135663
+(baseline/E1/E2); genuine original-eight-prompt legacy 47 AP 0.078141 ->0.131296
+->0.144434. Paper AP on the 18-image annex is 0 ->0.116952 ->0.507431. These are
+not direct comparisons with Stage 4 D-061 AP 0.265563 measured at 384/576.
+The actual bound export is 307 train /595 boxes and 65 validation /109 boxes,
+including 75 frozen-core and 34 annex boxes (20 paper). Earlier notes state 121
+combined GTs; the report records the actual 109 without altering datasets or the
+hashed rights record/assessment.
+
+Launch blockers in the isolated Stage 5 trainer/evaluator were fixed before
+execution: legacy path, COCO info, checkpoint-pointer replacement, full
+model/processor/adapter/optimizer/RNG saving, removal of extra pilot updates,
+native gradient auditing/norm 1 clipping and RNG-isolated validation. A separate
+47-image eight-prompt pass now supplies the true legacy result; filtered
+nine-prompt metrics remain separately labeled. Guarded suite: 286 run, 270 passed,
+16 documented skips, zero failures/errors. Eight complete new checkpoint bundles,
+614-step sampler trace, frozen hashes, two source bundles, all runtime/core source
+hashes, dataset/rights hashes and 372 authorized photo hashes pass postchecks.
+Existing 64 bundles remain unchanged; nothing is promoted or wired into inference.
+[Results, actual counts, scope distinctions and checkpoint evidence](TACO_STAGE_5_TRAINING.md).
+
+## D-070 Stage 5 paper-category authorization and Option A split adoption - 2026-10-26
+
+Owner authorizes Stage 5 implementation incorporating paper (id: 8) and selects
+Option A (Frozen Core + Annex). All 1,500 TACO images are verified present on local
+disk (0 missing). The 14 TACO source categories are approved for paper: Normal paper,
+Magazine paper, Wrapping paper, Tissues, Paper bag, Paper cup, Corrugated carton,
+Other carton, Drink carton, Meal carton, Egg carton, Pizza box, Paper straw, and Toilet tube.
+
+Option A preserves the original 221 training, 47 validation, and 47 test image
+memberships byte-for-byte, appending the 122 newly eligible images (165 paper boxes,
+106 original-class boxes) as follows:
+- Training: 221 frozen original + 86 appended = 307 total images (120 paper boxes)
+- Validation Annex: 47 frozen original + 18 appended = 65 total images (20 paper boxes)
+- Held-out Test Annex: 47 frozen original + 18 appended = 65 total images (25 paper boxes)
+
+Evaluation protocol preserves separate reporting for:
+1. Legacy benchmark view on original 47 validation images / 75 GTs.
+2. Paper annex view on 18 new validation images / 20 paper boxes.
+3. Combined 9-class view on 65 validation images / 121 GTs.
+
+Scope authorized: create config/taco_taxonomy.v2.json, document Section 185
+academic-use basis in docs/TACO_STAGE_5_ACADEMIC_USE.md, build isolated export
+exports/taco/strict-clean-stage5-v1, implement isolated 9-class training/evaluation
+modules on feat/stage5-paper-category, and run 9-class fine-tuning warm-started
+from champion D-061 weights. Existing 64 checkpoint bundles, frozen Stage 4 SOURCES,
+and test-split privacy constraints remain strictly invariant.
+
+## D-069 Stage 5 paper-category metadata audit - 2026-10-26
+
+Owner authorized a read-only metadata audit and proposal after the D-068 safe point.
+Stage 4 commit `9c3b6777724a799569c7e485815171ef4f3a878a` is already pushed to
+PR #18's branch; `feat/stage5-paper-category` was created/pushed from that exact
+commit, and all later audit work is on it. Phase 0 re-verification: 278 tests,
+262 passed, 16 documented skips, zero failures/errors; public links and diff checks
+passed. No redundant Stage 4 commit, merge, checkpoint promotion or new model run.
+
+The proposed paper class combines the fourteen requested source names under a
+new ID 8, preserving IDs 0..7. Raw support is 497 boxes /347 images; unchanged
+strict-clean rules with this proposed mapping retain 165 boxes /122 images.
+Zero overlap with the existing 315 eligible images; proposed total 437 images /
+809 annotations, including 106 original-class boxes on the new images. Across
+raw paper images, 72 contain Unlabeled litter and 160 another still-excluded class;
+43 overlap (union 189). Whole-image quarantine remains unchanged. Cached image
+metadata/fingerprints reproduce existing eligibility and annotation ledgers exactly;
+these are conditional counts, not fresh photo validation.
+
+The concrete split proposal locks all original 221/47/47 memberships and appends
+86/18/18 new images, with 120/20/25 paper boxes (combined views 307/65/65).
+The original 47/47 holdout files remain unchanged; annex/combined nine-class
+metrics would be separate from the legacy 47-image eight-class benchmark. If total
+holdout sizes must stay exactly 47/47, an alternative puts all 122 new images into
+training (343/47/47), but leaves zero paper evaluation support. Rare-subtype
+limitations, waterfall, counts, exact metadata anchors and proposed file-impact
+list are in the [paper audit](TACO_STAGE_5_PAPER_AUDIT.md).
+
+No photo bytes/decodes, test.json access, torch/Transformers import, GPU, training,
+inference or export occurred. Nineteen source/metadata/core-source hashes remained
+unchanged; all 64 checkpoints, old datasets/taxonomy and rights records are untouched.
+No taxonomy v2, prompt/adapter/trainer/evaluator or new rights record was created.
+**Stop for owner approval** of mapping and split plan; fresh qualification/export,
+nine-class software, rights scope and model execution are not authorized by this
+completed audit. Audit/report changes remain local and uncommitted for review.
+
 ## D-068 final Stage 4 synchronization and publication - 2026-10-25
 
 Owner authorizes synchronizing D-060 through D-067 and committing/pushing only the
