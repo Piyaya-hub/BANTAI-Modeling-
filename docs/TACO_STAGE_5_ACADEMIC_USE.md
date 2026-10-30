@@ -33,3 +33,32 @@ The authorization uses `bantai.training-rights.v2`:
 - `database_clearance`: `false` (fair-use exception claimed)
 - `definitive_legal_clearance`: `not_claimed`
 - Bound corpus: 307 training, 65 validation, and 65 held-out test images.
+
+
+## D-074: versioned Tier 1 corpus authorization ? 2026-10-29
+
+The owner explicitly authorizes a local non-commercial academic Tier 1 continuation
+under the same documented Section 185 claim, with **336 training images / 637 boxes**
+and the unchanged **65 validation images / 109 boxes**. This is 401 unique authorized
+train/validation photographs; the 65 test images remain frozen and uninspected.
+The new corpus incorporates 30 downloaded strict-clean images and excludes Image 1173
+by exact-duplicate propagation from Image 1305 with Unlabeled litter.
+
+The versioned export is `exports/taco/strict-clean-stage5-tier1-v1`; its new record is
+`work/stage5-paper/rights_tier1.json`. That record binds exact export/annotation/taxonomy
+hashes and the 401 verified source-photo SHA-256 digests. It authorizes one 336-update
+384/576 FP32 epoch at LR 2e-6 and three 112-forward validation evaluations (epoch state
+and two in-memory soups), with no test use or automatic promotion/publication.
+
+Purpose remains local academic localization research. Nature remains protected photos
+and potentially protected annotation/database expression. Whole-image amount now
+covers 336 train and 65 validation images, not the historical 307/65 corpus; necessity
+for spatial context does not remove uncertainty. Market effects remain unmeasured;
+no redistribution, uploads, commercial clearance or definitive legal conclusion is
+claimed. Owner workflow authorization remains distinct from rightsholder permission,
+institutional approval and definitive legal clearance; all three remain not claimed.
+
+Historical D-070 record and its 307/65 corpus remain unchanged. The exact earlier
+assessment bytes are archived by SHA-256 under `docs/assessments/`; the Stage 5 rights
+gate accepts only an archive matching the hash already bound by the old record.
+This preserves that record without pretending its authorization covers the new corpus.

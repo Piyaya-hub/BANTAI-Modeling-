@@ -103,5 +103,64 @@ class TestStage5Pipeline(unittest.TestCase):
         self.assertEqual(paper_val, 20)
 
 
+class TestStage5Hierarchy(unittest.TestCase):
+    def test_mapping_and_provenance(self):
+        from scripts.taco_stage5_material_hierarchy import map_row
+        expected = {'9-specific':tuple(range(9)), '5-material':(0,1,1,1,1,2,1,3,4),
+                    '4-material':(0,1,1,1,1,2,1,1,3)}
+        for scheme in ('9-specific','5-material','4-material'):
+            for cid in range(9):
+                row={'category_id':cid,'query_id':7,'score':.123,'bbox':[1,2,3,4]}
+                mapped=map_row(row,scheme,True)
+                self.assertEqual(mapped['category_id'],expected[scheme][cid])
+                self.assertEqual(mapped['hazard_flag'],cid==0)
+                self.assertEqual(mapped['specific_category_id'],cid)
+                for key in ('query_id','score','bbox'):self.assertEqual(mapped[key],row[key])
+                self.assertEqual(row['category_id'],cid)
+        self.assertEqual(map_row({'category_id':8},'5-material')['material'],'paper_fiber')
+
+    def test_containment_after_remapping(self):
+        from scripts.taco_stage5_material_hierarchy import prepare_rows
+        rows=[{'query_id':0,'score':.9,'category_id':1,'bbox':[0,0,100,100]},
+              {'query_id':1,'score':.8,'category_id':6,'bbox':[1,1,10,10]},
+              {'query_id':2,'score':.7,'category_id':0,'bbox':[1,1,10,10]}]
+        mode='class_aware_iou_0.50_containment_0.80'
+        self.assertEqual(len(prepare_rows(rows,'9-specific',mode)),3)
+        self.assertEqual([r['query_id'] for r in prepare_rows(rows,'5-material',mode)],[0,2])
+        self.assertEqual(len(prepare_rows(rows,'5-material','class_aware_iou_0.50')),3)
+        self.assertEqual(len(prepare_rows(rows,'5-material','raw')),3)
+
+    def test_material_coco_perfect_and_empty(self):
+        from scripts.taco_stage5_material_hierarchy import evaluate_case
+        data={'info':{},'images':[{'id':1,'width':100,'height':100}],
+              'annotations':[{'id':1,'image_id':1,'category_id':8,'bbox':[0,0,50,50],'area':2500,'iscrowd':0}],
+              'categories':[{'id':8,'name':'paper'}]}
+        row={'image_id':1,'query_id':0,'category_id':8,'score':.9,'bbox':[0,0,50,50]}
+        result=evaluate_case(data,[row],'5-material','raw')
+        self.assertAlmostEqual(result['metrics']['AP'],1.)
+        self.assertEqual(result['covered'],1)
+        self.assertEqual(evaluate_case(data,[],'4-material','raw')['metrics']['AP'],0.)
+
+    def test_remap_ties_and_polymer_boundary(self):
+        from scripts.taco_stage5_material_hierarchy import prepare_rows, map_row
+        rows=[{'query_id':3,'score':.5,'category_id':7,'bbox':[0,0,10,10]},
+              {'query_id':2,'score':.5,'category_id':1,'bbox':[0,0,10,10]}]
+        mode='class_aware_iou_0.50'
+        self.assertEqual([r['query_id'] for r in prepare_rows(rows,'4-material',mode)],[2])
+        self.assertEqual(len(prepare_rows(rows,'5-material',mode)),2)
+        self.assertEqual(map_row(rows[0],'4-material')['material'],'polystyrene_foam')
+        with self.assertRaises(ValueError):map_row({'category_id':9})
+
+    def test_view_selector_uses_shared_mapping(self):
+        import inspect
+        from scripts import taco_stage5_visual_review as viewer
+        from scripts.taco_stage5_material_hierarchy import VIEWS, VIEW_SCHEMES
+        self.assertEqual(len(VIEWS),4)
+        self.assertEqual(VIEW_SCHEMES[VIEWS[3]],'5-material')
+        source=inspect.getsource(viewer.Stage5ViewerGUI)
+        for marker in ('taxonomy_var','prepare_rows','specific_class','hazard_flag'):
+            self.assertIn(marker,source)
+
+
 if __name__ == "__main__":
     unittest.main()

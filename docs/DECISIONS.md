@@ -1,11 +1,162 @@
 # Decision register
 
+## D-075: durable Stage5 soup replay and focused publication - 2026-10-30
+
+Owner explicitly authorizes CPU-only soup persistence, Stage5 documentation
+synchronization, guarded verification, and commit/push to `origin/feat/stage5-paper-category`.
+This authorizes no new training/inference, test access, production promotion or merge.
+Approved D070-D074 workflow/evidence entries below remain historical measured facts;
+D075 publishes the authorized Stage5 source/docs/tests, not private weights/data.
+
+The exact D074 `soup_tier1_hr_blend2575` is reconstructed with nested CPU FP32 averaging:
+first 0.25*Run1 E1 +0.75*Run1 E2, then0.20*that blend +0.80*Tier1 E1. Source bundles
+are fully verified before/after. Reconstructed and serialized parameter SHA-256 is
+`fc0c497e1163509e96ec3a72c1f85729f18336aa1f688eee998c3c29031465eb`.
+The hash is in the companion D074 report, not the evaluation JSON itself; all three
+saved metric dictionaries match and both files are bound by SHA-256 in provenance.
+
+New private bundle: `stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575`.
+Includes safetensors, model/processor/tokenizer files, adapter config and soup manifest;
+`resume_supported=false`, no optimizer state, no training-resume claim. Frozen parameters
+remain identical. No CUDA initialization, detector forward, backward pass or optimizer
+step occurred. Existing checkpoint bundles, exports, rights records, both taxonomies
+and the six core Stage4 SOURCES remain unchanged.
+
+Viewer discovery selects the complete local D074 directory automatically and defaults
+the fourth panel to the best soup. Explicit `--tier1-run-dir` wins. Missing private
+artifacts yield a clear saved-review error and never trigger inference/downloads.
+
+Exact replay (local private artifacts required):
+
+```powershell
+Set-Location 'C:\Users\Justine\Documents\Python\Project Image-object Detection'
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --score-threshold 0.10 --box-top-k 15
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --tier1-run-dir .\runs\training\stage5-tier1-69d61fae160544468f155d34f0cb6337 --image-id 777 --score-threshold 0.10 --box-top-k 15
+```
+
+Guarded CPU suite: **308 run, 292 passed, 16 documented skips, zero failures/errors**.
+The local-destination Markdown check covers tracked docs plus the new authorized docs;
+A scoped `.gitattributes` rule preserves archived assessment bytes across Git line-ending conversion.
+Private evidence links remain local, and URL reachability/heading fragments are outside
+that checker scope. `git diff --check` passes.
+
+Remaining owner decisions: saved visual acceptance, PR review/merge, and any later
+experiment or deployment/promotion authorization. None is implied by persistence.
+Official nine-specific combined AP0.231226 remains separate from diagnostic5/4-material
+AP0.344601 /0.402577, test generalization and production readiness. See the
+[D074 evidence report](TACO_STAGE_5_TIER1_TRAINING.md) and [Stage5 progression](../README.md).
+Private [bundle manifest](../runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575/soup_manifest.json) and [D075 publication evidence](../runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/d075-persistence-bf03350809564a4d8316708faa158924/publication.json) remain local.
+
+Publication verification and final SHA are recorded in the D075 execution evidence;
+the commit cannot embed its own final SHA without a self-reference.
+
+
+## D-074: Tier 1 high-resolution continuation and soups - 2026-10-30
+
+Completed owner-authorized execution on `feat/stage5-paper-category`. The versioned
+Tier1 export has 336 training images / 637 boxes, byte-identical frozen validation
+(65 images / 109 boxes), and metadata-reconstructed test JSON matching the frozen
+65-image test hash. No test JSON was read and no test photograph opened. Original
+exports/checkpoints, taxonomy v2 and the six core Stage4 SOURCES remain unchanged.
+
+The new `rights_tier1.json` binds 401 verified train/validation photo digests and the
+exact corpus. Updated academic-use documentation retains the distinction between
+owner workflow authorization and unclaimed rightsholder/institutional/legal clearance.
+The exact prior assessment is archived by SHA-256 so the original rights record stays
+unchanged and usable; the archive must match its pre-bound hash.
+
+Verified HR E1 parameter SHA-256 before training:
+`d1310a00f540e4ea8770b32491fc47576b14cd1f4b81282756bab6ba8ddb5c1d`.
+One 384/576 epoch used LR 2e-6, AdamW WD 1e-4/foreach=False, clip 1.0, FP32/TF32 off,
+seed42 and frozen vision/text backbones. Exactly **336 training updates / 336 validation
+forwards** completed; four full resumable bundles at steps100/200/300/336 were verified.
+Peak allocated VRAM 3.556 GiB; training/evaluation/save phase 501.915 seconds.
+
+Official combined nine-specific AP: Tier1 E1 **0.218215**; 20% existing Stage5 blend2575
++80% Tier1 soup **0.231226**, retaining Styrofoam AP **0.148515**; 50% old HR E1
++50% Tier1 soup **0.203191**. Separate eight-prompt legacy APs are
+0.254373 / 0.246970 / 0.258472. Different scopes are not interchangeable. The 20/80 soup
+has the highest measured Stage5 combined AP in this bounded comparison; it is not
+promoted. Plastic_bag AP remains zero and gains are not uniform.
+
+All **81** CPU-only D072 hierarchy cases completed. The 20/80 soup's raw five-material
+AP/coverage is 0.344601 / 80 of109; four-material is 0.402577 / 85 of109; raw
+nine-specific coverage is 59 of109. These diagnostic category tasks and nonexclusive
+coverage remain separate from official AP. Native Tk Image777 passed 48 saved-state,
+taxonomy and NMS combinations. Guarded suite: **305 tests, 289 passed, 16 documented
+skips, zero failures/errors**. CPU checks verified 401 photo hashes, source/new bundles,
+558 optimizer counters, RNG/positions/sampler order and all protected inputs.
+
+See [full D074 results, evidence and exact GUI command](TACO_STAGE_5_TIER1_TRAINING.md).
+Stop for owner saved review. No commit, push, merge, promotion or further training.
+
+## D-073: read-only Stage 5 dataset expansion audit - 2026-10-29
+
+Owner-authorized audit/proposal completed on `feat/stage5-paper-category`. All 1,500
+raw image records were accounted for: 1,370 non-held-out photos were freshly checked
+and fingerprinted; frozen validation/test 65/65 photos were not opened, using their
+preparation-ledger fingerprint references instead. No test.json or checkpoint reads,
+GPU/model execution, new export, training, taxonomy edit, commit or push.
+
+All 252 historically missing records are now readable. Compared with baseline 307
+training images / 595 boxes, unchanged strict Tier 1 proposes **336 / 637** (net
++29 / +42), sibling-mapping Tier 2 **384 / 744**, and accessory-filtering Tier 3
+**584 / 1,260**. Broad Other plastic -> plastic_wrapper is separate: respective
+Tier 2/3 alternatives are 461 / 912 and 682 / 1,484. These are proposals, not modified
+exports. Fresh exact duplicates [1173, 1305] require propagating Unlabeled litter
+quarantine from restored 1305 to baseline 1173 (one wrapper box). Tier 1 adds 30 new
+images but would remove this one baseline image; current baseline stays unchanged.
+No detected exact/near component touches frozen held-out IDs. This does not guarantee
+that perceptual hashes catch every semantic near-duplicate.
+
+Recommend separately approved Tier 1 first: one 384/576 epoch, batch 1, LR 2e-6,
+unchanged frozen backbones/native loss, clip 1.0, FP32/TF32 off. The saved high-resolution
+run's timings project about 7.6 minutes for 336 updates plus its approximate overhead;
+allow 11.3-15.1 minutes as a planning budget. Tier 2/3 require subtype/background-policy
+review; no second epoch is authorized by this audit. Existing validation/test IDs and
+exports remain frozen. Expanded-corpus approval/export records would be new artifacts.
+
+Qualification: 299 guarded tests, **283 passed, 16 documented skips, zero failures/errors**;
+eight expansion fixtures include restored exact-duplicate quarantine propagation.
+Audit inputs, taxonomy v2 and six core source hashes match before/after. Private
+structured evidence and all per-class box/image counts are linked in the
+[full D-073 report](TACO_STAGE_5_DATA_EXPANSION_AUDIT.md). Stop for owner review.
+
+## D-072: Stage 5 material/hazard diagnostics and four-panel taxonomy replay - 2026-10-29
+
+Owner-authorized CPU-only saved-prediction work completed on `feat/stage5-paper-category`.
+The isolated hierarchy maps nine specific classes into five material/hazard categories
+or four polymer-grouped categories, preserving specific class, material, hazard flag,
+query identity, raw scores and boxes. GT and predictions are remapped before optional
+class-aware IoU/containment NMS. The four-panel Tk viewer offers all four requested
+taxonomy labels, dynamic colors/legend, subtype/hazard table columns, real query IDs,
+source-photo verification, and working explicit Image 777 selection.
+
+All 108 cases completed: four saved states x combined-65/legacy-47/annex-18 x three
+taxonomies x three NMS modes. Raw nine-class combined AP/AP50/AP75/AR100 reproduce
+all four saved states within 1e-12. For high-resolution E1, combined raw nine-specific
+AP is 0.202020 with 57/109 coverage; five-material AP is 0.314188 with 78/109;
+four-material AP is 0.398843 with 84/109. These mapped tasks accept subtype confusions
+and do not replace official nine-class metrics. Legacy-47 here is the nine-class-prompt
+subset, explicitly separate from the saved original-eight-class-prompt evaluation.
+
+Qualification: 291 guarded tests, 275 passed, 16 documented skips, zero failures/errors;
+native Tk Image 777 passed all four views x three NMS modes. Audit input SHA-256
+values match before/after. No GPU/model execution, weight updates, test JSON/photo
+access, checkpoint reads/writes, taxonomy v2 or six-core-source changes. No commit,
+push, merge or promotion. Next owner action: optional local saved replay/review;
+no further model execution is implied.
+
+See [full diagnostic results, methods, evidence and PowerShell replay command](TACO_STAGE_5_MATERIAL_HIERARCHY.md).
+
 ## D-071 Stage 5 High-Resolution Adaptation and Model Soup - 2026-10-28
+
+Owner-authorized bounded Stage5 workflow; measured validation results below are not test generalization or checkpoint promotion.
 
 Owner requested accuracy maximization for 9-class waste detection incorporating paper (Option A).
 1. Scale & Soup Analysis: Evaluating Stage 5 Run 1 at target 384/576 canvas scale lifted Combined AP from 0.135663 to 0.153029. Testing Model Soups revealed blend_2575 (25% Epoch 1 + 75% Epoch 2) as champion, achieving Combined AP 0.171262 and AP50 0.210596 while recovering styrofoam representation (0.148515) and maintaining paper AP (0.374468 overall, 0.473670 annex).
 2. High-Resolution Fine-Tuning: Executed bounded 1-epoch (307 updates) training run stage5-paper-558bcc18d6cf4556a966d8cfc320c968 directly at 384/576 scale, LR 5e-6, warm-started from verified blend_2575 weights. Peak VRAM was ~3,306 MiB on GTX 1660 Ti.
-3. Breakthrough Performance:
+3. Measured validation performance:
    - Combined 65 AP reached 0.202020 (AP50: 0.246182, AR100: 0.335380).
    - Legacy 47 AP reached 0.226047 (AP50: 0.263987, approaching Stage 4's 0.265).
    - Paper AP reached 0.421508 overall, and 0.586443 on the 18-image Annex.
@@ -61,7 +212,7 @@ memberships byte-for-byte, appending the 122 newly eligible images (165 paper bo
 Evaluation protocol preserves separate reporting for:
 1. Legacy benchmark view on original 47 validation images / 75 GTs.
 2. Paper annex view on 18 new validation images / 20 paper boxes.
-3. Combined 9-class view on 65 validation images / 121 GTs.
+3. Combined 9-class view on 65 validation images / 109 measured GTs (the earlier authorization estimate of 121 was superseded by the verified export).
 
 Scope authorized: create config/taco_taxonomy.v2.json, document Section 185
 academic-use basis in docs/TACO_STAGE_5_ACADEMIC_USE.md, build isolated export

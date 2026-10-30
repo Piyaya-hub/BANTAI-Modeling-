@@ -1,6 +1,47 @@
 # BANTAI Modeling
 
-**Stage 4 is complete through D-067; D-068 authorizes synchronization and commit/push to PR #18 on `feat/stage4-real-image-training`.**
+## Current Stage 5 state through D-075
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Best measured Stage5 combined
+**nine-specific validation AP is 0.231226**, from `soup_tier1_hr_blend2575` at 384/576.
+D075 persists that exact state as a private **inference/replay-only** bundle, with
+`resume_supported=false`; this is not production promotion or test generalization.
+No Stage5 weights are wired into `scripts/detect_images.py`, and no merge is authorized.
+
+| Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic 5-material / 4-material AP |
+| --- | --- | --- | --- |
+| D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
+| D-071 | 384/576 saved blend2575; HR E1 | 0.171262; 0.202020 | - |
+| D-072 | HR E1 hierarchy and four-view GUI | same saved HR E1, not rerun | 0.314188 / 0.398843 |
+| D-073 | 1,500-record expansion audit; 1,370 fresh photos + 130 frozen references | metadata only | - |
+| D-074 | Tier 1: 336 training images; 384/576 E1; 20/80 soup | 0.218215;**0.231226** | soup 0.344601 / 0.402577 |
+| D-075 | Exact soup persisted on CPU; docs/guarded checks/publication | no new forwards or metrics | no new evaluation |
+
+All AP values are validation measurements. Material AP changes category agreement and
+macro averaging; it must not replace official nine-specific AP. Separate original
+47-image eight-prompt legacy results remain in the detailed reports. The historical
+Stage4 eight-class champion D061 AP 0.265563 / coverage 38 of 75 is a different benchmark,
+not interchangeable with the Stage5 combined 65-image /109-GT result.
+
+Detailed evidence: [D070 training](docs/TACO_STAGE_5_TRAINING.md),
+[D072 hierarchy and GUI](docs/TACO_STAGE_5_MATERIAL_HIERARCHY.md),
+[D073 expansion audit](docs/TACO_STAGE_5_DATA_EXPANSION_AUDIT.md), and
+[D074 Tier1 results/replay](docs/TACO_STAGE_5_TIER1_TRAINING.md).
+Private runs, exports, rights records and weights are intentionally not published.
+The durable soup is `runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575`.
+
+Saved-only local replay auto-discovers the D074 run when complete:
+
+```powershell
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --score-threshold 0.10 --box-top-k 15
+```
+
+An explicit `--tier1-run-dir` overrides discovery. Without private runs/exports,
+the viewer reports what is unavailable; it does not download weights or run inference.
+
+
+**Historical Stage 4 wrap-up: complete through D-067; D-068 authorized synchronization and commit/push to PR #18 on `feat/stage4-real-image-training`.**
 The best measured **official eight-class validation state** is D-061
 `blend_350_442_2575`: COCO v2 **AP 0.265563**, without NMS or taxonomy remapping.
 Its separate eight-class candidate coverage is **38/75** GTs, 15/24 cigarettes

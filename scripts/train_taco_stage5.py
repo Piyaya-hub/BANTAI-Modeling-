@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import copy
 import gc
+import hashlib
 import json
 import math
 import os
@@ -118,6 +119,41 @@ def load_stage5_blend2575(model, run_dir: Path):
     print(f"Successfully warm-started model with Stage 5 blend_2575 weights ({len(averaged)} tensors).")
 
 
+def load_verified_stage5_checkpoint(model, checkpoint):
+    """Verify immutable bundle, frozen entries and parameter hash before any forward."""
+    checkpoint=Path(checkpoint)
+    context=strict_load(checkpoint/'checkpoint_manifest.json')['context']
+    manifest=verify_checkpoint(checkpoint,context)
+    trainable={n for n,p in model.named_parameters() if p.requires_grad}
+    if len(trainable)!=558:raise ValueError('Expected 558 trainable tensors')
+    with safe_open(str(checkpoint/'model.safetensors'),framework='pt',device='cpu') as saved:
+        mapping=canonical_saved_keys(model,saved.keys())
+        inverse={name:key for key,name in mapping.items()}
+        h=hashlib.sha256()
+        with torch.no_grad():
+            for name,param in model.named_parameters():
+                value=saved.get_tensor(inverse[name])
+                if value.dtype!=torch.float32 or not torch.isfinite(value).all():raise ValueError('Invalid saved FP32 parameter')
+                h.update(name.encode());h.update(value.contiguous().numpy().tobytes())
+                if name in trainable:param.copy_(value)
+                elif not bitwise_equal(value,param):raise ValueError('Frozen checkpoint parameter differs: '+name)
+            persisted=set(model.state_dict())
+            for name,buf in model.named_buffers():
+                if name in persisted and not bitwise_equal(saved.get_tensor(inverse[name]),buf):
+                    raise ValueError('Frozen checkpoint buffer differs: '+name)
+    if state_hash(model)!=h.hexdigest():raise ValueError('Loaded parameter SHA-256 differs from verified saved tensors')
+    evidence=strict_load(checkpoint/'experiment_evidence.json')
+    if state_hash(model,True)!=evidence['frozen_parameter_sha256']:raise ValueError('Frozen parameter hash differs')
+    return {'checkpoint':str(checkpoint),'manifest_sha256':digest(checkpoint/'checkpoint_manifest.json'),
+            'parameter_sha256':h.hexdigest(),'position':manifest['position']}
+
+
+def require_tier1_contract(args):
+    if (args.epochs!=1 or args.learning_rate!=2e-6 or (args.shortest,args.longest)!=(384,576)
+        or args.seed!=42 or args.evaluate_baseline or args.warmstart!='stage5_highres_epoch1'):
+        raise ValueError('D074 requires one epoch, LR2e-6,384/576,seed42,verified HR E1 and no baseline rerun')
+
+
 def save_stage5_checkpoint(output_dir: Path, step_name: str, model, optimizer, epoch: int, step: int, contract: dict,processor,adapter):
     cp_dir = output_dir / "checkpoints" / step_name
     count=contract["training_images"]
@@ -134,7 +170,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Stage 5 9-class Waste Detection Trainer")
     parser.add_argument("--epochs", type=int, default=2, help="Number of training epochs (default: 2)")
     parser.add_argument("--learning-rate", type=float, default=1e-5, help="Learning rate (default: 1e-5)")
-    parser.add_argument("--warmstart", default="blend", choices=["blend", "snapshot", "stage5_blend2575"], help="Warmstart source")
+    parser.add_argument("--warmstart", default="blend", choices=["blend", "snapshot", "stage5_blend2575", "stage5_highres_epoch1"], help="Warmstart source")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda/cpu)")
     parser.add_argument("--dataset", default="exports/taco/strict-clean-stage5-v1", help="Dataset export directory")
     parser.add_argument("--rights", default="work/stage5-paper/rights.json", help="Rights declaration file")
@@ -142,7 +178,13 @@ def main(argv=None) -> int:
     parser.add_argument("--longest", type=int, default=384, help="Longest canvas edge")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")
     parser.add_argument("--evaluate-baseline", action="store_true", help="Run validation before training")
+    parser.add_argument("--tier1-soups", action="store_true", help="D074: evaluate exactly two CPU-averaged soups after the epoch")
     args = parser.parse_args(argv)
+    tier1 = Path(args.dataset).name == "strict-clean-stage5-tier1-v1"
+    if tier1:
+        require_tier1_contract(args)
+    elif args.tier1_soups:
+        parser.error("Tier1 soups require the Tier1 export")
     if not 1<=args.epochs<=3 or not math.isfinite(args.learning_rate) or args.learning_rate<=0:
         parser.error("Require1..3 epochs and finite positive LR")
     if (args.shortest,args.longest) not in ((256,384),(384,576)):
@@ -165,7 +207,7 @@ def main(argv=None) -> int:
     if device == "cuda":
         torch.cuda.manual_seed_all(args.seed)
 
-    run_id = f"stage5-paper-{uuid.uuid4().hex}"
+    run_id = f"{'stage5-tier1' if tier1 else 'stage5-paper'}-{uuid.uuid4().hex}"
     output_dir = ROOT / "runs" / "training" / run_id
     output_dir.mkdir(parents=True, exist_ok=False)
     print(f"=== Stage 5 9-Class Training Run: {run_id} ===")
@@ -178,13 +220,21 @@ def main(argv=None) -> int:
     val_ds = CocoTrainingDatasetV2(args.dataset, "validation", args.rights)
     print(f"  Training samples: {len(train_ds)}")
     print(f"  Validation samples: {len(val_ds)}")
-    if len(train_ds)!=307 or len(val_ds)!=65:raise ValueError("Require the approved307/65 corpus")
+    if len(train_ds)!=(336 if tier1 else 307) or len(val_ds)!=65:raise ValueError("Unexpected approved corpus")
+    if tier1 and (len(train_ds.data["annotations"])!=637 or len(val_ds.data["annotations"])!=109):
+        raise ValueError("Tier1 annotation counts differ")
     # Persist the exact write/read boundary before model execution. All source
     # images/checkpoints remain read-only; test metadata/photos are unavailable.
     train_photos={(train_ds.root/i["file_name"]).resolve() for i in train_ds.images}
     val_photos={(val_ds.root/i["file_name"]).resolve() for i in val_ds.images}
     if train_photos&val_photos:raise ValueError("Train/validation photograph overlap")
     def file_guard(event,values):
+        if event in ("os.remove","os.rename","os.rmdir","os.mkdir"):
+            paths=values[:2] if event=="os.rename" else values[:1]
+            for v in paths:
+                if isinstance(v,(str,bytes,os.PathLike)):
+                    p=Path(os.fsdecode(v)).resolve()
+                    if p.is_relative_to(ROOT) and not p.is_relative_to(output_dir):raise AssertionError("Protected mutation")
         if event=="open" and isinstance(values[0],(str,bytes,os.PathLike)):
             path=Path(os.fsdecode(values[0])).resolve()
             if path.name=="test.json":raise AssertionError("Test split access prohibited")
@@ -209,7 +259,12 @@ def main(argv=None) -> int:
     processor = AutoProcessor.from_pretrained(SNAPSHOT, local_files_only=True, trust_remote_code=False)
     freeze_backbones(model)
 
-    if args.warmstart == "blend":
+    warmstart_proof = None
+    if args.warmstart == "stage5_highres_epoch1":
+        warmstart_proof=load_verified_stage5_checkpoint(model,ROOT/"runs/training/stage5-paper-558bcc18d6cf4556a966d8cfc320c968/checkpoints/epoch-01")
+        if warmstart_proof["position"]["global_step"]!=307:raise ValueError("Warmstart is not high-resolution E1")
+        print("Verified high-resolution E1 parameter SHA-256: "+warmstart_proof["parameter_sha256"])
+    elif args.warmstart == "blend":
         stage4_run = ROOT / "runs/training/taco-896e2f44146d4d54aee518e6087908ca"
         load_warmstart_blend(model, stage4_run)
     elif args.warmstart == "stage5_blend2575":
@@ -221,7 +276,7 @@ def main(argv=None) -> int:
     calls={"training":0,"validation":0}
     def forward_guard(module,args_hook,kwargs):
         mode="training" if module.training and torch.is_grad_enabled() else "validation"
-        limit=len(train_ds)*args.epochs if mode=="training" else 112*(args.epochs+int(args.evaluate_baseline))
+        limit=len(train_ds)*args.epochs if mode=="training" else 112*(args.epochs+int(args.evaluate_baseline)+2*int(args.tier1_soups))
         if calls[mode]>=limit:raise ValueError("Model forward budget exceeded")
         if list(kwargs['pixel_values'].shape)!=[1,3,args.longest,args.longest] or kwargs['pixel_values'].dtype!=torch.float32:
             raise ValueError("Image geometry/FP32 contract changed")
@@ -236,6 +291,7 @@ def main(argv=None) -> int:
         "learning_rate": args.learning_rate,
         "epochs": args.epochs,
         "warmstart": args.warmstart,
+        "warmstart_proof":warmstart_proof,"tier1_soups":args.tier1_soups,
         "shortest": args.shortest,
         "longest": args.longest,
         "seed": args.seed,
@@ -340,6 +396,43 @@ def main(argv=None) -> int:
         atomic_json(output_dir/"run-state.json",{"status":"running","contract":contract,"completed_epochs":epoch_results,
             "global_step":global_step,"forward_counts":calls},replace=True)
 
+    epoch_parameter_hash=state_hash(model)
+    soup_results={}
+    if args.tier1_soups:
+        print('Preparing exactly two CPU-only trainable-weight soups...')
+        optimizer.zero_grad(set_to_none=True);optimizer.state.clear();del optimizer
+        model.to('cpu');gc.collect();torch.cuda.empty_cache()
+        names={n for n,p in model.named_parameters() if p.requires_grad}
+        def cpu_state():return {n:p.detach().cpu().clone() for n,p in model.named_parameters() if n in names}
+        tier_state=cpu_state()
+        sources={}
+        original=ROOT/'runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4'
+        for key,cp in [('e1',original/'checkpoints/epoch-01'),('e2',original/'checkpoints/epoch-02')]:
+            load_verified_stage5_checkpoint(model,cp);sources[key]=cpu_state()
+        blend=average_trainable(sources,{'e1':.25,'e2':.75})
+        with torch.no_grad():
+            for n,p in model.named_parameters():
+                if n in names:p.copy_(blend[n])
+        if state_hash(model)!='5a8b832754cfbf16fa56e4742299c61a8f60cdba6cba9d6c9758ec85ad7b3e98':raise ValueError('Stage5 blend reference hash mismatch')
+        load_verified_stage5_checkpoint(model,ROOT/'runs/training/stage5-paper-558bcc18d6cf4556a966d8cfc320c968/checkpoints/epoch-01')
+        hr=cpu_state()
+        recipes=[('soup_tier1_hr_blend2575',blend,.20),('soup_tier1_hr_5050',hr,.50)]
+        for label,reference,weight in recipes:
+            averaged=average_trainable({'reference':reference,'tier1':tier_state},{'reference':weight,'tier1':1-weight})
+            with torch.no_grad():
+                for n,p in model.named_parameters():
+                    if n in names:p.copy_(averaged[n])
+            parameter_hash=state_hash(model)
+            if state_hash(model,True)!=frozen_hash:raise ValueError('Soup changed frozen parameters')
+            model.to(device)
+            value=validation()
+            atomic_json(output_dir/(label+'.json'),value)
+            soup_results[label]={'reference_weight':weight,'tier1_weight':1-weight,
+                'parameter_sha256':parameter_hash,'combined_65':value['combined_65'],
+                'legacy_47':value['legacy_47'],'annex_18':value['annex_18']}
+            print(label+' AP: '+str(value['combined_65']['AP']))
+            model.to('cpu');gc.collect();torch.cuda.empty_cache()
+        del sources,blend,hr,tier_state,averaged,recipes
     total_time = time.time() - start_train_time
     report = {
         "run_id": run_id,
@@ -348,16 +441,20 @@ def main(argv=None) -> int:
         "epoch_results": epoch_results,
         "total_training_time_seconds": total_time,
         "completed": True,
+        "epoch_parameter_sha256":epoch_parameter_hash,"soups":soup_results,
+        "peak_VRAM_bytes":torch.cuda.max_memory_allocated() if device=="cuda" else None,
         "training_updates":global_step,"training_photo_reads":train_ds.photo_reads,"validation_photo_reads":val_ds.photo_reads,
         "validation_forwards":calls["validation"],"training_forwards":calls["training"],
         "frozen_parameters_unchanged":state_hash(model,True)==frozen_hash,
         "core_sources_unchanged":{name:digest(ROOT/name) for name in SOURCES}==contract["implementation_sha256"],
     }
-    if calls!={"training":len(train_ds)*args.epochs,"validation":112*(args.epochs+int(args.evaluate_baseline))}:
+    if calls!={"training":len(train_ds)*args.epochs,"validation":112*(args.epochs+int(args.evaluate_baseline)+2*int(args.tier1_soups))}:
         raise ValueError("Completed forward counts differ from the authorized epoch/evaluation plan")
     atomic_json(output_dir / "report.json", report)
     atomic_json(output_dir/"run-state.json",{"status":"completed","global_step":global_step,"forward_counts":calls},replace=True)
     print(f"\nTraining completed in {total_time:.1f}s. Report saved to {output_dir / 'report.json'}")
+    model.to("cpu");gc.collect()
+    if device=="cuda":torch.cuda.empty_cache()
     return 0
 
 

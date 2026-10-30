@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.configuration import strict_load
 from scripts.taco_training_labels_v2 import LABELS
+from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, COLORS, map_row, prepare_rows)
 
 # 9 distinct high-contrast colors for waste categories
 CLASS_COLORS = [
@@ -39,6 +40,18 @@ CLASS_COLORS = [
     "#f032e6",  # 7: styrofoam_piece (magenta)
     "#808000",  # 8: paper (olive gold / amber)
 ]
+
+
+DEFAULT_TIER1_RUN = Path("runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337")
+
+
+def discover_tier1_run(explicit=None, root=ROOT):
+    """Explicit paths win; absent/incomplete private defaults fall back to old review."""
+    if explicit is not None:
+        return Path(explicit)
+    candidate=Path(root)/DEFAULT_TIER1_RUN
+    required=('report.json','validation-epoch-1.json','soup_tier1_hr_blend2575.json','soup_tier1_hr_5050.json')
+    return candidate if all((candidate/name).is_file() for name in required) else None
 
 
 def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float = 0.80):
@@ -57,6 +70,8 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
             continue
         suppressed = False
         for k_obj in kept:
+            if obj["category_id"] != k_obj["category_id"]:
+                continue
             kx, ky, kw, kh = k_obj["bbox"]
             k_area = kw * kh
             if k_area <= 0:
@@ -80,7 +95,7 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
     return kept
 
 
-def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None):
+def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None):
     val_json_path = dataset_dir / "validation.json"
     val_data = strict_load(val_json_path)
 
@@ -114,17 +129,31 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
         "Stage 5 High-Res (384/576)": defaultdict(list),
     }
 
-    for p in baseline_data.get("predictions", []):
+    for p in baseline_data["raw_queries"]:
         preds_by_state["Baseline"][p["image_id"]].append(p)
-    for p in ep2_data.get("predictions", []):
+    for p in ep2_data["raw_queries"]:
         preds_by_state["Stage 5 (256/384)"][p["image_id"]].append(p)
-    for p in highres_ep1_data.get("predictions", []):
+    for p in highres_ep1_data["raw_queries"]:
         preds_by_state["Stage 5 High-Res (384/576)"][p["image_id"]].append(p)
 
-    # Fallback if highres wasn't present
-    if not any(preds_by_state["Stage 5 High-Res (384/576)"].values()):
-        for p in ep1_data.get("predictions", []):
-            preds_by_state["Stage 5 High-Res (384/576)"][p["image_id"]].append(p)
+    if set(images) != {p["image_id"] for p in highres_ep1_data["raw_queries"]}:
+        raise ValueError("High-resolution saved validation predictions are incomplete")
+
+    if tier1_run_dir is not None:
+        report = strict_load(tier1_run_dir / "report.json")
+        if not report.get("completed") or report.get("training_updates") != 336:
+            raise ValueError("Tier1 replay requires a completed bounded run")
+        for label, filename in (
+            ("Tier 1 High-Res (384/576)", "validation-epoch-1.json"),
+            ("Tier 1 + blend2575 soup", "soup_tier1_hr_blend2575.json"),
+            ("Tier 1 + HR E1 soup", "soup_tier1_hr_5050.json"),
+        ):
+            saved = strict_load(tier1_run_dir / filename)
+            rows = saved['raw_queries']
+            if len(rows) != 65*900 or {r['image_id'] for r in rows} != set(images):
+                raise ValueError("Tier1 saved queries differ from frozen validation")
+            preds_by_state[label] = defaultdict(list)
+            for row in rows: preds_by_state[label][row['image_id']].append(row)
 
     # Sort predictions by score descending
     for state in preds_by_state:
@@ -164,7 +193,8 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
         cid = obj["category_id"]
         color = CLASS_COLORS[cid] if 0 <= cid < len(CLASS_COLORS) else "#ffffff"
-        label_name = LABELS[cid] if 0 <= cid < len(LABELS) else f"cls_{cid}"
+        label_name = obj.get("display_label", LABELS[cid] if 0 <= cid < len(LABELS) else f"cls_{cid}")
+        color = COLORS.get(obj.get("mapped_category"), color)
 
         bx, by, bw, bh = obj["bbox"]
         linestyle = "-" if is_gt else "--"
@@ -249,17 +279,31 @@ class Stage5ViewerGUI:
         topk_spin.pack(side="left", padx=2)
         topk_spin.bind("<Return>", lambda e: self.update_plots())
 
-        # Containment NMS Filter Checkbox
-        self.nms_var = tk.BooleanVar(value=True)
-        nms_check = ttk.Checkbutton(ctrl_frame, text="Overlap NMS", variable=self.nms_var, command=self.update_plots)
-        nms_check.pack(side="left", padx=(10, 4))
+        self.nms_var = tk.StringVar(value='class_aware_iou_0.50_containment_0.80')
+        nms_cb = ttk.Combobox(ctrl_frame, textvariable=self.nms_var,
+            values=('raw','class_aware_iou_0.50','class_aware_iou_0.50_containment_0.80'),
+            state="readonly", width=24)
+        nms_cb.pack(side="left", padx=4)
+        nms_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
 
-        # Legend Panel in Control Bar
-        legend_frame = ttk.Frame(ctrl_frame)
-        legend_frame.pack(side="right", padx=6)
-        for cid, (name, color) in enumerate(zip(LABELS, CLASS_COLORS)):
-            lbl = tk.Label(legend_frame, text=f" {name} ", bg=color, fg="black" if cid in (2, 6) else "white", font=("Arial", 7, "bold"))
-            lbl.pack(side="left", padx=1)
+        ttk.Label(ctrl_frame, text="Taxonomy View:").pack(side="left", padx=4)
+        self.taxonomy_var = tk.StringVar(value=VIEWS[2])
+        taxonomy_cb = ttk.Combobox(ctrl_frame, textvariable=self.taxonomy_var,
+                                  values=VIEWS, state="readonly", width=38)
+        taxonomy_cb.pack(side="left")
+        taxonomy_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
+        state_frame = ttk.Frame(self.root)
+        state_frame.pack(side="top", fill="x")
+        ttk.Label(state_frame, text="Fourth panel state:").pack(side="left", padx=6)
+        choices=[n for n in self.preds if n not in ("Baseline", "Stage 5 (256/384)")]
+        initial="Tier 1 + blend2575 soup" if "Tier 1 + blend2575 soup" in choices else choices[0]
+        self.review_state_var=tk.StringVar(value=initial)
+        state_cb=ttk.Combobox(state_frame, textvariable=self.review_state_var, values=choices,
+                              state="readonly", width=38)
+        state_cb.pack(side="left")
+        state_cb.bind("<<ComboboxSelected>>", lambda e:self.update_plots())
+        self.legend_frame = ttk.Frame(self.root)
+        self.legend_frame.pack(side="top", fill="x")
 
         # Main Paned Window (Plots on top, Details table on bottom, exactly like Stage 4)
         pane = ttk.Panedwindow(self.root, orient="vertical")
@@ -290,15 +334,20 @@ class Stage5ViewerGUI:
 
         # Details Notebook (Tables for GT, Baseline, Stage 5 Run 1, Stage 5 High-Res)
         notebook = ttk.Notebook(details_frame)
+        self.details_notebook = notebook
         notebook.pack(fill="both", expand=True)
         self.tables = {}
-        columns = ("rank", "category", "score", "bbox_xywh")
+        columns = ("rank", "category", "specific_class", "hazard_flag", "score", "bbox_xywh")
         for tab_name in ("Ground Truth", "Baseline", "Stage 5 (256/384)", "Stage 5 High-Res (384/576)"):
             tab_f = ttk.Frame(notebook)
             notebook.add(tab_f, text=tab_name)
             tree = ttk.Treeview(tab_f, columns=columns, show="headings", height=5)
             tree.heading("rank", text="Rank")
             tree.heading("category", text="Category")
+            tree.heading("specific_class", text="specific_class")
+            tree.heading("hazard_flag", text="hazard_flag")
+            tree.column("specific_class", width=150)
+            tree.column("hazard_flag", width=80)
             tree.heading("score", text="Score")
             tree.heading("bbox_xywh", text="BBox [x, y, w, h]")
             tree.column("rank", width=60, stretch=False)
@@ -321,7 +370,9 @@ class Stage5ViewerGUI:
         status_bar.pack(side="bottom", fill="x")
 
         self.populate_image_list()
-        if initial_image_id and initial_image_id in self.images:
+        if initial_image_id is not None and initial_image_id in self.images:
+            self.filter_var.set("All Images (65)")
+            self.populate_image_list()
             self.set_current_image(initial_image_id)
         else:
             first_id = sorted(self.paper_img_ids)[0] if self.paper_img_ids else sorted(self.images.keys())[0]
@@ -359,7 +410,7 @@ class Stage5ViewerGUI:
 
     def set_current_image(self, img_id: int):
         for val in self.img_cb["values"]:
-            if val.startswith(f"Image {img_id}"):
+            if val.startswith(f"Image {img_id} "):
                 self.img_var.set(val)
                 self.load_and_draw(img_id)
                 break
@@ -385,12 +436,18 @@ class Stage5ViewerGUI:
     def load_and_draw(self, img_id: int):
         self.current_image_id = img_id
         img_entry = self.images[img_id]
-        photo_path = self.dataset_root / img_entry["file_name"]
+        photo_path = (self.dataset_root / img_entry["file_name"]).resolve()
+        if not photo_path.is_relative_to(self.dataset_root):
+            raise ValueError("Validation photo path escapes dataset root")
 
         if not photo_path.is_file():
             self.status_var.set(f"ERROR: Photograph not found at {photo_path}")
             return
 
+        import hashlib
+        expected = img_entry["source_taco"]["file_sha256"]
+        if hashlib.sha256(photo_path.read_bytes()).hexdigest() != expected:
+            raise ValueError("Validation source photo hash mismatch")
         with Image.open(photo_path) as pil_img:
             self.current_pil = pil_img.convert("RGB")
 
@@ -401,20 +458,25 @@ class Stage5ViewerGUI:
             return
 
         img_id = self.current_image_id
+        self.details_notebook.tab(3, text=self.review_state_var.get())
         thresh = float(self.thresh_var.get())
         top_k = int(self.topk_var.get())
 
-        gt_boxes = self.gt.get(img_id, [])
+        scheme = VIEW_SCHEMES[self.taxonomy_var.get()]
+        hierarchical = self.taxonomy_var.get() == VIEWS[3]
+        import tkinter as tk
+        for child in self.legend_frame.winfo_children(): child.destroy()
+        for name in NAMES[scheme]:
+            tk.Label(self.legend_frame, text=name, bg=COLORS.get(name, CLASS_COLORS[LABELS.index(name)] if name in LABELS else "white"), fg="white").pack(side="left", padx=2)
+        gt_boxes = [map_row(a, scheme, hierarchical) for a in self.gt.get(img_id, [])]
         base_preds = self.preds["Baseline"].get(img_id, [])
         run1_preds = self.preds["Stage 5 (256/384)"].get(img_id, [])
-        highres_preds = self.preds["Stage 5 High-Res (384/576)"].get(img_id, [])
+        highres_preds = self.preds[self.review_state_var.get()].get(img_id, [])
 
         # Apply score threshold and optional containment NMS
         def filter_preds(plist):
-            passing = [p for p in plist if p["score"] >= thresh]
-            if self.nms_var.get():
-                passing = apply_containment_nms(passing, iou_thresh=0.50, iomin_thresh=0.80)
-            return passing[:top_k]
+            mode = self.nms_var.get()
+            return prepare_rows(plist, scheme, mode, thresh, hierarchical)[:top_k]
 
         base_filtered = filter_preds(base_preds)
         run1_filtered = filter_preds(run1_preds)
@@ -427,10 +489,10 @@ class Stage5ViewerGUI:
         self.axes["Baseline"].set_title(f"Warm-Start Baseline (@{thresh:.2f})", fontsize=11)
 
         draw_panel(self.axes["Stage 5 (256/384)"], self.current_pil, run1_filtered, is_gt=False, score_thresh=thresh, top_k=top_k)
-        self.axes["Stage 5 (256/384)"].set_title(f"Stage 5 Run 1 (256/384, AP: 0.136)", fontsize=11)
+        self.axes["Stage 5 (256/384)"].set_title(f"Stage 5 Run 1 (256/384; diagnostic view)", fontsize=11)
 
         draw_panel(self.axes["Stage 5 High-Res (384/576)"], self.current_pil, highres_filtered, is_gt=False, score_thresh=thresh, top_k=top_k)
-        self.axes["Stage 5 High-Res (384/576)"].set_title(f"Stage 5 High-Res (384/576, AP: 0.202)", fontsize=11, color="#005500", weight="bold")
+        self.axes["Stage 5 High-Res (384/576)"].set_title(self.review_state_var.get(), fontsize=11, color="#005500", weight="bold")
 
         self.canvas.draw_idle()
 
@@ -440,9 +502,9 @@ class Stage5ViewerGUI:
 
         # Ground Truth table
         for r_idx, ann in enumerate(gt_boxes, 1):
-            c_name = LABELS[ann["category_id"]]
+            c_name = ann["display_label"]
             bx = [round(v, 1) for v in ann["bbox"]]
-            self.tables["Ground Truth"].insert("", "end", values=(f"GT-{r_idx}", c_name, "1.000", str(bx)))
+            self.tables["Ground Truth"].insert("", "end", values=(f"GT-{ann['id']}", c_name, ann["specific_class"], ann["hazard_flag"], "1.000", str(bx)))
 
         # Baseline, Stage 5 Run 1, Stage 5 High-Res tables
         for tab_name, passing in [
@@ -451,14 +513,14 @@ class Stage5ViewerGUI:
             ("Stage 5 High-Res (384/576)", highres_filtered),
         ]:
             for r_idx, p in enumerate(passing, 1):
-                c_name = LABELS[p["category_id"]]
+                c_name = p["display_label"]
                 bx = [round(v, 1) for v in p["bbox"]]
-                self.tables[tab_name].insert("", "end", values=(f"q-{r_idx}", c_name, f"{p['score']:.4f}", str(bx)))
+                self.tables[tab_name].insert("", "end", values=(f"q{p['query_id']}", c_name, p["specific_class"], p["hazard_flag"], f"{p['score']:.4f}", str(bx)))
 
         # Update status bar
-        gt_types = [LABELS[a["category_id"]] for a in gt_boxes]
-        hr_types = [f"{LABELS[p['category_id']]}({p['score']:.2f})" for p in highres_filtered]
-        nms_str = " | NMS: ON" if self.nms_var.get() else " | NMS: OFF"
+        gt_types = [a["display_label"] for a in gt_boxes]
+        hr_types = [f"{p['display_label']}({p['score']:.2f})" for p in highres_filtered]
+        nms_str = " | NMS: " + self.nms_var.get()
         self.status_var.set(
             f"Image ID: {img_id} [{self.current_pil.size[0]}x{self.current_pil.size[1]}]{nms_str} | "
             f"GT: {len(gt_boxes)} {gt_types} | "
@@ -511,6 +573,7 @@ def main() -> int:
         default=ROOT / "exports/taco/strict-clean-stage5-v1",
         help="Path to Stage 5 dataset export",
     )
+    parser.add_argument("--tier1-run-dir", type=Path, default=None, help="Explicit Tier1 replay directory; auto-discovers the completed local D074 run by default")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
@@ -521,7 +584,18 @@ def main() -> int:
         print(f"ERROR: Run directory not found: {args.run_dir}", file=sys.stderr)
         return 1
 
-    data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir)
+    args.tier1_run_dir = discover_tier1_run(args.tier1_run_dir)
+    if args.tier1_run_dir is not None and not args.tier1_run_dir.is_dir():
+        print(f"ERROR: Explicit Tier1 saved replay directory is missing: {args.tier1_run_dir}", file=sys.stderr)
+        return 1
+    if not (args.dataset_dir / "validation.json").is_file():
+        print("ERROR: Saved review needs the private validation export; no model will be run.", file=sys.stderr)
+        return 1
+    try:
+        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir)
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
+        return 1
 
     if args.gui:
         app = Stage5ViewerGUI(

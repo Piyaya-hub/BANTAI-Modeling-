@@ -102,8 +102,16 @@ def require_rights(path, context):
             raise RightsRequired("Owner-authorized exception record is incomplete or misrepresents clearance")
         assessment = record.get("assessment", {})
         doc_path = (ROOT / assessment.get("path", "")).resolve()
-        if not doc_path.is_relative_to(ROOT / "docs") or not doc_path.is_file() or digest(doc_path) != assessment.get("sha256"):
-            raise RightsRequired("Exception assessment evidence is missing or changed")
+        expected = assessment.get("sha256", "")
+        if not doc_path.is_relative_to(ROOT / "docs"):
+            raise RightsRequired("Exception assessment path escapes docs")
+        if not doc_path.is_file() or digest(doc_path) != expected:
+            # Versioned updates preserve the exact earlier assessment, not a new basis.
+            if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
+                raise RightsRequired("Invalid assessment digest")
+            archived = ROOT / "docs" / "assessments" / (expected + ".md")
+            if not archived.is_file() or digest(archived) != expected:
+                raise RightsRequired("Exception assessment evidence is missing or changed")
     else:
         raise RightsRequired("Unsupported rights record schema")
     return {"record_sha256": digest(path), "record": record}
@@ -121,6 +129,14 @@ class CocoTrainingDatasetV2:
         if [(c["id"], c["name"]) for c in self.data["categories"]] != list(enumerate(LABELS)):
             raise ValueError("COCO category order differs from approved 9-class taxonomy")
         self.root = Path(self.data["info"]["image_root"]).resolve()
+        self.photo_hashes = self.rights["record"].get("photo_sha256", {})
+        if self.photo_hashes:
+            expected_ids={str(i) for value in self.context['splits'].values() for i in value['image_ids']}
+            if set(self.photo_hashes)!=expected_ids:raise RightsRequired('Incomplete source-photo hash binding')
+            for image in self.data['images']:
+                proof=self.photo_hashes[str(image['id'])]
+                if proof['split']!=split or proof['file_name']!=image['file_name'] or proof['sha256']!=image['source_taco']['file_sha256']:
+                    raise RightsRequired('Photo binding differs from export')
         self.images = self.data["images"]
         self.photo_reads = 0
         self.objects = {i["id"]: [] for i in self.images}
@@ -156,6 +172,8 @@ class CocoTrainingDatasetV2:
         path = image_path(self.root, row["file_name"])
         if not path.is_relative_to(self.root) or not path.is_file():
             raise ValueError(f"Unsafe or missing source photograph: {path}")
+        if self.photo_hashes and digest(path)!=self.photo_hashes[str(row["id"])]["sha256"]:
+            raise ValueError("Source-photo SHA-256 changed")
         self.photo_reads += 1
         with Image.open(path) as image:
             image.load()

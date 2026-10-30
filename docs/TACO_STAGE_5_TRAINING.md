@@ -1,5 +1,45 @@
 # Stage 5: two-epoch nine-class fine-tuning (D-070 execution)
 
+## D-074: Tier 1 high-resolution continuation and soups - 2026-10-30
+
+Completed owner-authorized execution on `feat/stage5-paper-category`. The versioned
+Tier1 export has 336 training images / 637 boxes, byte-identical frozen validation
+(65 images / 109 boxes), and metadata-reconstructed test JSON matching the frozen
+65-image test hash. No test JSON was read and no test photograph opened. Original
+exports/checkpoints, taxonomy v2 and the six core Stage4 SOURCES remain unchanged.
+
+The new `rights_tier1.json` binds 401 verified train/validation photo digests and the
+exact corpus. Updated academic-use documentation retains the distinction between
+owner workflow authorization and unclaimed rightsholder/institutional/legal clearance.
+The exact prior assessment is archived by SHA-256 so the original rights record stays
+unchanged and usable; the archive must match its pre-bound hash.
+
+Verified HR E1 parameter SHA-256 before training:
+`d1310a00f540e4ea8770b32491fc47576b14cd1f4b81282756bab6ba8ddb5c1d`.
+One 384/576 epoch used LR 2e-6, AdamW WD 1e-4/foreach=False, clip 1.0, FP32/TF32 off,
+seed42 and frozen vision/text backbones. Exactly **336 training updates / 336 validation
+forwards** completed; four full resumable bundles at steps100/200/300/336 were verified.
+Peak allocated VRAM 3.556 GiB; training/evaluation/save phase 501.915 seconds.
+
+Official combined nine-specific AP: Tier1 E1 **0.218215**; 20% existing Stage5 blend2575
++80% Tier1 soup **0.231226**, retaining Styrofoam AP **0.148515**; 50% old HR E1
++50% Tier1 soup **0.203191**. Separate eight-prompt legacy APs are
+0.254373 / 0.246970 / 0.258472. Different scopes are not interchangeable. The 20/80 soup
+has the highest measured Stage5 combined AP in this bounded comparison; it is not
+promoted. Plastic_bag AP remains zero and gains are not uniform.
+
+All **81** CPU-only D072 hierarchy cases completed. The 20/80 soup's raw five-material
+AP/coverage is 0.344601 / 80 of109; four-material is 0.402577 / 85 of109; raw
+nine-specific coverage is 59 of109. These diagnostic category tasks and nonexclusive
+coverage remain separate from official AP. Native Tk Image777 passed 48 saved-state,
+taxonomy and NMS combinations. Guarded suite: **305 tests, 289 passed, 16 documented
+skips, zero failures/errors**. CPU checks verified 401 photo hashes, source/new bundles,
+558 optimizer counters, RNG/positions/sampler order and all protected inputs.
+
+See [full D074 results, evidence and exact GUI command](TACO_STAGE_5_TIER1_TRAINING.md).
+Stop for owner saved review. No commit, push, merge, promotion or further training.
+
+
 Completed locally on the owner-authorized Stage 5 branch; execution recorded 2026-10-28. The requested command ran with its existing **256/384 default**, FP32, TF32 disabled, AdamW LR1e-5/weight decay1e-4/foreachFalse and norm1 clipping. It trained exactly **two epochs /614 updates** on 307 images, with no extra pilot updates. Baseline and two epoch-end validations each used 65 nine-class forwards plus 47 original-eight-prompt forwards, **336 validation forwards total**. No test.json or test photos were opened; no checkpoint was promoted or wired into baseline inference. No commit/push/merge was performed for this run.
 
 Warm start reproduces D-061 `blend_350_442_2575` bitwise (parameter SHA-256 490bd4b1082bf0a515dc10b0b3c7d64a180b03cd2fbd2c1ee3e93d4374a8c69e). It averages 0.25*D-057 step350+0.75*step442 over 558 canonical trainable tensors; frozen entries match the pinned snapshot. This is a fresh optimizer/seeded nine-class run, not restoration of Stage 4 optimizer/RNG state. The six core Stage 4 SOURCES, old datasets, taxonomy v1 and previous 64 checkpoints remain unchanged. Both source checkpoint bundles were independently verified again after execution. Eight complete new bundles were verified with full processor/adapter/model/optimizer/RNG/context files.
