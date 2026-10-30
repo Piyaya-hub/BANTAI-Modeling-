@@ -158,7 +158,7 @@ class TestStage5Hierarchy(unittest.TestCase):
         self.assertEqual(len(VIEWS),4)
         self.assertEqual(VIEW_SCHEMES[VIEWS[3]],'5-material')
         source=inspect.getsource(viewer.Stage5ViewerGUI)
-        for marker in ('taxonomy_var','prepare_rows','specific_class','hazard_flag'):
+        for marker in ('taxonomy_var','visible_rows','specific_class','hazard_flag'):
             self.assertIn(marker,source)
 
 

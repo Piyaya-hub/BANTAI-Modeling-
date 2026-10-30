@@ -62,3 +62,25 @@ Historical D-070 record and its 307/65 corpus remain unchanged. The exact earlie
 assessment bytes are archived by SHA-256 under `docs/assessments/`; the Stage 5 rights
 gate accepts only an archive matching the hash already bound by the old record.
 This preserves that record without pretending its authorization covers the new corpus.
+
+
+## D-076: training-only sibling-subtype corpus - 2026-10-30
+
+Owner authorizes one controlled local academic epoch on 384 Tier2 training images /
+744 annotations plus the unchanged 65 validation images /109 annotations: **449 unique
+train/validation photos**, bound in `work/stage5-paper/rights_tier2.json` for the new
+`exports/taco/strict-clean-stage5-tier2-v1` corpus. The 65 test photos remain unopened.
+Sibling category mappings are training-only, without Other plastic or accessory
+filtering; taxonomy v2 and validation labels remain unchanged. Exact-duplicate
+quarantine still excludes1173/1305. All prior exports, rights records and bundles
+remain unchanged; previous assessment bytes are archived by their bound SHA-256.
+
+The approved bounds are384 training updates and336 validation forwards (three states,
+112 forwards each), plus CPU-only material diagnostics and best-state replay-bundle
+persistence. No commit, push, merge, production promotion or test access is authorized.
+Purpose remains local non-commercial academic localization research; nature includes
+protected photographic expression and potentially protected annotations/database.
+Whole-image amount now covers449 authorized photos and their annotations. Market
+effects remain unmeasured and uncertain, with no dataset publication or uploads.
+Owner workflow authorization under the documented Section185 claim does not establish
+rightsholder permission, institutional approval or definitive legal clearance.

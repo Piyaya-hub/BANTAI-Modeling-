@@ -1,5 +1,16 @@
 # Stage 5: two-epoch nine-class fine-tuning (D-070 execution)
 
+## D-076 Tier2 training-only sibling continuation - 2026-10-30
+
+Completed384 updates /336 validation forwards on the384-image /744-box versioned
+Tier2 corpus, with449 source photos bound by a new rights record. Frozen validation
+is byte-identical; metadata-reconstructed test hash matches without test reads.
+Tier2 E1 nine-specific AP0.232968;20/80 blend-reference soup0.225850 (negative vs E1);
+50/50 D074-champion/Tier2 soup **0.235994**, saved as a replay-only best bundle.
+No test generalization, production promotion, commit or push is claimed.
+See [full D076 comparisons, diagnostics, verification and replay](TACO_STAGE_5_TIER2_TRAINING.md).
+
+
 ## D-074: Tier 1 high-resolution continuation and soups - 2026-10-30
 
 Completed owner-authorized execution on `feat/stage5-paper-category`. The versioned

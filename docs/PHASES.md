@@ -1,13 +1,14 @@
 # Development phases
 
-## Current Stage 5 state through D-075
+## Current Stage 5 state through D-078
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Best measured Stage5 combined
-**nine-specific validation AP is 0.231226**, from `soup_tier1_hr_blend2575` at 384/576.
-D075 persists that exact state as a private **inference/replay-only** bundle, with
-`resume_supported=false`; this is not production promotion or test generalization.
-No Stage5 weights are wired into `scripts/detect_images.py`, and no merge is authorized.
+validation / 65-image test memberships frozen. The best measured Stage5 combined
+**nine-specific validation AP through D-078 is 0.235994**, from the D076 Tier2/D074
+champion 50/50 soup at 384/576. D075 also persists the D074 `soup_tier1_hr_blend2575`
+(AP 0.231226) as a private inference/replay-only bundle. Both remain unpromoted and
+are not wired into `scripts/detect_images.py`; validation results are not test
+generalization or production promotion, and no merge is authorized.
 
 | Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic 5-material / 4-material AP |
 | --- | --- | --- | --- |
@@ -17,6 +18,9 @@ No Stage5 weights are wired into `scripts/detect_images.py`, and no merge is aut
 | D-073 | 1,500-record expansion audit; 1,370 fresh photos + 130 frozen references | metadata only | - |
 | D-074 | Tier 1: 336 training images; 384/576 E1; 20/80 soup | 0.218215;**0.231226** | soup 0.344601 / 0.402577 |
 | D-075 | Exact soup persisted on CPU; docs/guarded checks/publication | no new forwards or metrics | no new evaluation |
+| D-076 | Tier 2: 384 training images; 384/576 E1 and 50/50 D074-champion soup | **0.235994** | 0.342725 / 0.400957 |
+| D-077 | Display floors and balanced soups; negative for GT259 correction | no promoted state | diagnostic operating points only |
+| D-078 | 65 saved vectors; one failed attempt made 66 forwards total; pooling degraded AP; Tcl/Tk fixed | references D-076 | raw material argmax retained |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
@@ -30,6 +34,17 @@ Detailed evidence: [D070 training](TACO_STAGE_5_TRAINING.md),
 [D074 Tier1 results/replay](TACO_STAGE_5_TIER1_TRAINING.md).
 Private runs, exports, rights records and weights are intentionally not published.
 The durable soup is `runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575`.
+
+D076 measured the Tier2 50/50 D074-champion soup at nine-specific AP **0.235994**;
+it remains local and unpromoted. D077's display-floor and balanced-soup experiments
+were negative for resolving GT259. D078 completed 65 validation forwards to store
+`(65,900,9)` raw query probabilities; one earlier failed attempt reached a forward,
+so cumulative execution exceeded the 65-forward cap by one; tested pooling raised q0's plastic score enough
+to flip the material label but degraded validation material AP. Native Tcl/Tk path
+resolution was fixed, and Image 777 passed all 40 taxonomy/NMS/threshold GUI
+combinations. See [D076 training](TACO_STAGE_5_TIER2_TRAINING.md),
+[D077 display audit](TACO_STAGE_5_IMAGE777_CALIBRATION.md), and
+[D078 score-vector analysis](TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-078-nine-class-score-vector-and-material-pooling-audit).
 
 Saved-only local replay auto-discovers the D074 run when complete:
 

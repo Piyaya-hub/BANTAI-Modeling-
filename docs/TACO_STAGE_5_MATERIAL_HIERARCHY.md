@@ -457,3 +457,137 @@ The full JSON also retains per-category AR100, object/image denominators, and ni
 All per-category AP/AR100 values for every NMS and view, GT denominators and per-GT coverage are retained in the full JSON. No photo/model execution occurs in this CPU-only diagnostic stage. All three raw nine-specific combined AP/AP50/AP75/AR100 sets reproduce the corresponding official saved metric dictionaries within 1e-12.
 
 [D-074 full material cases](../runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/material-hierarchy/summary.json). The diagnostic legacy_47 rows use nine-class-prompt conditioning; they must not be substituted for the separate eight-prompt legacy evaluation in the official training report.
+
+## D-076: Tier2 hierarchy extension - 2026-10-30
+
+Three new saved Tier2 states add81 CPU-only diagnostic cases. Training sibling mapping changes no validation category or protocol. Official combined AP and mapped-task AP remain separate. See the [D076 full training and replay report](TACO_STAGE_5_TIER2_TRAINING.md).
+
+### D076 diagnostic combined_65
+
+| State | Taxonomy | NMS | AP | AP50 | AP75 | AR100 | Covered /GT |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tier2 E1 | 9-specific | raw | 0.232968 | 0.280211 | 0.255207 | 0.373224 | 60 / 109 |
+| Tier2 E1 | 9-specific | class_aware_iou_0.50 | 0.232095 | 0.281439 | 0.253190 | 0.362176 | 60 / 109 |
+| Tier2 E1 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.232582 | 0.282539 | 0.253184 | 0.362656 | 59 / 109 |
+| Tier2 E1 | 5-material | raw | 0.338991 | 0.416715 | 0.363470 | 0.509181 | 79 / 109 |
+| Tier2 E1 | 5-material | class_aware_iou_0.50 | 0.335336 | 0.418998 | 0.356644 | 0.492391 | 79 / 109 |
+| Tier2 E1 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.335728 | 0.420072 | 0.355522 | 0.495416 | 77 / 109 |
+| Tier2 E1 | 4-material | raw | 0.395853 | 0.490139 | 0.426614 | 0.605927 | 84 / 109 |
+| Tier2 E1 | 4-material | class_aware_iou_0.50 | 0.391539 | 0.493309 | 0.418909 | 0.586662 | 84 / 109 |
+| Tier2 E1 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.391649 | 0.494430 | 0.416380 | 0.588084 | 81 / 109 |
+| Blend20/Tier2 80 | 9-specific | raw | 0.225850 | 0.272254 | 0.248019 | 0.364579 | 57 / 109 |
+| Blend20/Tier2 80 | 9-specific | class_aware_iou_0.50 | 0.224913 | 0.273239 | 0.246377 | 0.351142 | 57 / 109 |
+| Blend20/Tier2 80 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.224682 | 0.272166 | 0.245975 | 0.348679 | 55 / 109 |
+| Blend20/Tier2 80 | 5-material | raw | 0.342659 | 0.420343 | 0.368732 | 0.502185 | 77 / 109 |
+| Blend20/Tier2 80 | 5-material | class_aware_iou_0.50 | 0.338885 | 0.422536 | 0.362562 | 0.483402 | 77 / 109 |
+| Blend20/Tier2 80 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.336774 | 0.418135 | 0.359908 | 0.477719 | 72 / 109 |
+| Blend20/Tier2 80 | 4-material | raw | 0.400026 | 0.494862 | 0.432404 | 0.596545 | 82 / 109 |
+| Blend20/Tier2 80 | 4-material | class_aware_iou_0.50 | 0.395560 | 0.497972 | 0.424835 | 0.574979 | 82 / 109 |
+| Blend20/Tier2 80 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.392660 | 0.492408 | 0.420974 | 0.566600 | 76 / 109 |
+| D074champion50/Tier2 50 | 9-specific | raw | 0.235994 | 0.282890 | 0.258859 | 0.379813 | 61 / 109 |
+| D074champion50/Tier2 50 | 9-specific | class_aware_iou_0.50 | 0.234990 | 0.284232 | 0.257027 | 0.366932 | 61 / 109 |
+| D074champion50/Tier2 50 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.235054 | 0.284233 | 0.256700 | 0.363588 | 58 / 109 |
+| D074champion50/Tier2 50 | 5-material | raw | 0.342725 | 0.419523 | 0.369158 | 0.505848 | 80 / 109 |
+| D074champion50/Tier2 50 | 5-material | class_aware_iou_0.50 | 0.338783 | 0.422298 | 0.362627 | 0.488064 | 80 / 109 |
+| D074champion50/Tier2 50 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.337524 | 0.420218 | 0.360003 | 0.483967 | 75 / 109 |
+| D074champion50/Tier2 50 | 4-material | raw | 0.400957 | 0.494067 | 0.433767 | 0.600996 | 85 / 109 |
+| D074champion50/Tier2 50 | 4-material | class_aware_iou_0.50 | 0.396260 | 0.497901 | 0.425736 | 0.580680 | 85 / 109 |
+| D074champion50/Tier2 50 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.394390 | 0.494682 | 0.421955 | 0.574155 | 79 / 109 |
+
+### D076 diagnostic legacy_47
+
+| State | Taxonomy | NMS | AP | AP50 | AP75 | AR100 | Covered /GT |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tier2 E1 | 9-specific | raw | 0.227015 | 0.268597 | 0.243304 | 0.354547 | 40 / 75 |
+| Tier2 E1 | 9-specific | class_aware_iou_0.50 | 0.226961 | 0.269953 | 0.243366 | 0.343449 | 40 / 75 |
+| Tier2 E1 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.226767 | 0.270439 | 0.242276 | 0.337519 | 40 / 75 |
+| Tier2 E1 | 5-material | raw | 0.342716 | 0.432198 | 0.366834 | 0.477827 | 55 / 75 |
+| Tier2 E1 | 5-material | class_aware_iou_0.50 | 0.341492 | 0.434744 | 0.365496 | 0.464606 | 55 / 75 |
+| Tier2 E1 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.340157 | 0.433879 | 0.361354 | 0.454029 | 54 / 75 |
+| Tier2 E1 | 4-material | raw | 0.404569 | 0.525541 | 0.438584 | 0.580790 | 59 / 75 |
+| Tier2 E1 | 4-material | class_aware_iou_0.50 | 0.403396 | 0.529697 | 0.436725 | 0.565007 | 59 / 75 |
+| Tier2 E1 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.400710 | 0.526510 | 0.429991 | 0.546573 | 57 / 75 |
+| Blend20/Tier2 80 | 9-specific | raw | 0.222014 | 0.261309 | 0.238481 | 0.348643 | 38 / 75 |
+| Blend20/Tier2 80 | 9-specific | class_aware_iou_0.50 | 0.221681 | 0.262509 | 0.238592 | 0.333178 | 38 / 75 |
+| Blend20/Tier2 80 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.220398 | 0.259154 | 0.237185 | 0.321920 | 36 / 75 |
+| Blend20/Tier2 80 | 5-material | raw | 0.348624 | 0.436825 | 0.375699 | 0.479029 | 54 / 75 |
+| Blend20/Tier2 80 | 5-material | class_aware_iou_0.50 | 0.346525 | 0.439453 | 0.373886 | 0.461561 | 54 / 75 |
+| Blend20/Tier2 80 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.341897 | 0.430926 | 0.367656 | 0.440327 | 50 / 75 |
+| Blend20/Tier2 80 | 4-material | raw | 0.411994 | 0.531134 | 0.448263 | 0.581421 | 58 / 75 |
+| Blend20/Tier2 80 | 4-material | class_aware_iou_0.50 | 0.409765 | 0.535288 | 0.446518 | 0.560462 | 58 / 75 |
+| Blend20/Tier2 80 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.402870 | 0.523491 | 0.437312 | 0.529275 | 53 / 75 |
+| D074champion50/Tier2 50 | 9-specific | raw | 0.233309 | 0.274122 | 0.250291 | 0.367393 | 42 / 75 |
+| D074champion50/Tier2 50 | 9-specific | class_aware_iou_0.50 | 0.232958 | 0.275382 | 0.250413 | 0.351928 | 42 / 75 |
+| D074champion50/Tier2 50 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.232462 | 0.274703 | 0.249190 | 0.345037 | 40 / 75 |
+| D074champion50/Tier2 50 | 5-material | raw | 0.348624 | 0.437775 | 0.374777 | 0.484638 | 57 / 75 |
+| D074champion50/Tier2 50 | 5-material | class_aware_iou_0.50 | 0.346721 | 0.440504 | 0.373018 | 0.467811 | 57 / 75 |
+| D074champion50/Tier2 50 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.343451 | 0.435819 | 0.366986 | 0.450183 | 53 / 75 |
+| D074champion50/Tier2 50 | 4-material | raw | 0.412829 | 0.532275 | 0.448535 | 0.588997 | 61 / 75 |
+| D074champion50/Tier2 50 | 4-material | class_aware_iou_0.50 | 0.410793 | 0.536579 | 0.446812 | 0.568795 | 61 / 75 |
+| D074champion50/Tier2 50 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.405669 | 0.529261 | 0.437692 | 0.542027 | 56 / 75 |
+
+### D076 diagnostic annex_18
+
+| State | Taxonomy | NMS | AP | AP50 | AP75 | AR100 | Covered /GT |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tier2 E1 | 9-specific | raw | 0.155533 | 0.241560 | 0.204786 | 0.240000 | 20 / 34 |
+| Tier2 E1 | 9-specific | class_aware_iou_0.50 | 0.153901 | 0.243123 | 0.200524 | 0.233750 | 20 / 34 |
+| Tier2 E1 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.155686 | 0.244592 | 0.202660 | 0.234375 | 19 / 34 |
+| Tier2 E1 | 5-material | raw | 0.248093 | 0.326841 | 0.265644 | 0.387500 | 24 / 34 |
+| Tier2 E1 | 5-material | class_aware_iou_0.50 | 0.237030 | 0.329117 | 0.245323 | 0.361250 | 24 / 34 |
+| Tier2 E1 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.240016 | 0.331682 | 0.248842 | 0.370000 | 23 / 34 |
+| Tier2 E1 | 4-material | raw | 0.328737 | 0.422813 | 0.350456 | 0.512222 | 25 / 34 |
+| Tier2 E1 | 4-material | class_aware_iou_0.50 | 0.314788 | 0.425774 | 0.325392 | 0.481667 | 25 / 34 |
+| Tier2 E1 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.318788 | 0.429730 | 0.330037 | 0.494444 | 24 / 34 |
+| Blend20/Tier2 80 | 9-specific | raw | 0.154093 | 0.241560 | 0.202325 | 0.244375 | 19 / 34 |
+| Blend20/Tier2 80 | 9-specific | class_aware_iou_0.50 | 0.152864 | 0.243008 | 0.198863 | 0.241250 | 19 / 34 |
+| Blend20/Tier2 80 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.154849 | 0.246941 | 0.200094 | 0.247500 | 19 / 34 |
+| Blend20/Tier2 80 | 5-material | raw | 0.245341 | 0.326495 | 0.263903 | 0.390000 | 23 / 34 |
+| Blend20/Tier2 80 | 5-material | class_aware_iou_0.50 | 0.236394 | 0.328458 | 0.246101 | 0.368750 | 23 / 34 |
+| Blend20/Tier2 80 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.237286 | 0.327454 | 0.247974 | 0.371250 | 22 / 34 |
+| Blend20/Tier2 80 | 4-material | raw | 0.323794 | 0.422070 | 0.346234 | 0.515556 | 24 / 34 |
+| Blend20/Tier2 80 | 4-material | class_aware_iou_0.50 | 0.312470 | 0.424549 | 0.324320 | 0.490556 | 24 / 34 |
+| Blend20/Tier2 80 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.313885 | 0.424138 | 0.326818 | 0.496111 | 23 / 34 |
+| D074champion50/Tier2 50 | 9-specific | raw | 0.153563 | 0.239039 | 0.202612 | 0.243750 | 19 / 34 |
+| D074champion50/Tier2 50 | 9-specific | class_aware_iou_0.50 | 0.152301 | 0.241475 | 0.198896 | 0.241250 | 19 / 34 |
+| D074champion50/Tier2 50 | 9-specific | class_aware_iou_0.50_containment_0.80 | 0.153286 | 0.242006 | 0.200233 | 0.228750 | 18 / 34 |
+| D074champion50/Tier2 50 | 5-material | raw | 0.246709 | 0.322460 | 0.266148 | 0.383750 | 23 / 34 |
+| D074champion50/Tier2 50 | 5-material | class_aware_iou_0.50 | 0.236979 | 0.326758 | 0.247819 | 0.361250 | 23 / 34 |
+| D074champion50/Tier2 50 | 5-material | class_aware_iou_0.50_containment_0.80 | 0.238295 | 0.327091 | 0.249772 | 0.358750 | 22 / 34 |
+| D074champion50/Tier2 50 | 4-material | raw | 0.326301 | 0.417027 | 0.350016 | 0.505556 | 24 / 34 |
+| D074champion50/Tier2 50 | 4-material | class_aware_iou_0.50 | 0.313958 | 0.422668 | 0.327401 | 0.479444 | 24 / 34 |
+| D074champion50/Tier2 50 | 4-material | class_aware_iou_0.50_containment_0.80 | 0.315875 | 0.423653 | 0.330004 | 0.479444 | 23 / 34 |
+
+### Raw combined per-material AP /AR100
+
+| State | Taxonomy | Material | AP | AR100 |
+| --- | --- | --- | --- | --- |
+| Tier2 E1 | 5-material | hazardous_cigarette | 0.112535 | 0.376923 |
+| Tier2 E1 | 5-material | plastic_waste | 0.356140 | 0.648980 |
+| Tier2 E1 | 5-material | metal_waste | 0.656436 | 0.657143 |
+| Tier2 E1 | 5-material | styrofoam_waste | 0.148515 | 0.142857 |
+| Tier2 E1 | 5-material | paper_waste | 0.421328 | 0.720000 |
+| Tier2 E1 | 4-material | hazardous_cigarette | 0.112535 | 0.376923 |
+| Tier2 E1 | 4-material | plastic_polymer_waste | 0.393112 | 0.669643 |
+| Tier2 E1 | 4-material | metal_waste | 0.656436 | 0.657143 |
+| Tier2 E1 | 4-material | paper_waste | 0.421328 | 0.720000 |
+| Blend20/Tier2 80 | 5-material | hazardous_cigarette | 0.111058 | 0.361538 |
+| Blend20/Tier2 80 | 5-material | plastic_waste | 0.375463 | 0.669388 |
+| Blend20/Tier2 80 | 5-material | metal_waste | 0.656436 | 0.657143 |
+| Blend20/Tier2 80 | 5-material | styrofoam_waste | 0.148515 | 0.142857 |
+| Blend20/Tier2 80 | 5-material | paper_waste | 0.421824 | 0.680000 |
+| Blend20/Tier2 80 | 4-material | hazardous_cigarette | 0.111058 | 0.361538 |
+| Blend20/Tier2 80 | 4-material | plastic_polymer_waste | 0.410785 | 0.687500 |
+| Blend20/Tier2 80 | 4-material | metal_waste | 0.656436 | 0.657143 |
+| Blend20/Tier2 80 | 4-material | paper_waste | 0.421824 | 0.680000 |
+| D074champion50/Tier2 50 | 5-material | hazardous_cigarette | 0.111849 | 0.380769 |
+| D074champion50/Tier2 50 | 5-material | plastic_waste | 0.374480 | 0.673469 |
+| D074champion50/Tier2 50 | 5-material | metal_waste | 0.656436 | 0.657143 |
+| D074champion50/Tier2 50 | 5-material | styrofoam_waste | 0.148515 | 0.142857 |
+| D074champion50/Tier2 50 | 5-material | paper_waste | 0.422343 | 0.675000 |
+| D074champion50/Tier2 50 | 4-material | hazardous_cigarette | 0.111849 | 0.380769 |
+| D074champion50/Tier2 50 | 4-material | plastic_polymer_waste | 0.413199 | 0.691071 |
+| D074champion50/Tier2 50 | 4-material | metal_waste | 0.656436 | 0.657143 |
+| D074champion50/Tier2 50 | 4-material | paper_waste | 0.422343 | 0.675000 |
+
+[Full81-case JSON](../runs/training/stage5-tier2-6d4b34c076714947ae9bbfe8e3521c14/material-hierarchy/summary.json) and [CSV](../runs/training/stage5-tier2-6d4b34c076714947ae9bbfe8e3521c14/material-hierarchy/summary.csv) retain every per-class/material AP/AR100 and per-GT coverage result across all views/NMS settings. No photos or model execution were used in this diagnostic stage.

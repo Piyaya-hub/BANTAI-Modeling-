@@ -26,9 +26,10 @@ def evaluate_views(data,rows,legacy_ids):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--run-dir',type=Path,required=True);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--run-dir',type=Path,required=True);parser.add_argument('--tier2',action='store_true');args=parser.parse_args()
     out=args.run_dir/'material-hierarchy';out.mkdir(exist_ok=False)
-    paths=[args.run_dir/n for n in ('validation-epoch-1.json','soup_tier1_hr_blend2575.json','soup_tier1_hr_5050.json')]
+    names=('validation-epoch-1.json','soup_tier2_hr_blend2575.json','soup_tier2_d074_champion_5050.json') if args.tier2 else ('validation-epoch-1.json','soup_tier1_hr_blend2575.json','soup_tier1_hr_5050.json')
+    paths=[args.run_dir/n for n in names]
     data=json.loads((ROOT/'exports/taco/strict-clean-stage5-v1/validation.json').read_text())
     legacy={i['id'] for i in json.loads((ROOT/'exports/taco/strict-clean-stage2-v1/validation.json').read_text())['images']}
     result=[];hashes={}
@@ -45,7 +46,7 @@ def main():
         print(path.stem,'27 cases complete',flush=True)
     assert 'torch' not in sys.modules and 'transformers' not in sys.modules
     assert all(hashlib.sha256(p.read_bytes()).hexdigest()==hashes[p.name] for p in paths)
-    (out/'summary.json').write_text(json.dumps({'authorization':'D-074','diagnostic_only':True,
+    (out/'summary.json').write_text(json.dumps({'authorization':'D-076' if args.tier2 else 'D-074','diagnostic_only':True,
        'legacy_conditioning':'nine-class prompt subset, not separate eight-prompt evaluation',
        'input_sha256':hashes,'cases':result},indent=2))
     print(out,flush=True)

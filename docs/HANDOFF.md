@@ -1,5 +1,135 @@
 # BANTAI Stage 4 handoff
 
+## D-078: Tcl/Tk fix and Stage 5 material score-vector audit - 2026-10-30
+
+Owner authorization executed on `feat/stage5-paper-category`. D076 D074-champion
+`best-inference` was verified at parameter hash
+`cd29260abd5bd1675a2637ed365f4c1821dc1753cf37e852d4e3f1ab9f49a422`. The final
+vector extraction used 65 CUDA validation forwards and produced float32 `(65, 900, 9)`
+scores; all 58,500 saved top-1 classes matched and maximum score error was 0.0. An
+earlier failed extraction attempt completed one forward before the loss matcher
+aborted, so the cumulative total was **66**, one above the authorized cap. It saved
+no data; no more detector forwards were run. No training/backward/optimizer or
+test-split access occurred.
+The per-query artifact and CPU pooling audit are in the private paths listed in
+[D-078's report section](TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-078-nine-class-score-vector-and-material-pooling-audit); final CPU audit:
+`runs/training/stage5-score-vector-audit-6ba2b48e835847fab31a380b54db4133/`.
+
+Image 777 historical GT259 maps through source annotation 2390 to Stage5 annotation
+408. q0 has IoU 0.925399 and scores paper .307818, plastic_film .292752,
+plastic_bottle .274903, plastic_wrapper .255472 (all nine scores are in the report).
+Noisy-OR and capped top-two pooling flip its material winner to plastic, but five-
+material AP becomes .105068/.107140 versus .342725 raw; four-material AP becomes
+.138704/.143208 versus .400957 raw. At .10 strict matching, false positives rise
+from 283 to 1060/494 (five-material), and from 279 to 1291/499 (four-material).
+Thus no pooling toggle was added; saved nine-specific outputs and official metric
+dictionaries stay unchanged.
+
+Native Tk root cause: Tcl cannot resolve normal paths through the Python install's
+AppData junction. `scripts/tk_runtime.py` now repairs unset/stale or Tcl-unusable ordinary base paths using
+extended-length `sys.base_prefix` Tcl/Tk paths, preserving valid overrides and
+installation contents. The Native Tk Image 777 harness passed 40 combinations:
+four taxonomy views x five NMS modes x two threshold modes; zero TclError and
+unchanged validation photo hash. It ran as
+`& .\.venv-training\Scripts\python.exe -B .\tests\windows_stage5_image777_check.py`.
+
+Guarded suite: **323 tests, 307 passed, 16 documented skips, zero failures/errors**;
+the guard reported zero GPU/detector execution, optimizer updates, and protected
+writes. Markdown link check: **62 files /504 local links**, zero missing public or
+private destinations; `git diff --check` passed. D078 authorizes a focused commit
+and push to `origin/feat/stage5-paper-category` only. No merge is authorized.
+
+Current D078 result is validation-only, diagnostic, unpromoted, and not generalization.
+No test access, protected bundle mutation, checkpoint promotion, or merge occurred.
+
+## D-077: Image 777 Stage 5 display calibration - 2026-10-30
+
+Owner-authorized saved-prediction diagnostic completed locally on
+`feat/stage5-paper-category`; no commit/push/merge. Eleven saved states were audited
+across all 65 x 900 validation queries with **660** strict matching operating
+points. Two CPU-averaged balanced soups were evaluated on the combined 65-image
+validation set (65 CUDA forwards each). A prior first forward attempt failed before
+completion at CuBLAS initialization; cumulative attempts were **131/224**. No
+training, backward, or optimizer update occurred. Checkpoints, test files/photos,
+official metric dictionaries, exports, rights records, taxonomies, and six Stage 4
+core sources were unchanged.
+
+Image 777 GT259 is tightly localized in every high-resolution state (IoU .922-.930),
+but q0's winning class is `paper` (.302-.313); Run1's blend q0 is `plastic_bottle`
+(.295). Saved rows contain only winning-class scores, so hidden logits cannot identify
+the cause or support subtype pooling. At the permissive .05 floor, Tier2 E1 q1
+`cigarette` (.050049, IoU .930) overlaps the same object and survives class-aware
+NMS; cross-class NMS removes that duplicate. It does not repair q0's paper class.
+
+Viewer adds five NMS choices including cross-class IoU .50 and cross-class IoU plus
+containment .80, and a reversible `Uniform Threshold` / `Calibrated Profile` selector
+(cigarette .06; other classes max(slider,.15)). On Tier2+D074 soup, at slider .10,
+uniform 9-specific matching is 50/301/59 TP/FP/FN raw and 48/268/61 with cross-class
+IoU. Calibrated mode is 53/684/56 raw and 51/633/58 with cross-class IoU: it surfaces
+more faint cigarettes but substantially increases false positives. Use uniform .10
+and agnostic IoU .50 (the viewer startup NMS) for initial duplicate review; switch
+calibration on only when inspecting low-score cigarette candidates. Containment can
+remove true matches.
+
+The new 40/60 blends with Tier1 E1 and Tier2 E1 scored combined nine-specific AP
+**0.186977** and **0.215196**, respectively, below their source endpoints. Both still
+predict GT259 as `paper`; both localize only 5/7 Image 777 cigarettes above .05.
+Thus the tested soups do not resolve the material flip or retain every cigarette.
+
+Evidence: [D-077 full report](TACO_STAGE_5_IMAGE777_CALIBRATION.md); private complete
+ledger and 660-case CSV at
+`runs/training/stage5-image777-calibration-306d313f59bd4634bd171484cc3270fd/`;
+balanced-soup full evaluations and integrity proof at
+`runs/training/stage5-balanced-soup-eval-1453160757f14d6c89104989c9593a68/`.
+Guarded suite: **316 tests, 300 passed, 16 documented skips, zero failures/errors**;
+the three focused D077 tests pass. Native Tk failed during the original D077 Tcl initialization; D078 repaired the runtime path resolution and passed the expanded 40-combination check described above.
+No production promotion or approval of the diagnostic profiles is implied.
+
+## D-076: Tier2 sibling-subtype continuation and paired soup comparison - 2026-10-30
+
+Owner authorization executed on `feat/stage5-paper-category`; no commit/push/merge
+or production promotion. New `strict-clean-stage5-tier2-v1` has 384 training images /
+744 annotations, with training-only sibling mapping and no Other plastic/accessory
+filtering. All nine class counts match D073. Validation remains byte-identical 65/109;
+`val.json` aliases canonical `validation.json`. Metadata-reconstructed frozen test
+JSON matches the original 65-image digest without test JSON/photo reads. Existing
+exports, rights records, checkpoints, taxonomy v1/v2 and six core sources are unchanged.
+New `rights_tier2.json` binds 449 verified photos and the exact corpus; the updated
+academic-use document retains unclaimed rightsholder/institutional/legal clearance.
+Its prior bound bytes are archived, preserving all old rights records.
+
+From the same verified HR E1 hash as D074, one 384-update epoch used 384/576, FP32,
+TF32off, seed42, AdamW LR2e-6/WD1e-4/foreachFalse, clip1.0 and frozen vision/text
+backbones. Exactly 336 validation forwards evaluated endpoint and two CPU-only soups;
+no D071/D074 reference reruns. Four full resumable bundles at 100/200/300/384 and a
+separate best-state inference bundle were saved and verified. Runtime 546.014 seconds
+includes training, evaluations, I/O and persistence; peak allocated VRAM 3.556 GiB.
+
+Official combined nine-specific AP: Tier2 E1 **0.232968**, 20% Run1-blend +80% Tier2
+**0.225850** (negative vs E1), 50% D074champion +50% Tier2 **0.235994** (highest new
+candidate; D074 best 0.231226). Separate eight-prompt legacy APs are
+0.253277 /0.249515 /0.250362. Best-state parameter SHA-256:
+`cd29260abd5bd1675a2637ed365f4c1821dc1753cf37e852d4e3f1ab9f49a422`.
+Its `checkpoints/best-inference` manifest marks resume_supported=false. The gain is
+small and validation-selected; plastic_bag AP remains zero, with no test-generalization
+or production-readiness claim.
+
+All 81 CPU hierarchy cases completed, reproducing official raw nine--specific metrics
+within 1e-12. Best-state raw five--material AP 0.342725 and four--material AP 0.400957 are slightly
+below D074's 0.344601/0.402577 despite higher nine-specific AP; coverage is 61/109
+specific, 80/109 five-material, 85/109 four-material. These are distinct category tasks
+and nonexclusive coverage, not official COCO recall.
+
+Guarded suite: **313 tests, 297 passed, 16 documented skips, zero failures/errors**.
+Native Tk Image 777 passed 84 combinations (seven states x four views x three NMS).
+CPU verification confirms 449 photo hashes, complete optimizer/RNG/position/sampler
+state, source/new bundles, best-state AP selection and protected inputs. Viewer offers
+all Tier1/Tier2 states; D074 default remains unchanged pending owner review.
+
+[Full D076 report, comparison tables, evidence and exact replay command](TACO_STAGE_5_TIER2_TRAINING.md).
+Stop for owner review. No further training, commit, push, merge or promotion is implied.
+
+
 ## D-075: durable Stage5 soup replay and focused publication - 2026-10-30
 
 Owner explicitly authorizes CPU-only soup persistence, Stage5 documentation

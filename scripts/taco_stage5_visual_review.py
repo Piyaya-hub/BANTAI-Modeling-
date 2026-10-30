@@ -25,8 +25,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.configuration import strict_load
+from scripts.tk_runtime import configure_tcl_tk_environment
 from scripts.taco_training_labels_v2 import LABELS
 from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, COLORS, map_row, prepare_rows)
+from scripts.taco_stage5_display_profiles import (NMS_CHOICES, THRESHOLD_CHOICES,
+                                                   visible_rows)
 
 # 9 distinct high-contrast colors for waste categories
 CLASS_COLORS = [
@@ -52,6 +55,14 @@ def discover_tier1_run(explicit=None, root=ROOT):
     candidate=Path(root)/DEFAULT_TIER1_RUN
     required=('report.json','validation-epoch-1.json','soup_tier1_hr_blend2575.json','soup_tier1_hr_5050.json')
     return candidate if all((candidate/name).is_file() for name in required) else None
+
+
+def discover_tier2_run(explicit=None, root=ROOT):
+    if explicit is not None:return Path(explicit)
+    required=('report.json','validation-epoch-1.json','soup_tier2_hr_blend2575.json','soup_tier2_d074_champion_5050.json')
+    candidates=[p for p in (Path(root)/'runs/training').glob('stage5-tier2-*')
+                if all((p/name).is_file() for name in required)]
+    return max(candidates,key=lambda p:(p/'report.json').stat().st_mtime) if candidates else None
 
 
 def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float = 0.80):
@@ -95,7 +106,7 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
     return kept
 
 
-def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None):
+def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None):
     val_json_path = dataset_dir / "validation.json"
     val_data = strict_load(val_json_path)
 
@@ -154,6 +165,20 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
                 raise ValueError("Tier1 saved queries differ from frozen validation")
             preds_by_state[label] = defaultdict(list)
             for row in rows: preds_by_state[label][row['image_id']].append(row)
+
+    if tier2_run_dir is not None:
+        report=strict_load(tier2_run_dir/'report.json')
+        if not report.get('completed') or report.get('training_updates')!=384 or report.get('validation_forwards')!=336:
+            raise ValueError('Tier2 replay requires completed D076 bounds')
+        for label,filename in (
+            ('Tier 2 E1 (384/576)','validation-epoch-1.json'),
+            ('Tier 2 + blend2575 soup','soup_tier2_hr_blend2575.json'),
+            ('Tier 2 + D074 champion soup','soup_tier2_d074_champion_5050.json')):
+            rows=strict_load(tier2_run_dir/filename)['raw_queries']
+            if len(rows)!=65*900 or {r['image_id'] for r in rows}!=set(images):
+                raise ValueError('Tier2 saved queries differ from frozen validation')
+            preds_by_state[label]=defaultdict(list)
+            for row in rows:preds_by_state[label][row['image_id']].append(row)
 
     # Sort predictions by score descending
     for state in preds_by_state:
@@ -222,6 +247,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
 class Stage5ViewerGUI:
     def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 15):
+        configure_tcl_tk_environment()
         import tkinter as tk
         from tkinter import ttk
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -279,10 +305,9 @@ class Stage5ViewerGUI:
         topk_spin.pack(side="left", padx=2)
         topk_spin.bind("<Return>", lambda e: self.update_plots())
 
-        self.nms_var = tk.StringVar(value='class_aware_iou_0.50_containment_0.80')
+        self.nms_var = tk.StringVar(value='agnostic_iou_0.50')
         nms_cb = ttk.Combobox(ctrl_frame, textvariable=self.nms_var,
-            values=('raw','class_aware_iou_0.50','class_aware_iou_0.50_containment_0.80'),
-            state="readonly", width=24)
+            values=NMS_CHOICES, state="readonly", width=34)
         nms_cb.pack(side="left", padx=4)
         nms_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
 
@@ -302,6 +327,12 @@ class Stage5ViewerGUI:
                               state="readonly", width=38)
         state_cb.pack(side="left")
         state_cb.bind("<<ComboboxSelected>>", lambda e:self.update_plots())
+        ttk.Label(state_frame, text="Threshold Mode:").pack(side="left", padx=(14, 2))
+        self.threshold_mode_var = tk.StringVar(value=THRESHOLD_CHOICES[0])
+        threshold_cb = ttk.Combobox(state_frame, textvariable=self.threshold_mode_var,
+                                    values=THRESHOLD_CHOICES, state="readonly", width=43)
+        threshold_cb.pack(side="left", padx=4)
+        threshold_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
         self.legend_frame = ttk.Frame(self.root)
         self.legend_frame.pack(side="top", fill="x")
 
@@ -475,8 +506,8 @@ class Stage5ViewerGUI:
 
         # Apply score threshold and optional containment NMS
         def filter_preds(plist):
-            mode = self.nms_var.get()
-            return prepare_rows(plist, scheme, mode, thresh, hierarchical)[:top_k]
+            return visible_rows(plist, scheme, self.nms_var.get(), thresh,
+                                self.threshold_mode_var.get(), hierarchical)[:top_k]
 
         base_filtered = filter_preds(base_preds)
         run1_filtered = filter_preds(run1_preds)
@@ -485,13 +516,17 @@ class Stage5ViewerGUI:
         draw_panel(self.axes["GT"], self.current_pil, gt_boxes, is_gt=True)
         self.axes["GT"].set_title(f"Ground Truth ({len(gt_boxes)} objects)", fontsize=11, weight="bold")
 
-        draw_panel(self.axes["Baseline"], self.current_pil, base_filtered, is_gt=False, score_thresh=thresh, top_k=top_k)
-        self.axes["Baseline"].set_title(f"Warm-Start Baseline (@{thresh:.2f})", fontsize=11)
+        # Rows were already filtered by the selected uniform/calibrated profile.
+        # A second uniform filter here would silently hide 0.06-0.10 cigarettes.
+        draw_panel(self.axes["Baseline"], self.current_pil, base_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
+        threshold_caption = (f"uniform >= {thresh:.2f}" if self.threshold_mode_var.get() == THRESHOLD_CHOICES[0]
+                             else f"cigarette >= 0.06 / macro >= {max(thresh, .15):.2f}")
+        self.axes["Baseline"].set_title(f"Warm-Start Baseline ({threshold_caption})", fontsize=11)
 
-        draw_panel(self.axes["Stage 5 (256/384)"], self.current_pil, run1_filtered, is_gt=False, score_thresh=thresh, top_k=top_k)
-        self.axes["Stage 5 (256/384)"].set_title(f"Stage 5 Run 1 (256/384; diagnostic view)", fontsize=11)
+        draw_panel(self.axes["Stage 5 (256/384)"], self.current_pil, run1_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
+        self.axes["Stage 5 (256/384)"].set_title(f"Stage 5 Run 1 (256/384; {threshold_caption})", fontsize=11)
 
-        draw_panel(self.axes["Stage 5 High-Res (384/576)"], self.current_pil, highres_filtered, is_gt=False, score_thresh=thresh, top_k=top_k)
+        draw_panel(self.axes["Stage 5 High-Res (384/576)"], self.current_pil, highres_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
         self.axes["Stage 5 High-Res (384/576)"].set_title(self.review_state_var.get(), fontsize=11, color="#005500", weight="bold")
 
         self.canvas.draw_idle()
@@ -520,11 +555,11 @@ class Stage5ViewerGUI:
         # Update status bar
         gt_types = [a["display_label"] for a in gt_boxes]
         hr_types = [f"{p['display_label']}({p['score']:.2f})" for p in highres_filtered]
-        nms_str = " | NMS: " + self.nms_var.get()
+        nms_str = " | NMS: " + self.nms_var.get() + " | " + self.threshold_mode_var.get()
         self.status_var.set(
             f"Image ID: {img_id} [{self.current_pil.size[0]}x{self.current_pil.size[1]}]{nms_str} | "
             f"GT: {len(gt_boxes)} {gt_types} | "
-            f"High-Res Detections (>= {thresh:.2f}, top-{top_k}): {len(highres_filtered)} {hr_types}"
+            f"High-Res Detections ({threshold_caption}, top-{top_k}): {len(highres_filtered)} {hr_types}"
         )
 
     def run(self):
@@ -574,6 +609,7 @@ def main() -> int:
         help="Path to Stage 5 dataset export",
     )
     parser.add_argument("--tier1-run-dir", type=Path, default=None, help="Explicit Tier1 replay directory; auto-discovers the completed local D074 run by default")
+    parser.add_argument("--tier2-run-dir",type=Path,default=None,help="Explicit Tier2 run, otherwise newest complete local Tier2 run")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
@@ -585,6 +621,10 @@ def main() -> int:
         return 1
 
     args.tier1_run_dir = discover_tier1_run(args.tier1_run_dir)
+    args.tier2_run_dir = discover_tier2_run(args.tier2_run_dir)
+    if args.tier2_run_dir is not None and not args.tier2_run_dir.is_dir():
+        print("ERROR: Explicit Tier2 replay directory is missing",file=sys.stderr)
+        return 1
     if args.tier1_run_dir is not None and not args.tier1_run_dir.is_dir():
         print(f"ERROR: Explicit Tier1 saved replay directory is missing: {args.tier1_run_dir}", file=sys.stderr)
         return 1
@@ -592,7 +632,7 @@ def main() -> int:
         print("ERROR: Saved review needs the private validation export; no model will be run.", file=sys.stderr)
         return 1
     try:
-        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir)
+        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir)
     except (OSError, ValueError, KeyError) as exc:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1
