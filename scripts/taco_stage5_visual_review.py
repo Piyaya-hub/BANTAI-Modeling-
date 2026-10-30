@@ -30,6 +30,7 @@ from scripts.taco_training_labels_v2 import LABELS
 from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, COLORS, map_row, prepare_rows)
 from scripts.taco_stage5_display_profiles import (NMS_CHOICES, THRESHOLD_CHOICES,
                                                    visible_rows)
+from scripts.taco_stage5_consensus_tiebreak import apply_to_query_rows
 
 # 9 distinct high-contrast colors for waste categories
 CLASS_COLORS = [
@@ -46,6 +47,8 @@ CLASS_COLORS = [
 
 
 DEFAULT_TIER1_RUN = Path("runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337")
+DEFAULT_SCORE_VECTOR_DIR = Path("runs/training/stage5-score-vectors-5619e219fa264287aa0564c4565a2472")
+CONSENSUS_STATE = "Tier 2 + D074 champion soup"
 
 
 def discover_tier1_run(explicit=None, root=ROOT):
@@ -63,6 +66,40 @@ def discover_tier2_run(explicit=None, root=ROOT):
     candidates=[p for p in (Path(root)/'runs/training').glob('stage5-tier2-*')
                 if all((p/name).is_file() for name in required)]
     return max(candidates,key=lambda p:(p/'report.json').stat().st_mtime) if candidates else None
+
+
+def load_consensus_score_vectors(tier2_run_dir, images, root=ROOT):
+    """Load only the verified D078 validation vectors matching the saved state."""
+    if tier2_run_dir is None:
+        return None
+    import hashlib
+    import numpy as np
+    vector_dir = Path(root) / DEFAULT_SCORE_VECTOR_DIR
+    manifest_path = vector_dir / "manifest.json"
+    vector_path = vector_dir / "query-scores.npz"
+    saved_path = Path(tier2_run_dir) / "soup_tier2_d074_champion_5050.json"
+    if not all(path.is_file() for path in (manifest_path, vector_path, saved_path)):
+        return None
+    manifest = strict_load(manifest_path)
+    sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+    if (manifest.get("state") != "soup_tier2_d074_champion_5050"
+            or manifest.get("shape") != [65, 900, 9]
+            or manifest.get("parameter_sha256") != "cd29260abd5bd1675a2637ed365f4c1821dc1753cf37e852d4e3f1ab9f49a422"
+            or manifest.get("artifact") != vector_path.name
+            or manifest.get("artifact_sha256") != sha(vector_path)
+            or manifest.get("saved_evaluation_sha256") != sha(saved_path)):
+        return None
+    with np.load(vector_path, allow_pickle=False) as archive:
+        image_ids = archive["image_ids"].tolist()
+        scores = archive["scores"].copy()
+    if (scores.shape != (65, 900, 9) or scores.dtype != np.float32
+            or set(image_ids) != set(images)):
+        return None
+    return {"state": CONSENSUS_STATE,
+            "scores_by_image": {image_id: scores[index]
+                                for index, image_id in enumerate(image_ids)},
+            "parameter_sha256": manifest["parameter_sha256"],
+            "artifact_sha256": manifest["artifact_sha256"]}
 
 
 def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float = 0.80):
@@ -185,11 +222,13 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
         for img_id in preds_by_state[state]:
             preds_by_state[state][img_id].sort(key=lambda x: -x["score"])
 
+    consensus = load_consensus_score_vectors(tier2_run_dir, images, ROOT)
     return {
         "images": images,
         "dataset_root": Path(val_data["info"]["image_root"]).resolve(),
         "ground_truth": annotations_by_img,
         "predictions": preds_by_state,
+        "consensus_score_vectors": consensus,
         "metrics": {
             "Baseline": baseline_data.get("combined_65", {}),
             "Stage 5 (256/384)": ep2_data.get("combined_65", {}),
@@ -257,6 +296,7 @@ class Stage5ViewerGUI:
         self.images = data["images"]
         self.gt = data["ground_truth"]
         self.preds = data["predictions"]
+        self.consensus_vectors = data.get("consensus_score_vectors")
         self.dataset_root = data["dataset_root"]
 
         # Identify which images have paper
@@ -312,7 +352,7 @@ class Stage5ViewerGUI:
         nms_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
 
         ttk.Label(ctrl_frame, text="Taxonomy View:").pack(side="left", padx=4)
-        self.taxonomy_var = tk.StringVar(value=VIEWS[2])
+        self.taxonomy_var = tk.StringVar(value=VIEWS[0])
         taxonomy_cb = ttk.Combobox(ctrl_frame, textvariable=self.taxonomy_var,
                                   values=VIEWS, state="readonly", width=38)
         taxonomy_cb.pack(side="left")
@@ -321,12 +361,19 @@ class Stage5ViewerGUI:
         state_frame.pack(side="top", fill="x")
         ttk.Label(state_frame, text="Fourth panel state:").pack(side="left", padx=6)
         choices=[n for n in self.preds if n not in ("Baseline", "Stage 5 (256/384)")]
-        initial="Tier 1 + blend2575 soup" if "Tier 1 + blend2575 soup" in choices else choices[0]
+        initial=(CONSENSUS_STATE if self.consensus_vectors and CONSENSUS_STATE in choices else
+                 "Tier 1 + blend2575 soup" if "Tier 1 + blend2575 soup" in choices else choices[0])
         self.review_state_var=tk.StringVar(value=initial)
         state_cb=ttk.Combobox(state_frame, textvariable=self.review_state_var, values=choices,
                               state="readonly", width=38)
         state_cb.pack(side="left")
         state_cb.bind("<<ComboboxSelected>>", lambda e:self.update_plots())
+        self.consensus_var = tk.BooleanVar(value=bool(self.consensus_vectors))
+        self.consensus_check = ttk.Checkbutton(
+            state_frame, text="Score-preserving plastic consensus",
+            variable=self.consensus_var, command=self.update_plots,
+            state="normal" if self.consensus_vectors else "disabled")
+        self.consensus_check.pack(side="left", padx=8)
         ttk.Label(state_frame, text="Threshold Mode:").pack(side="left", padx=(14, 2))
         self.threshold_mode_var = tk.StringVar(value=THRESHOLD_CHOICES[0])
         threshold_cb = ttk.Combobox(state_frame, textvariable=self.threshold_mode_var,
@@ -503,6 +550,16 @@ class Stage5ViewerGUI:
         base_preds = self.preds["Baseline"].get(img_id, [])
         run1_preds = self.preds["Stage 5 (256/384)"].get(img_id, [])
         highres_preds = self.preds[self.review_state_var.get()].get(img_id, [])
+
+        use_consensus = (self.consensus_var.get() and self.consensus_vectors is not None
+                         and self.review_state_var.get() == CONSENSUS_STATE
+                         and scheme == "bantai-5-category"
+                         and self.taxonomy_var.get() != VIEWS[2])
+        if use_consensus:
+            highres_preds, _ = apply_to_query_rows(
+                highres_preds, self.consensus_vectors["scores_by_image"][img_id],
+                delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                confidence_mode="top1_score")
 
         # Apply score threshold and optional containment NMS
         def filter_preds(plist):

@@ -60,7 +60,7 @@ class Tier1DiagnosticsTests(unittest.TestCase):
           'annotations':[{'id':1,'image_id':1,'category_id':6,'bbox':[0,0,50,50],'area':2500,'iscrowd':0}]}
         rows=[{'query_id':0,'image_id':1,'category_id':1,'score':.9,'bbox':[0,0,50,50]},
               {'query_id':1,'image_id':1,'category_id':6,'score':.8,'bbox':[0,0,50,50]}]
-        cases=list(evaluate_views(data,rows,{1}));self.assertEqual(len(cases),27)
+        cases=list(evaluate_views(data,rows,{1}));self.assertEqual(len(cases),36)
         for c in cases:
             if c['view']=='combined_65':
                 direct=evaluate_case(data,rows,c['taxonomy'],c['nms'])

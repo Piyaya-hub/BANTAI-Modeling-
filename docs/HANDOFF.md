@@ -1,5 +1,36 @@
 # BANTAI Stage 4 handoff
 
+## D-079: Canonical five-category view and score-preserving consensus - 2026-10-30
+
+Owner authorization was executed locally on `feat/stage5-paper-category`; no
+commit, push, or merge was performed. The viewer now defaults to the canonical
+BANTAI labels `Plastic`, `Paper`, `Organic`, `Metal`, and `Potentially Hazardous`.
+Organic is retained in the legend (green) with no TACO GT instances and null AP.
+Legacy `5-material` / `4-material`, 9-Specific, hierarchical, and
+Styrofoam-Separate views remain selectable.
+
+Using only D-078's saved CPU-readable `(65,900,9)` vectors, the selected rule
+(`delta=.016`, three plastic subtype scores >=.20, preserve top1 score) changes
+one of 58,500 queries. Image 777 q0/GT259 becomes `plastic_film` / Plastic while
+retaining score **0.3078179955482483**. Diagnostic 65-image 9-Specific AP changes
+from **0.235994** to **0.236283**; canonical BANTAI 5-Category AP changes from
+**0.400957** to **0.405106**. At .05/.10/.15 strict thresholds, 9-Specific
+TP/FP/FN are unchanged (61/1445/48, 50/301/59, 43/125/66); BANTAI changes from
+85/1421/24, 72/279/37, 63/105/46 to 86/1420/23, 73/278/36, 64/104/45. These are
+saved-prediction diagnostics; official saved nine-class metrics are not modified.
+The GUI tie-break toggle is reversible, only available when the D-078 vectors
+verify locally, and does not apply in 9-Specific view. Full evidence and all rule
+variants are in [the Image 777 calibration report](TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-079-canonical-bantai-categories-and-score-preserving-subtype-consensus).
+
+Verification: **323 guarded tests: 307 passed, 16 documented skips, zero failures
+or errors**; no GPU/detector calls, updates, or protected writes. Native Tk Image
+777 passed all **50** combinations across five taxonomy views, five NMS modes,
+and two threshold modes, plus consensus display assertions; zero TclError and the
+validation-photo hash was unchanged. The new audit outputs are private under
+`runs/training/stage5-score-consensus-audit-46bbdd13df54420bbf5e4d5f16b439af/`;
+pre-existing checkpoints, exports, rights, taxonomies, and protected sources were
+not changed. Next action: owner review; no publication action is authorized.
+
 ## D-078: Tcl/Tk fix and Stage 5 material score-vector audit - 2026-10-30
 
 Owner authorization executed on `feat/stage5-paper-category`. D076 D074-champion

@@ -20,7 +20,7 @@ import tkinter as tk
 from scripts.taco_stage5_display_profiles import NMS_CHOICES, THRESHOLD_CHOICES
 from scripts.taco_stage5_material_hierarchy import VIEWS
 from scripts.taco_stage5_visual_review import (
-    DEFAULT_TIER1_RUN, discover_tier2_run, load_review_data, Stage5ViewerGUI,
+    CONSENSUS_STATE, DEFAULT_TIER1_RUN, discover_tier2_run, load_review_data, Stage5ViewerGUI,
 )
 
 run1 = ROOT / "runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4"
@@ -38,6 +38,11 @@ root = app.root
 root.withdraw()
 root.update()
 assert app.current_image_id == 777
+assert app.taxonomy_var.get() == VIEWS[0]
+assert app.consensus_vectors is not None
+assert app.review_state_var.get() == CONSENSUS_STATE
+assert [child.cget("text") for child in app.legend_frame.winfo_children()] == [
+    "Plastic", "Paper", "Organic", "Metal", "Potentially Hazardous"]
 assert app.nms_var.get() in NMS_CHOICES
 assert app.threshold_mode_var.get() == THRESHOLD_CHOICES[0]
 assert set(app.preds) >= {"Tier 1 High-Res (384/576)", "Tier 2 E1 (384/576)"}
@@ -51,6 +56,44 @@ root.update()
 table = app.tables["Stage 5 High-Res (384/576)"]
 uniform_queries = {table.item(item, "values")[0] for item in table.get_children()}
 assert "q58" not in uniform_queries, "0.070 cigarette should be hidden by uniform 0.10"
+
+# Verify the score-preserving consensus affects only the matching saved champion
+# state and only in general/hierarchical display views.
+app.review_state_var.set(CONSENSUS_STATE)
+app.taxonomy_var.set(VIEWS[0])
+app.nms_var.set("raw")
+app.consensus_var.set(True)
+app.update_plots()
+root.update()
+table = app.tables["Stage 5 High-Res (384/576)"]
+q0 = next(table.item(item, "values") for item in table.get_children()
+          if table.item(item, "values")[0] == "q0")
+assert q0[1] == "Plastic" and q0[2] == "plastic_film"
+assert q0[4] == "0.3078", q0
+app.taxonomy_var.set(VIEWS[3])
+app.update_plots()
+root.update()
+q0 = next(table.item(item, "values") for item in table.get_children()
+          if table.item(item, "values")[0] == "q0")
+assert q0[1] == "Plastic [plastic_film]", q0
+app.taxonomy_var.set(VIEWS[2])
+app.update_plots()
+root.update()
+q0 = next(table.item(item, "values") for item in table.get_children()
+          if table.item(item, "values")[0] == "q0")
+assert q0[1] == "paper", q0
+app.taxonomy_var.set(VIEWS[0])
+app.consensus_var.set(False)
+app.update_plots()
+root.update()
+q0 = next(table.item(item, "values") for item in table.get_children()
+          if table.item(item, "values")[0] == "q0")
+assert q0[1] == "Paper", q0
+app.consensus_var.set(True)
+app.update_plots()
+app.review_state_var.set("Tier 2 E1 (384/576)")
+app.update_plots()
+root.update()
 
 rendered = 0
 for taxonomy in VIEWS:
@@ -72,5 +115,6 @@ for taxonomy in VIEWS:
 
 assert hashlib.sha256(photo.read_bytes()).hexdigest() == digest
 root.destroy()
-print(f"Native Tk Image 777 passed: {rendered} taxonomy/NMS/threshold combinations; "
+print(f"Native Tk Image 777 passed: {rendered} taxonomy/NMS/threshold combinations "
+      "plus consensus toggle/view assertions; "
       f"Tcl/Tk libraries={configured}; Tier2 saved state, source photo hash unchanged.")

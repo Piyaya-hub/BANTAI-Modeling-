@@ -364,3 +364,56 @@ Python raises `TclError: Can't find a usable init.tcl` even though the Tcl/Tk fi
 present at the standard Python 3.11 path. The smoke therefore did not reach GUI
 assertions; it must be rerun after repairing the local Tcl/Tk runtime. This is not
 reported as a native GUI pass.
+
+## D-079: Canonical BANTAI categories and score-preserving subtype consensus
+
+D-079 revises the default general-material display to the owner's five BANTAI
+categories: `Plastic`, `Paper`, `Organic`, `Metal`, and `Potentially Hazardous`.
+Plastic combines TACO classes 1, 2, 3, 4, 6, and 7 (including styrofoam piece);
+Paper is class 8, Metal class 5, and Potentially Hazardous class 0 with
+`hazard_flag=True`. Organic remains visible in the legend in green (`#3cb44b`),
+but has no ground-truth class in this strict-clean TACO export. Its AP is null/n/a,
+not zero. Existing `5-material` and `4-material` code schemes remain available as
+legacy aliases/views. BANTAI 5-Category is now the GUI default; 9-Specific,
+Hierarchical, 4-Material Polymer, and Styrofoam-Separate remain selectable.
+
+The CPU-only consensus audit used the D-078 saved `(65, 900, 9)` vectors; it did
+not rerun a detector. Across deltas `.016`, `.020`, `.025`, both co-activation
+profiles, and both confidence policies, the preferred narrow rule was:
+`delta=.016`, at least **3** plastic subtype probabilities `>=.20`, and preserve
+the original winning scalar score (`top1_score`). It changed **1 of 58,500**
+queries: Image 777 q0/GT259 from Paper to `plastic_film` (shown as Plastic), while
+keeping score exactly **0.3078179955482483**. Among the other variants, the
+2-subtype `>=.25` rule changes q0 plus Image 998 q1 and slightly lowers AP. Larger
+deltas produced the same affected set as `.016`.
+
+| 65-image diagnostic | Raw saved winner | Consensus: `.016`, 3 subtypes `>=.20`, top1 score |
+| --- | ---: | ---: |
+| 9-Specific AP | 0.235994 | 0.236283 |
+| BANTAI 5-Category AP | 0.400957 | 0.405106 |
+| 9-Specific strict TP/FP/FN @ .05 | 61/1445/48 | 61/1445/48 |
+| 9-Specific strict TP/FP/FN @ .10 | 50/301/59 | 50/301/59 |
+| 9-Specific strict TP/FP/FN @ .15 | 43/125/66 | 43/125/66 |
+| BANTAI strict TP/FP/FN @ .05 | 85/1421/24 | 86/1420/23 |
+| BANTAI strict TP/FP/FN @ .10 | 72/279/37 | 73/278/36 |
+| BANTAI strict TP/FP/FN @ .15 | 63/105/46 | 64/104/45 |
+
+The companion CPU artifacts are in
+`runs/training/stage5-score-consensus-audit-46bbdd13df54420bbf5e4d5f16b439af/`.
+They record all 12 rule variants, class AP/AR, strict results, input hashes, and
+the q0 vector. The BANTAI AP change is a taxonomy remapping diagnostic, not a change
+to official saved nine-class COCO metrics. The GUI toggle is reversible, enabled
+when the matching D-078 vectors verify locally, applies only to the D-074 champion
+state in BANTAI or Hierarchical view, and remaps before class-aware NMS. It is off
+in 9-Specific view; without the private vectors the viewer retains ordinary saved
+labels and disables the toggle. No scalar score is increased.
+
+D-079 verification: the guarded suite ran **323 tests: 307 passed, 16 documented
+skips, zero failures/errors**. The guard reported zero GPU access, detector
+execution, optimizer updates, or protected-directory writes. Native Tk Image 777
+passed **50 combinations** (five taxonomy views x five NMS modes x two threshold
+profiles), plus assertions for default BANTAI view, q0's unchanged `.3078` score,
+Plastic / Plastic [plastic_film] display, raw Paper in 9-Specific, and the reversible
+toggle. The validation photo SHA-256 was unchanged; Tcl/Tk resolved through the
+extended-length Python 3.11 paths with zero `TclError`. No commit, push, or merge
+was performed.

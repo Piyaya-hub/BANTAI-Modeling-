@@ -107,8 +107,9 @@ class TestStage5Hierarchy(unittest.TestCase):
     def test_mapping_and_provenance(self):
         from scripts.taco_stage5_material_hierarchy import map_row
         expected = {'9-specific':tuple(range(9)), '5-material':(0,1,1,1,1,2,1,3,4),
-                    '4-material':(0,1,1,1,1,2,1,1,3)}
-        for scheme in ('9-specific','5-material','4-material'):
+                    '4-material':(0,1,1,1,1,2,1,1,3),
+                    'bantai-5-category':(4,0,0,0,0,3,0,0,1)}
+        for scheme in expected:
             for cid in range(9):
                 row={'category_id':cid,'query_id':7,'score':.123,'bbox':[1,2,3,4]}
                 mapped=map_row(row,scheme,True)
@@ -155,8 +156,10 @@ class TestStage5Hierarchy(unittest.TestCase):
         import inspect
         from scripts import taco_stage5_visual_review as viewer
         from scripts.taco_stage5_material_hierarchy import VIEWS, VIEW_SCHEMES
-        self.assertEqual(len(VIEWS),4)
-        self.assertEqual(VIEW_SCHEMES[VIEWS[3]],'5-material')
+        self.assertEqual(len(VIEWS),5)
+        self.assertEqual(VIEW_SCHEMES[VIEWS[0]],'bantai-5-category')
+        self.assertEqual(VIEW_SCHEMES[VIEWS[3]],'bantai-5-category')
+        self.assertEqual(VIEW_SCHEMES[VIEWS[4]],'5-material')
         source=inspect.getsource(viewer.Stage5ViewerGUI)
         for marker in ('taxonomy_var','visible_rows','specific_class','hazard_flag'):
             self.assertIn(marker,source)

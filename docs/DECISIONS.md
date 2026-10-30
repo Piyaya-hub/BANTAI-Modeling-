@@ -1,5 +1,32 @@
 # Decision register
 
+## D-079: Canonical BANTAI 5-category display and score-preserving consensus - 2026-10-30
+
+Owner-authorized local diagnostic completed on `feat/stage5-paper-category`;
+no commit, push, or merge. The default GUI taxonomy is `Plastic`, `Paper`,
+`Organic`, `Metal`, and `Potentially Hazardous`; class mapping, empty Organic AP,
+colors, and compatibility views are documented in the calibration report.
+
+The CPU-only audit used the D-078 saved `(65,900,9)` vectors. The selected
+paper-to-plastic subtype tie-break uses delta `.016`, at least three plastic
+subtype probabilities `>=.20`, and preserves the original scalar score. It
+changes 1/58,500 queries (Image777 q0, Paper -> `plastic_film`/Plastic), with
+unchanged score `0.3078179955482483`. Diagnostic combined-65 9-Specific AP is
+`.235994 -> .236283`; BANTAI 5-Category AP is `.400957 -> .405106`. Strict TP/FP/FN
+at `.05/.10/.15` are reported in the linked evidence; the 9-Specific values are
+unchanged, while BANTAI gains one TP at each threshold. This is display-level
+relabeling and diagnostic remapping, not model calibration, test generalization,
+or a change to official saved COCO metrics.
+
+The viewer toggle is reversible, defaults on only when verified matching local
+vectors are available, affects only the D-074 champion state in BANTAI general
+or hierarchical views, and is disabled in 9-Specific view. NMS follows remapping.
+The CPU rule audit and native Tk Image777 GUI matrix are qualified: **323 guarded
+tests, 307 passed, 16 documented skips, zero failures/errors; 50 GUI control
+combinations plus consensus assertions passed with zero TclError**. No GPU
+execution, optimizer updates, protected writes, commit, push, or merge occurred.
+See [D-079 audit and display evidence](TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-079-canonical-bantai-categories-and-score-preserving-subtype-consensus).
+
 ## D-078: Tcl/Tk runtime repair and champion query score vectors - 2026-10-30
 
 Owner authorization executed on `feat/stage5-paper-category`; publication is

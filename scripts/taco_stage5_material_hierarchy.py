@@ -5,22 +5,28 @@ from .taco_training_labels_v2 import LABELS
 from .taco_diagnostic_nms import diagnostic_nms, NMS_MODES
 from .taco_error_analysis import iou
 
-SCHEMES = ('9-specific', '5-material', '4-material')
+SCHEMES = ('9-specific', '5-material', '4-material', 'bantai-5-category')
 NAMES = {'9-specific': LABELS,
  '5-material': ('hazardous_cigarette','plastic_waste','metal_waste','styrofoam_waste','paper_waste'),
- '4-material': ('hazardous_cigarette','plastic_polymer_waste','metal_waste','paper_waste')}
+ '4-material': ('hazardous_cigarette','plastic_polymer_waste','metal_waste','paper_waste'),
+ 'bantai-5-category': ('Plastic','Paper','Organic','Metal','Potentially Hazardous')}
 MAPS = {'9-specific': tuple(range(9)), '5-material': (0,1,1,1,1,2,1,3,4),
-        '4-material': (0,1,1,1,1,2,1,1,3)}
+        '4-material': (0,1,1,1,1,2,1,1,3),
+        'bantai-5-category': (4,0,0,0,0,3,0,0,1)}
 MATERIALS = ('cellulose_acetate_filter','plastic','plastic','plastic','plastic','metal','plastic','polystyrene_foam','paper_fiber')
-VIEWS = ('5-Material General (Paper / Plastic / Metal / Styrofoam / Hazardous)',
+VIEWS = ('BANTAI 5-Category (Plastic / Paper / Organic / Metal / Potentially Hazardous)',
  '4-Material Polymer (Paper / Plastic+Polymer / Metal / Hazardous)',
- '9-Specific (Subtype Only)', 'Hierarchical (General [Subtype])')
-VIEW_SCHEMES = dict(zip(VIEWS, ('5-material','4-material','9-specific','5-material')))
+ '9-Specific (Subtype Only)', 'Hierarchical (Category [Subtype])',
+ 'Styrofoam-Separate (Legacy 5-Material)')
+VIEW_SCHEMES = dict(zip(VIEWS, ('bantai-5-category','4-material','9-specific',
+                                'bantai-5-category','5-material')))
 MODES = dict(zip(('raw','class_aware_iou_0.50','class_aware_iou_0.50_containment_0.80'),
                  (NMS_MODES[0],NMS_MODES[2],NMS_MODES[4])))
 COLORS = {'hazardous_cigarette':'#e6194B','plastic_waste':'#4363d8',
  'plastic_polymer_waste':'#4363d8','metal_waste':'#911eb4',
- 'styrofoam_waste':'#f032e6','paper_waste':'#808000'}
+ 'styrofoam_waste':'#f032e6','paper_waste':'#808000',
+ 'Plastic':'#4363d8','Paper':'#808000','Organic':'#3cb44b','Metal':'#911eb4',
+ 'Potentially Hazardous':'#e6194B'}
 
 
 def map_row(row, scheme='5-material', hierarchical=False):
