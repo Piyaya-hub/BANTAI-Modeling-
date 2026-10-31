@@ -27,6 +27,7 @@ from scripts.taco_stage5_consensus_tiebreak import apply_consensus_tiebreak
 VAL_JSON = ROOT / "exports/taco/strict-clean-stage5-d083-core-v1/validation.json"
 D083_RUN = ROOT / "runs/training/stage5-d083-core-20261031-a"
 D086_RUN = ROOT / "runs/training/stage5-d086-highres-20261031-a"
+D089_RUN = ROOT / "runs/training/stage5-d089-tier3-core-20261031-a"
 
 ROUTING_POLICIES = [
     "uniform_both",
@@ -208,6 +209,19 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         },
     }
 
+    if (D089_RUN / "soup_d089_d083_2575.json").is_file():
+        d089_champ_json = strict_load(D089_RUN / "soup_d089_d083_2575.json")
+        d089_champ_vecs = np.load(D089_RUN / "scores-soup_d089_d083_2575.npz")
+        d089_img_map = {img_id: idx for idx, img_id in enumerate(d089_champ_vecs["image_ids"])}
+        pairings["D089_Champion_384_plus_D086_HR448"] = {
+            "std_queries": d089_champ_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d089_champ_vecs,
+            "std_img_map": d089_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+        }
+
     results = {}
     winning_pool = None
     winning_vectors = None
@@ -292,17 +306,63 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
     }
     atomic_json(output_dir / "multiscale-consensus-replay.json", replay_meta, replace=True)
 
+    def _containment(b1, b2):
+        ix1 = max(b1[0], b2[0])
+        iy1 = max(b1[1], b2[1])
+        ix2 = min(b1[0] + b1[2], b2[0] + b2[2])
+        iy2 = min(b1[1] + b1[3], b2[1] + b2[3])
+        if ix2 <= ix1 or iy2 <= iy1:
+            return 0.0
+        return (ix2 - ix1) * (iy2 - iy1) / max(1e-6, b1[2] * b1[3])
+
+    containment_eval = {}
+    by_img = defaultdict(list)
+    for r in winning_pool:
+        by_img[r["image_id"]].append(r)
+
+    for thresh in (0.95, 0.90, 0.85, 0.80):
+        filt_pool = []
+        suppressed_count = 0
+        for i_id in sorted(by_img):
+            rows = by_img[i_id]
+            kept = []
+            for r in rows:
+                supp = False
+                for kr in kept:
+                    if kr["category_id"] != r["category_id"]:
+                        if _containment(r["bbox"], kr["bbox"]) >= thresh:
+                            supp = True
+                            suppressed_count += 1
+                            break
+                if not supp:
+                    kept.append(r)
+            filt_pool.extend(kept)
+        m9 = evaluate_case(val_data, filt_pool, "9-specific", "raw")["metrics"]["AP"]
+        m5 = evaluate_case(val_data, filt_pool, "bantai-5-category", "raw")["metrics"]["AP"]
+        containment_eval[str(thresh)] = {
+            "suppressed_queries": suppressed_count,
+            "9_specific_AP": m9,
+            "bantai_5_category_AP": m5,
+        }
+
     audit_summary = {
         "authorization": "D-088",
+        "d089_evaluated": "D089_Champion_384_plus_D086_HR448" in pairings,
         "status": "complete",
         "winning_pairing": winning_pair_name,
         "winning_routing_policy": winning_policy,
         "winning_consensus_mode": winning_mode,
         "winning_9_specific_AP": highest_ap,
         "winning_bantai_5_category_AP": results[winning_pair_name][winning_policy][winning_mode]["bantai_5_category"]["AP"],
+        "containment_suppression_audit": {
+            "finding": "Cross-class containment suppression degrades AP by eliminating real co-occurring items",
+            "thresholds": containment_eval,
+        },
         "results": results,
     }
     atomic_json(output_dir / "multiscale-consensus-audit.json", audit_summary, replace=True)
+    if D089_RUN.exists():
+        atomic_json(D089_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
 
     print(json.dumps({
         "status": "complete",

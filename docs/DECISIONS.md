@@ -1,5 +1,40 @@
 # Decision register
 
+## D-089: Stage 5 Tier 3 Core Expansion (576 Train Images / 1,240 Boxes) with Omitted-Accessory Masking & Soup Evaluation - 2026-11-01
+
+Owner authorization D-089 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened).
+
+1. **Dataset Export & Invariants (`exports/taco/strict-clean-stage5-tier3-core-v1/`)**:
+   - Expanded candidate training images to Tier 3 with strict exclusion of all `Aerosol`, `Plastified paper bag`, `Other plastic`, and `Unlabeled litter` images.
+   - Identified and quarantined all 8 `Aerosol` images across the candidate pool (`6, 16, 23, 24, 35, 800, 1079, 1101`), preventing empty/unannotated image errors (Image 800) and preventing unaudited hazardous contamination.
+   - Exact training counts: **576 strict-clean training images** (379 D-083 Core + 197 newly unlocked Tier 3 clean images) and **1,240 retained boxes** across classes `0..8`.
+   - Exact omitted accessory boxes tracked: **286 bboxes** across the 197 newly unlocked images.
+   - Frozen validation heldout preserved identically: 65 images / 109 boxes (and legacy benchmark 47 images / 75 boxes).
+   - Exact photo bindings: **641 photos** (`576 train + 65 val`) verified by physical raster/EXIF check and bound by SHA-256 in `work/stage5-paper/rights_tier3_core.json`.
+2. **In-Memory Omitted-Accessory Neutral Masking (Training Only)**:
+   - Evaluated training-only in-memory replacement of omitted accessory regions with image mean RGB.
+   - Bounding boxes overlapping any retained `0..8` ground-truth box are strictly preserved untouched in memory; zero disk files mutated.
+3. **1-Epoch Fine-Tuning & 4-State Soup Evaluation (`scripts/taco_stage5_d089_tier3_core.py`)**:
+   - Warm-started from verified D-083 Champion (`82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`), Swin-T + BERT frozen (`161c9814bffe1657ae0debd7e21b7ed1c41f29f3ba43fffe879ab31ba36a0b67`).
+   - Executed exactly 576 updates at `384/576` FP32 with AdamW under a deterministic cosine annealing schedule ($1.5 \times 10^{-6} \to 2.0 \times 10^{-7}$). Mean loss `4.62176`, peak VRAM `3590.51 MiB`, elapsed `1213.18 s`.
+   - Evaluated 4 validation states (448 forwards):
+     - `D089-Tier3-Core E1`: combined-65 AP `0.216870` (legacy-47 `0.252880`; paper AP `0.428288`, drink_can AP `0.670297`).
+     - `soup_d089_d083_5050`: combined-65 AP `0.218216` (legacy-47 `0.253403`; paper AP `0.429627`).
+     - **`soup_d089_d083_2575` (Champion)**: combined-65 AP **`0.233812`** (AP50 `0.278686`, AR100 `0.371596`; legacy-47 `0.253113`), parameter SHA-256 `135ace61bc3acccd682175922e4f3a3581fef0a62d9af961b942751906c6bf70`. BANTAI 5-Category AP **`0.398774`** (Plastic `0.400643`, Paper `0.416378`, Metal `0.670297`, Potentially Hazardous `0.107777`).
+     - `soup_d089_d086s2575_5050`: combined-65 AP `0.218809` (legacy-47 `0.252160`).
+4. **D-079 Score-Preserving Consensus**:
+   - Image 419 q0 reassigned from `paper` to `plastic_wrapper` (score 0.349545).
+   - 9-Specific AP improves to **`0.236248`** (`+0.002437`); BANTAI 5-Category AP improves to **`0.403616`** (`+0.004843`).
+5. **Multi-Scale Query Fusion & Cross-Class Containment Suppression Audit**:
+   - Fusing D-089 Champion (`384/576`) with `D086-HR448 E1` (`448/672`) under calibrated routing yields combined-65 AP **`0.256673`** and BANTAI 5-Category AP **`0.428970`**.
+   - D-088 Champion pairing (`D086_Soup2575_384 + D086_HR448`) remains highest overall at **`0.258410`** / **`0.430072`**; `multiscale-consensus-replay.json` correctly retains the champion state.
+   - Containment suppression audit confirms that suppressing enclosed cross-class detections degrades AP from `0.258410` to `0.243460` by eliminating legitimate co-occurring objects.
+   - On Image 777, multi-scale fusion with D-089 elevates `paper` (`cat=8`) to `0.3131` ($\ge 0.10$, $\text{IoU} > 0.90$).
+6. **Integrity Snapshot**:
+   - 2,089 protected files verified unchanged (digest `de43089895ecd4e42c77dc22f8750a39e709a818738852cc2606a5537981b6d0`).
+
+Full report: [D-089 report](TACO_STAGE_5_D089_TIER3_CORE_TRAINING.md).
+
 ## D-088: Class-Calibrated Multi-Scale Query Routing + D-079 Consensus Optimization - 2026-10-31
 
 Owner authorization D-088 executed locally on `feat/stage5-paper-category` as a strictly CPU-only routing optimization and evaluation task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
