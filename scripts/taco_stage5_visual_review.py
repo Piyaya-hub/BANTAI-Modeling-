@@ -49,6 +49,9 @@ CLASS_COLORS = [
 DEFAULT_TIER1_RUN = Path("runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337")
 DEFAULT_SCORE_VECTOR_DIR = Path("runs/training/stage5-score-vectors-5619e219fa264287aa0564c4565a2472")
 CONSENSUS_STATE = "Tier 2 + D074 champion soup"
+ORGANIC_SHOWCASE_FILTER = "Organic Showcase (4 Images: 68, 72, 92, 841)"
+ORGANIC_9_STATE = "Organic Showcase 9-Prompt (384/576)"
+ORGANIC_10_STATE = "Organic Showcase 10-Prompt (Hybrid)"
 
 
 def discover_tier1_run(explicit=None, root=ROOT):
@@ -100,6 +103,32 @@ def load_consensus_score_vectors(tier2_run_dir, images, root=ROOT):
                                 for index, image_id in enumerate(image_ids)},
             "parameter_sha256": manifest["parameter_sha256"],
             "artifact_sha256": manifest["artifact_sha256"]}
+
+
+def load_organic_showcase(root=ROOT):
+    """Load a complete, hash-bound local D081 replay artifact when available."""
+    import hashlib
+    runs = Path(root) / "runs/training"
+    candidates = sorted(runs.glob("stage5-organic-hybrid-*"),
+                        key=lambda p: p.stat().st_mtime, reverse=True)
+    for run in candidates:
+        payload_path, manifest_path = run / "gui-showcase.json", run / "manifest.json"
+        if not payload_path.is_file() or not manifest_path.is_file():
+            continue
+        manifest = strict_load(manifest_path)
+        digest = hashlib.sha256(payload_path.read_bytes()).hexdigest()
+        payload = strict_load(payload_path)
+        if (manifest.get("authorization") != "D-081" or manifest.get("status") != "complete"
+                or manifest.get("gui_showcase_sha256") != digest
+                or manifest.get("checkpoint_parameter_sha256") != "cd29260abd5bd1675a2637ed365f4c1821dc1753cf37e852d4e3f1ab9f49a422"
+                or payload.get("image_ids") != [68, 72, 92, 841]
+                or set(map(int, payload.get("images", {}).keys())) != {68, 72, 92, 841}
+                or set(payload.get("predictions", {})) != {ORGANIC_9_STATE, ORGANIC_10_STATE}):
+            continue
+        payload["run_dir"] = run
+        payload["manifest"] = manifest
+        return payload
+    return None
 
 
 def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float = 0.80):
@@ -223,12 +252,19 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
             preds_by_state[state][img_id].sort(key=lambda x: -x["score"])
 
     consensus = load_consensus_score_vectors(tier2_run_dir, images, ROOT)
+    organic_showcase = load_organic_showcase(ROOT)
+    if organic_showcase:
+        for state, by_image in organic_showcase["predictions"].items():
+            preds_by_state[state] = defaultdict(list)
+            for image_id, rows in by_image.items():
+                preds_by_state[state][int(image_id)] = rows
     return {
         "images": images,
         "dataset_root": Path(val_data["info"]["image_root"]).resolve(),
         "ground_truth": annotations_by_img,
         "predictions": preds_by_state,
         "consensus_score_vectors": consensus,
+        "organic_showcase": organic_showcase,
         "metrics": {
             "Baseline": baseline_data.get("combined_65", {}),
             "Stage 5 (256/384)": ep2_data.get("combined_65", {}),
@@ -297,6 +333,7 @@ class Stage5ViewerGUI:
         self.gt = data["ground_truth"]
         self.preds = data["predictions"]
         self.consensus_vectors = data.get("consensus_score_vectors")
+        self.organic_showcase = data.get("organic_showcase")
         self.dataset_root = data["dataset_root"]
 
         # Identify which images have paper
@@ -316,7 +353,10 @@ class Stage5ViewerGUI:
         # Filter mode
         ttk.Label(ctrl_frame, text="Filter:").pack(side="left", padx=(4, 2))
         self.filter_var = tk.StringVar(value="Paper Images (18)" if self.paper_img_ids else "All Images (65)")
-        filter_cb = ttk.Combobox(ctrl_frame, textvariable=self.filter_var, values=["Paper Images (18)", "All Images (65)"], state="readonly", width=16)
+        filter_values = ["Paper Images (18)", "All Images (65)"]
+        if self.organic_showcase:
+            filter_values.append(ORGANIC_SHOWCASE_FILTER)
+        filter_cb = ttk.Combobox(ctrl_frame, textvariable=self.filter_var, values=filter_values, state="readonly", width=35)
         filter_cb.pack(side="left", padx=4)
         filter_cb.bind("<<ComboboxSelected>>", self.on_filter_change)
 
@@ -448,7 +488,14 @@ class Stage5ViewerGUI:
         status_bar.pack(side="bottom", fill="x")
 
         self.populate_image_list()
-        if initial_image_id is not None and initial_image_id in self.images:
+        if (initial_image_id is not None and self.organic_showcase
+                and initial_image_id in {68, 72, 92, 841}):
+            self.filter_var.set(ORGANIC_SHOWCASE_FILTER)
+            if ORGANIC_10_STATE in self.preds:
+                self.review_state_var.set(ORGANIC_10_STATE)
+            self.populate_image_list()
+            self.set_current_image(initial_image_id)
+        elif initial_image_id is not None and initial_image_id in self.images:
             self.filter_var.set("All Images (65)")
             self.populate_image_list()
             self.set_current_image(initial_image_id)
@@ -458,15 +505,21 @@ class Stage5ViewerGUI:
 
     def populate_image_list(self):
         f = self.filter_var.get()
-        if "Paper" in f:
+        if f == ORGANIC_SHOWCASE_FILTER and self.organic_showcase:
+            target_ids = [68, 72, 92, 841]
+            source_images = {int(k): v for k, v in self.organic_showcase["images"].items()}
+        elif "Paper" in f:
             target_ids = sorted(self.paper_img_ids)
+            source_images = self.images
         else:
             target_ids = sorted(self.images.keys())
+            source_images = self.images
 
         items = []
         for img_id in target_ids:
-            img = self.images[img_id]
-            tag = " [PAPER]" if img_id in self.paper_img_ids else ""
+            img = source_images[img_id]
+            tag = (" [ORGANIC]" if f == ORGANIC_SHOWCASE_FILTER else
+                   " [PAPER]" if img_id in self.paper_img_ids else "")
             fname = Path(img["file_name"]).name
             items.append(f"Image {img_id}{tag} ({fname})")
 
@@ -474,6 +527,11 @@ class Stage5ViewerGUI:
         self.active_ids = target_ids
 
     def on_filter_change(self, event=None):
+        if self.filter_var.get() == ORGANIC_SHOWCASE_FILTER and ORGANIC_10_STATE in self.preds:
+            self.review_state_var.set(ORGANIC_10_STATE)
+        elif (self.consensus_vectors and CONSENSUS_STATE in self.preds
+              and self.review_state_var.get() in (ORGANIC_9_STATE, ORGANIC_10_STATE)):
+            self.review_state_var.set(CONSENSUS_STATE)
         self.populate_image_list()
         if self.active_ids:
             self.set_current_image(self.active_ids[0])
@@ -513,9 +571,14 @@ class Stage5ViewerGUI:
 
     def load_and_draw(self, img_id: int):
         self.current_image_id = img_id
-        img_entry = self.images[img_id]
-        photo_path = (self.dataset_root / img_entry["file_name"]).resolve()
-        if not photo_path.is_relative_to(self.dataset_root):
+        organic_mode = (self.organic_showcase is not None
+                        and self.filter_var.get() == ORGANIC_SHOWCASE_FILTER
+                        and img_id in (68, 72, 92, 841))
+        img_entry = ({int(k): v for k, v in self.organic_showcase["images"].items()}[img_id]
+                     if organic_mode else self.images[img_id])
+        image_root = Path(self.organic_showcase["dataset_root"]).resolve() if organic_mode else self.dataset_root
+        photo_path = (image_root / img_entry["file_name"]).resolve()
+        if not photo_path.is_relative_to(image_root):
             raise ValueError("Validation photo path escapes dataset root")
 
         if not photo_path.is_file():
@@ -523,7 +586,10 @@ class Stage5ViewerGUI:
             return
 
         import hashlib
-        expected = img_entry["source_taco"]["file_sha256"]
+        expected = (img_entry.get("source_taco", {}).get("file_sha256")
+                    or img_entry.get("file_sha256"))
+        if not expected:
+            raise ValueError("Replay image has no bound SHA-256")
         if hashlib.sha256(photo_path.read_bytes()).hexdigest() != expected:
             raise ValueError("Validation source photo hash mismatch")
         with Image.open(photo_path) as pil_img:
@@ -536,7 +602,11 @@ class Stage5ViewerGUI:
             return
 
         img_id = self.current_image_id
+        showcase_mode = (self.organic_showcase is not None
+                         and self.filter_var.get() == ORGANIC_SHOWCASE_FILTER)
         self.details_notebook.tab(3, text=self.review_state_var.get())
+        self.details_notebook.tab(1, text="9-Prompt" if showcase_mode else "Baseline")
+        self.details_notebook.tab(2, text="10-Prompt Hybrid" if showcase_mode else "Stage 5 (256/384)")
         thresh = float(self.thresh_var.get())
         top_k = int(self.topk_var.get())
 
@@ -544,16 +614,26 @@ class Stage5ViewerGUI:
         hierarchical = self.taxonomy_var.get() == VIEWS[3]
         import tkinter as tk
         for child in self.legend_frame.winfo_children(): child.destroy()
-        for name in NAMES[scheme]:
+        gt_rows = (self.organic_showcase["ground_truth"].get(str(img_id), []) if showcase_mode
+                   else self.gt.get(img_id, []))
+        legend_names = list(NAMES[scheme])
+        if any(row.get("specific_category_id", row.get("category_id")) == 9 for row in gt_rows):
+            organic_name = "food_waste" if scheme == "9-specific" else "Organic"
+            if organic_name not in legend_names:
+                legend_names.append(organic_name)
+        for name in legend_names:
             tk.Label(self.legend_frame, text=name, bg=COLORS.get(name, CLASS_COLORS[LABELS.index(name)] if name in LABELS else "white"), fg="white").pack(side="left", padx=2)
-        gt_boxes = [map_row(a, scheme, hierarchical) for a in self.gt.get(img_id, [])]
-        base_preds = self.preds["Baseline"].get(img_id, [])
-        run1_preds = self.preds["Stage 5 (256/384)"].get(img_id, [])
+        gt_boxes = [map_row(a, scheme, hierarchical) for a in gt_rows]
+        base_preds = (self.preds[ORGANIC_9_STATE].get(img_id, []) if showcase_mode
+                      else self.preds["Baseline"].get(img_id, []))
+        run1_preds = (self.preds[ORGANIC_10_STATE].get(img_id, []) if showcase_mode
+                      else self.preds["Stage 5 (256/384)"].get(img_id, []))
         highres_preds = self.preds[self.review_state_var.get()].get(img_id, [])
 
         use_consensus = (self.consensus_var.get() and self.consensus_vectors is not None
                          and self.review_state_var.get() == CONSENSUS_STATE
                          and scheme == "bantai-5-category"
+                         and img_id in self.consensus_vectors["scores_by_image"]
                          and self.taxonomy_var.get() != VIEWS[2])
         if use_consensus:
             highres_preds, _ = apply_to_query_rows(
@@ -578,10 +658,12 @@ class Stage5ViewerGUI:
         draw_panel(self.axes["Baseline"], self.current_pil, base_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
         threshold_caption = (f"uniform >= {thresh:.2f}" if self.threshold_mode_var.get() == THRESHOLD_CHOICES[0]
                              else f"cigarette >= 0.06 / macro >= {max(thresh, .15):.2f}")
-        self.axes["Baseline"].set_title(f"Warm-Start Baseline ({threshold_caption})", fontsize=11)
+        self.axes["Baseline"].set_title((f"9-Prompt (384/576; {threshold_caption})" if showcase_mode
+                                           else f"Warm-Start Baseline ({threshold_caption})"), fontsize=11)
 
         draw_panel(self.axes["Stage 5 (256/384)"], self.current_pil, run1_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
-        self.axes["Stage 5 (256/384)"].set_title(f"Stage 5 Run 1 (256/384; {threshold_caption})", fontsize=11)
+        self.axes["Stage 5 (256/384)"].set_title((f"10-Prompt Hybrid (384/576; {threshold_caption})" if showcase_mode
+                                                   else f"Stage 5 Run 1 (256/384; {threshold_caption})"), fontsize=11)
 
         draw_panel(self.axes["Stage 5 High-Res (384/576)"], self.current_pil, highres_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
         self.axes["Stage 5 High-Res (384/576)"].set_title(self.review_state_var.get(), fontsize=11, color="#005500", weight="bold")

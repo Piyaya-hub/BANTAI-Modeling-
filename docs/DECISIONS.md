@@ -1006,3 +1006,39 @@ Investigation findings, not an adopted correction within Stage 3C: native encode
 D-040 (2026-10-19): The owner explicitly approves the separate training-only encoder-output adapter and synthetic qualification using Stage 3C findings. Supply selected image-conditioned encoder proposal scores and undetached supervised boxes to the existing native loss; preserve detached decoder reference initialization, pretrained architecture/base weights, query count, text mapping and coefficients. Verify actual gradients/updates, empty paths, decoder equivalence, checkpoint/adapter reconstruction, memory and regression evidence. No installed-library modification/monkey patch, inference change, real TACO training, data/taxonomy/split modification, cloud spending or automatic promotion. Stop/report if invariants cannot be preserved, and stop after Stage 3D synthetic qualification.
 
 Actual Stage 3D outcome is a bounded synthetic PASS, detailed in [evidence](TACO_STAGE_3D.md). Every corrected case has two optimizer steps, finite values, intended encoder updates and exact decoder equivalence; empty regression is correctly zero. Experimental model/processor weights and explicit adapter context reload exactly. The checkpoint is weights/context only with `resume_supported=false`; no inference promotion or real-data readiness is approved by this outcome. Real-data trainer/resume/evaluator design, rights, coverage/leakage and intended-resolution memory remain future prerequisites.
+## D-081: bounded Organic hybrid showcase attempt — 2026-10-31
+
+D-081 execution record: D-080 was committed locally as `2802723`
+before D-081 work began. The D-081 rights manifest was written before decoding
+the four authorized non-held-out images and bound their verified hashes. The
+attempt stopped after two CUDA forwards on Image 68 because the runner had
+joined the last two prompt labels; no complete comparison artifact or Organic
+detection result exists. The separator bug is fixed in the runner. The remaining
+six calls cannot complete the requested four image pairs, and a fresh eight-call
+evaluation would exceed this authorization's cumulative cap. No test-split
+access/training/update occurred. Native Tk Image 777 passed 50 combinations;
+the four-image Organic GUI fixture passed 65 renders across all five taxonomies
+and every NMS/threshold combination on Image 68. This was GT-only in-memory
+fixture verification, not saved-prediction replay. The actual Organic filter
+was unavailable at the D-081 stop point; this is superseded by D-082 below.
+
+## D-082: complete bounded Organic hybrid showcase — 2026-10-31
+
+D-082 authorized a fresh eight-forward budget, excluding the two aborted D-081
+setup forwards. CPU preflight verified the nine- and ten-prompt phrase spans in
+order, and the D-076 champion bundle hashes matched before inference. Exactly
+eight FP32 CUDA forwards completed across images 68, 72, 92, and 841 at 384/576;
+no test JSON/held-out photo, training, backward pass, or optimizer update was
+used. The artifact and detailed measurements are in
+[the D-082 report](TACO_STAGE_5_ORGANIC_SHOWCASE.md).
+
+Best spatially localized Organic results: Image 68 GT163 q9, 0.138023 / IoU
+0.8911 / Organic rank 6; Image 72 GT171 q1, 0.176177 / 0.8997 / rank 2; Image
+92 GT244 q0, 0.232682 / 0.9686 / rank 1 (top-1 remains Plastic); Image 841
+GT2611 q3, 0.182473 / 0.9220 / rank 1. Full per-query vectors, including all
+62 qualifying IoU≥0.50 queries, are retained in the private evaluation JSON.
+Native Tk replay passed 65 Organic showcase renders with saved 9-/10-prompt
+predictions and reopened Image777; no TclError occurred. The showcase remains a
+four-image diagnostic and does not add validation support for supervised class
+9. D-081/D-082 code and documentation were committed locally only; not pushed
+or merged.

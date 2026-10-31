@@ -150,7 +150,50 @@ class TestStage5Hierarchy(unittest.TestCase):
         self.assertEqual([r['query_id'] for r in prepare_rows(rows,'4-material',mode)],[2])
         self.assertEqual(len(prepare_rows(rows,'5-material',mode)),2)
         self.assertEqual(map_row(rows[0],'4-material')['material'],'polystyrene_foam')
-        with self.assertRaises(ValueError):map_row({'category_id':9})
+        with self.assertRaises(ValueError):map_row({'category_id':10})
+
+    def test_organic_showcase_mapping_preserves_class_and_hazard_metadata(self):
+        from scripts.taco_stage5_material_hierarchy import map_row
+        row={'category_id':9,'query_id':42,'score':.4,'bbox':[1,2,3,4]}
+        general=map_row(row,'bantai-5-category')
+        self.assertEqual((general['category_id'],general['mapped_category']),(2,'Organic'))
+        self.assertEqual(general['specific_class'],'food_waste')
+        self.assertEqual(general['material'],'organic_biodegradable')
+        self.assertFalse(general['hazard_flag'])
+        self.assertEqual((general['query_id'],general['score'],general['bbox']),(42,.4,[1,2,3,4]))
+        for scheme, category, label in (('9-specific',9,'food_waste'),
+                                        ('4-material',4,'Organic'),
+                                        ('5-material',5,'Organic')):
+            mapped=map_row(row,scheme,True)
+            self.assertEqual(mapped['category_id'],category)
+            self.assertEqual(mapped['display_label'],'Organic [food_waste]' if scheme!='9-specific' else 'food_waste [food_waste]')
+
+    def test_organic_showcase_prompt_and_optional_manifest_discovery(self):
+        import hashlib, json, tempfile
+        from pathlib import Path
+        from scripts import taco_stage5_organic_showcase as runner
+        from scripts import taco_stage5_visual_review as viewer
+        self.assertEqual(runner.PROMPT_10,
+                         'cigarette. plastic bottle. plastic bag. plastic wrapper. plastic film. '
+                         'drink can. plastic cup. styrofoam piece. paper. food waste.')
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            run = root / 'runs/training/stage5-organic-hybrid-fixture'
+            run.mkdir(parents=True)
+            payload = {'image_ids':[68,72,92,841],
+                       'images':{str(i):{'id':i} for i in (68,72,92,841)},
+                       'predictions':{viewer.ORGANIC_9_STATE:{},viewer.ORGANIC_10_STATE:{}}}
+            data = json.dumps(payload).encode()
+            (run/'gui-showcase.json').write_bytes(data)
+            manifest = {'authorization':'D-081','status':'complete',
+                        'checkpoint_parameter_sha256':runner.EXPECTED_PARAMETER_SHA256,
+                        'gui_showcase_sha256':hashlib.sha256(data).hexdigest()}
+            (run/'manifest.json').write_text(json.dumps(manifest),encoding='utf-8')
+            discovered = viewer.load_organic_showcase(root)
+            self.assertIsNotNone(discovered)
+            self.assertEqual(discovered['image_ids'],[68,72,92,841])
+            self.assertEqual(set(discovered['predictions']),
+                             {viewer.ORGANIC_9_STATE,viewer.ORGANIC_10_STATE})
 
     def test_view_selector_uses_shared_mapping(self):
         import inspect

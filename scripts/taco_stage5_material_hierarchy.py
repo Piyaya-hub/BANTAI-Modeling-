@@ -14,6 +14,8 @@ MAPS = {'9-specific': tuple(range(9)), '5-material': (0,1,1,1,1,2,1,3,4),
         '4-material': (0,1,1,1,1,2,1,1,3),
         'bantai-5-category': (4,0,0,0,0,3,0,0,1)}
 MATERIALS = ('cellulose_acetate_filter','plastic','plastic','plastic','plastic','metal','plastic','polystyrene_foam','paper_fiber')
+ORGANIC_SPECIFIC_ID = 9
+ORGANIC_MATERIAL = 'organic_biodegradable'
 VIEWS = ('BANTAI 5-Category (Plastic / Paper / Organic / Metal / Potentially Hazardous)',
  '4-Material Polymer (Paper / Plastic+Polymer / Metal / Hazardous)',
  '9-Specific (Subtype Only)', 'Hierarchical (Category [Subtype])',
@@ -31,14 +33,26 @@ COLORS = {'hazardous_cigarette':'#e6194B','plastic_waste':'#4363d8',
 
 def map_row(row, scheme='5-material', hierarchical=False):
     specific = row.get('specific_category_id',row['category_id'])
-    if type(specific) is not int or not 0 <= specific < 9:
+    if type(specific) is not int or not 0 <= specific <= ORGANIC_SPECIFIC_ID:
         raise ValueError('Invalid specific class')
-    category = MAPS[scheme][specific]
-    name = NAMES[scheme][category]
+    if specific == ORGANIC_SPECIFIC_ID:
+        if scheme == 'bantai-5-category':
+            category, name = 2, 'Organic'
+        elif scheme == '9-specific':
+            category, name = ORGANIC_SPECIFIC_ID, 'food_waste'
+        else:
+            # Keep the existing material category IDs stable; Organic occupies a
+            # diagnostic-only appended ID in the two legacy material views.
+            category, name = len(NAMES[scheme]), 'Organic'
+        material, hazard = ORGANIC_MATERIAL, False
+    else:
+        category = MAPS[scheme][specific]
+        name = NAMES[scheme][category]
+        material, hazard = MATERIALS[specific], specific == 0
     return dict(row, category_id=category, specific_category_id=specific,
-                specific_class=LABELS[specific], material=MATERIALS[specific],
-                hazard_flag=specific==0, mapped_category=name, taxonomy_scheme=scheme,
-                display_label=name + (' ['+LABELS[specific]+']' if hierarchical else ''))
+                specific_class='food_waste' if specific == ORGANIC_SPECIFIC_ID else LABELS[specific],
+                material=material, hazard_flag=hazard, mapped_category=name, taxonomy_scheme=scheme,
+                display_label=name + (' ['+('food_waste' if specific == ORGANIC_SPECIFIC_ID else LABELS[specific])+']' if hierarchical else ''))
 
 
 def prepare_rows(rows, scheme='5-material', mode='raw', threshold=0., hierarchical=False):
@@ -54,13 +68,17 @@ def evaluate_case(data, rows, scheme, mode):
     from .taco_evaluation_v3 import coco_metrics
     mapped_data=copy.deepcopy(data)
     mapped_data['annotations']=[map_row(a,scheme) for a in data['annotations']]
-    mapped_data['categories']=[{'id':i,'name':n} for i,n in enumerate(NAMES[scheme])]
+    class_names = list(NAMES[scheme])
+    if any(a.get('specific_category_id', a.get('category_id')) == ORGANIC_SPECIFIC_ID
+           for a in data['annotations']) and scheme != 'bantai-5-category':
+        class_names.append('Organic' if scheme in ('4-material', '5-material') else 'food_waste')
+    mapped_data['categories']=[{'id':i,'name':n} for i,n in enumerate(class_names)]
     by_image=defaultdict(list)
     for row in rows: by_image[row['image_id']].append(row)
     retained={i['id']:prepare_rows(by_image[i['id']],scheme,mode) for i in data['images']}
     predictions=[{k:r[k] for k in ('image_id','category_id','score','bbox')}
                  for rs in retained.values() for r in rs[:100]]
-    metrics=coco_metrics(mapped_data,predictions,cat_ids=list(range(len(NAMES[scheme]))),label_names=NAMES[scheme])
+    metrics=coco_metrics(mapped_data,predictions,cat_ids=list(range(len(class_names))),label_names=class_names)
     coverage=[{'annotation_id':a['id'],'image_id':a['image_id'],
                'covered':any(r['score']>=.05 and r['category_id']==a['category_id']
                    and iou(r['bbox'],a['bbox'])>=.5 for r in retained[a['image_id']])}

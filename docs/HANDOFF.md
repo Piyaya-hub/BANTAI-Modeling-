@@ -1131,3 +1131,63 @@ D-001–D-023 preserve prior owner decisions, with D-022/D-023 assigning Codex a
 D-061 runtime verification: native standard/per-object Tk checks passed at Image777 with all47 IDs selectable, correct labels, navigation and zoom/pan; no model/GPU calls or saved JSON changes. Guarded suite:241 tests,225 passed,16 documented skips,zero failures/errors. Human visual acceptance remains pending. The selected25/75 blend partially recovers larger-object performance (17/36 coverage versus E1 21/36).
 
 D-062 verification: the guarded suite ran245 tests (229 passed,16 documented skips,zero failures/errors). Four native Tk smoke cases passed (two choices,standard/per-object), with Image777,all47 selectable IDs,correct labels,navigation and zoom/pan. Model/GPU calls,weight reads and image exports were blocked; saved JSON hashes stayed unchanged. Human visual acceptance remains pending.
+
+## D-081: Organic hybrid showcase attempt — 2026-10-31
+
+D-080 was committed locally first as `2802723` on `feat/stage5-paper-category`;
+there was no push or merge. D-081 wrote
+`work/stage5-paper/rights_organic_showcase.json` before decoding and verified
+the four D-080-clean non-held-out image bindings. The attempted detector run
+stopped after two CUDA forwards (Image 68, one nine-prompt and one malformed
+hybrid prompt). A missing delimiter caused the ten-class phrase mapper to see
+nine spans. The code fix is in place, but the eight-forward authorization has
+only six calls remaining and cannot produce all four paired comparisons. No
+complete predictions were saved; no accuracy, query-vector, or Organic
+performance result is claimed. No test JSON/held-out photos, training, backward
+passes, or optimizer updates occurred.
+
+See [D-081 execution record and current limits](TACO_STAGE_5_ORGANIC_SHOWCASE.md).
+The optional Organic filter remains hidden until a complete, verified local
+showcase artifact exists. Native Tk Image 777 passed 50 combinations; a
+four-image Organic GT-only fixture passed 65 renders across all five taxonomy
+views and all NMS/threshold controls on Image 68. This is UI fixture coverage,
+not saved-prediction replay. A new bounded evaluation authorization is needed before running the
+corrected prompt on all four image pairs. D-081 changes remain uncommitted and
+unpushed for owner review.
+
+## D-082: Organic hybrid showcase completed — 2026-10-31
+
+D-082 used a fresh eight-forward CUDA budget after CPU tokenizer preflight
+verified the exact nine- and ten-span prompts. All four images (68, 72, 92,
+841) completed 9-/10-prompt passes at 384/576 FP32 with TF32 disabled using the
+hash-verified D-076 champion. Full 900-query outputs, ten-class score vectors,
+per-GT matching diagnostics, image bindings, and artifact hashes are stored in
+`runs/training/stage5-organic-hybrid-505b80d9f7cf430a96fcea4c7471d7f4/`.
+Native Tk loaded the real saved predictions, verified 9-/10-prompt rows on all
+four showcase images, cycled 65 filter/taxonomy/NMS/threshold renders, and
+reopened Image777. The 10-class prompt yielded localized Organic queries on all
+four GTs, but Image92 remains Plastic at top-1 and the D-080 four-box sample
+still provides no validation/generalization support for a supervised Organic
+class. See [complete scores and vectors](TACO_STAGE_5_ORGANIC_SHOWCASE.md).
+
+PowerShell replay for the four-image showcase (choose the Organic Showcase
+filter, then navigate among images 68, 72, 92, and 841):
+
+```powershell
+Set-Location 'C:\Users\Justine\Documents\Python\Project Image-object Detection'
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 68 --score-threshold 0.10 --box-top-k 15
+```
+
+Open the standard frozen validation view at Image 777:
+
+```powershell
+Set-Location 'C:\Users\Justine\Documents\Python\Project Image-object Detection'
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --score-threshold 0.10 --box-top-k 15
+```
+
+Guarded verification: **329 tests, 313 passed, 16 documented skips, zero
+failures/errors**; links checked 513 local destinations with no missing targets;
+`git diff --check` passed. No push/merge occurred. Owner review remains
+needed for whether Organic stays a zero-shot-only diagnostic and whether to
+seek a permissioned external Organic dataset; this four-image result does not
+answer those decisions.

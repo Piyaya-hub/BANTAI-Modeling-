@@ -117,4 +117,24 @@ optimizer updates, and protected-directory writes. The four new CPU fixtures cov
 class-9 mapping, Tier 2 sibling unlocks, persistent Unlabeled quarantine after
 Tier 3 accessory omission, and 384/576 box scaling. The Markdown link checker
 reported no missing local destinations; `git diff --check` passed. D-079 is
-committed locally as `287ac5f`; D-080 changes remain uncommitted for owner review.
+committed locally as `287ac5f`; D-080 was committed locally as `2802723`.
+
+## D-082 four-image hybrid-prompt diagnostic
+
+D-082 completed the explicitly bounded 9-vs-10-prompt comparison on the four
+clean Tier 2 non-held-out images (68, 72, 92, 841), using exactly eight CUDA
+forwards. The 10-prompt span order passed CPU preflight; no test split or model
+updates were used. The results do not change the support conclusion above:
+
+| Organic GT | Best localized 10-prompt Organic query | Diagnostic observation |
+| --- | --- | --- |
+| Image 68 / GT 163 | q9, score 0.138023, IoU 0.8911, rank 6 | Hybrid top-1 is `food_waste` / Organic; 9-prompt best spatial query was plastic_film. |
+| Image 72 / GT 171 | q1, score 0.176177, IoU 0.8997, rank 2 | q0 has higher Organic score (0.216378, rank 1) but IoU 0.4182. |
+| Image 92 / GT 244 | q0, score 0.232682, IoU 0.9686, rank 1 | q0 remains `plastic_wrapper` / Plastic at top-1 (score 0.327066). |
+| Image 841 / GT 2611 | q3, score 0.182473, IoU 0.9220, rank 1 | Hybrid top-1 is `food_waste` / Organic; 9-prompt q3 was drink_can / Metal. |
+
+See the [complete D-082 showcase report](TACO_STAGE_5_ORGANIC_SHOWCASE.md) for
+all seven GT comparisons and the full 10-class score vectors for each of the 62
+queries whose boxes overlap the four Organic GT boxes at IoU ≥ 0.50. This small
+non-held-out showcase is diagnostic evidence, not validation/generalization or
+support for supervised Organic class ID 9.
