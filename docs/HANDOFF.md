@@ -1,5 +1,27 @@
 # BANTAI Stage 4 handoff
 
+## D-087: Multi-Scale Query Fusion + D-079 Consensus Integration and Native Tk Review Replay Mode - 2026-10-31
+
+Owner authorization D-087 executed locally on `feat/stage5-paper-category` as a strictly CPU-only integration and evaluation task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+1. **Multi-Scale Query Fusion & D-079 Consensus Grid (`scripts/taco_stage5_multiscale_consensus.py`)**:
+   - Evaluated candidate pairings across both multi-scale combinations (`D083_Champion_384 + D086_HR448` and `D086_Soup2575_384 + D086_HR448`) under three consensus modes (`none` [raw], `pre_nms` [consensus before NMS], and `post_nms` [consensus after NMS]).
+   - **Winning Configuration**: `D086_Soup2575_384 + D086_HR448` with `pre_nms` consensus:
+     - Combined-65 9-Specific AP: **`0.245952`** (AP50 `0.293917`, AP75 `0.268650`, AR100 `0.415315`).
+     - Scale breakdown: `AP_small 0.077975`, `AP_medium 0.175067`, `AP_large 0.267979`.
+     - Combined-65 BANTAI 5-Category AP: **`0.426502`** (AP50 `0.520115` / **`52.01% AP50`**, AP75 `0.452306`, AR100 `0.646841`).
+     - Exactly 3 queries reclassified before NMS under the D-079 rule: Image 215 q0 (HR: `paper` -> `plastic_wrapper`, score 0.307247), Image 419 q0 (Std: `paper` -> `plastic_wrapper`, score 0.347176), and Image 777 q0 (Std: `paper` -> `plastic_film`, score 0.309664).
+2. **Saved Consensus Replay Artifacts**:
+   - `runs/training/stage5-d086-highres-20261031-a/multiscale-consensus-replay.json` (6,500 queries, 100/image).
+   - `runs/training/stage5-d086-highres-20261031-a/scores-multiscale-consensus.npz` (shape `(65, 100, 9)`, float32).
+   - `runs/training/stage5-d086-highres-20261031-a/multiscale-consensus-audit.json`.
+3. **Native Tk Visual Review Tool Integration (`scripts/taco_stage5_visual_review.py`)**:
+   - Added `--prediction-source` CLI option supporting `single_scale_champion` (default) and `multiscale_384_448`.
+   - Added interactive GUI switcher combobox and dynamic multi-scale score vector loading.
+   - Successfully verified Native Tk GUI replay on Image 777 with full display loop and zero errors.
+
+Full report: [D-086 & D-087 report](TACO_STAGE_5_D086_HIGHRES_TRAINING.md#7-multi-scale-query-fusion--d-079-consensus-integration-d-087).
+
 ## D-086: Stage 5 High-Resolution (448/672) 1-Epoch Fine-Tuning & Multi-Scale Evaluation - 2026-10-31
 
 Owner authorization D-086 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Dataset: `exports/taco/strict-clean-stage5-d083-core-v1` (379 train / 731 boxes; 65 val / 109 boxes) with `work/stage5-paper/rights_d083_core.json`. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened).

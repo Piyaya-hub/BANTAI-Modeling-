@@ -110,7 +110,84 @@ Applying the D-079 consensus profile to the best D-086 single-pass state (`soup_
 
 ---
 
-## 6. Verification and Reproducibility
+## 7. Multi-Scale Query Fusion + D-079 Consensus Integration (D-087)
 
-- Unit tests: `tests/test_stage5_d086_highres.py` passed (`0.614s`).
+Owner authorization **D-087** completed a strictly CPU-only integration of multi-scale query fusion with the D-079 score-preserving consensus profile, and added multi-scale replay mode to the native Tk review GUI (`scripts/taco_stage5_visual_review.py`).
+
+### Candidate Multi-Scale Pairings & Consensus Grid
+
+Two multi-scale candidate combinations were evaluated across three consensus operating modes (`none` [raw fusion], `pre_nms` [consensus reclassification before NMS], and `post_nms` [consensus reclassification after NMS]):
+
+| Multi-Scale Pairing | Consensus Mode | Changes | 9-Specific AP | 9-Specific AP50 | 9-Specific AR100 | BANTAI 5-Cat AP | BANTAI 5-Cat AP50 | BANTAI 5-Cat AR100 |
+|---|---|---|---|---|---|---|---|---|
+| `D083_Champion_384 + D086_HR448` | `none` (raw) | 0 | `0.244213` | `0.291926` | `0.411469` | `0.422337` | `0.517015` | `0.637740` |
+| `D083_Champion_384 + D086_HR448` | `pre_nms` | 2 | `0.244580` | `0.292322` | `0.411469` | `0.422848` | `0.517283` | `0.637740` |
+| `D083_Champion_384 + D086_HR448` | `post_nms` | 2 | `0.244451` | `0.292067` | `0.411469` | `0.422582` | `0.516832` | `0.637740` |
+| `D086_Soup2575_384 + D086_HR448` | `none` (raw) | 0 | `0.242913` | `0.290692` | `0.406768` | `0.423197` | `0.516810` | `0.646841` |
+| **`D086_Soup2575_384 + D086_HR448`** | **`pre_nms` (Winner)** | **3** | **`0.245952`** | **`0.293917`** | **`0.415315`** | **`0.426502`** | **`0.520115`** | **`0.646841`** |
+| `D086_Soup2575_384 + D086_HR448` | `post_nms` | 2 | `0.243151` | `0.290831` | `0.406768` | `0.423412` | `0.516582` | `0.646841` |
+
+### Winning State Breakdown (`D086_Soup2575_384 + D086_HR448` @ `pre_nms`)
+
+- **9-Specific Detection Metrics**:
+  - AP: **`0.245952`** (`+0.009823` vs D-083 single-scale champion `0.236129`)
+  - AP50: **`0.293917`** (`+0.011231` vs champion `0.282686`)
+  - AP75: **`0.268650`** (`+0.014517` vs champion `0.254133`)
+  - AR100: **`0.415315`** (`+0.037187` vs champion `0.378128`)
+- **Scale Buckets**:
+  - `AP_small`: **`0.077975`** (AR_small: `0.145833`)
+  - `AP_medium`: **`0.175067`** (AR_medium: `0.346429`)
+  - `AP_large`: **`0.267979`** (AR_large: `0.431811`)
+- **BANTAI 5-Category Aggregation**:
+  - AP: **`0.426502`** (`+0.025254` vs D-083 champion raw `0.401248`)
+  - AP50: **`0.520115`** (**`52.01% AP50`**, `+0.029707` vs champion raw `0.490408`)
+  - AP75: **`0.452306`** (`+0.030592` vs champion raw `0.421714`)
+  - AR100: **`0.646841`** (`+0.040419` vs champion raw `0.606422`)
+
+### Per-Class Performance (Winning Multi-Scale Consensus vs Baselines)
+
+| Class | D-083 Champion (`384/576`) | `D086-HR448 E1` (`448/672`) | Winning Multi-Scale Fused (`D-087`) | Multi-Scale Δ vs Champion |
+|---|---|---|---|---|
+| `cigarette` | `0.111154` | `0.116874` | **`0.123328`** | **`+0.012174`** |
+| `plastic_bottle` | `0.331400` | `0.490174` | **`0.419554`** | **`+0.088154`** |
+| `plastic_bag` | `0.000000` | `0.000000` | `0.000000` | `0.000000` |
+| `plastic_wrapper` | `0.015842` | `0.019650` | **`0.041867`** | **`+0.026025`** |
+| `plastic_film` | `0.045093` | `0.068783` | **`0.068697`** | **`+0.023604`** |
+| `drink_can` | `0.656436` | `0.555941` | **`0.680693`** | **`+0.024257`** |
+| `plastic_cup` | `0.395545` | `0.319802` | `0.357673` | `-0.037872` |
+| `styrofoam_piece` | `0.148515` | `0.074257` | `0.074257` | `-0.074258` |
+| `paper` | `0.421176` | `0.370209` | **`0.447498`** | **`+0.026322`** |
+
+### BANTAI 5-Category Breakdown (Winning State)
+
+- **`Plastic`**: AP = **`0.454488`**, AR100 = **`0.753571`**
+- **`Paper`**: AP = **`0.447498`**, AR100 = **`0.725000`**
+- **`Metal`**: AP = **`0.680693`**, AR100 = **`0.685714`**
+- **`Potentially Hazardous`**: AP = **`0.123328`**, AR100 = **`0.423077`**
+- **`Organic`**: Unannotated on validation split (`None`).
+
+### Reclassified Queries Under `pre_nms` Consensus
+
+Exactly three queries triggered the D-079 consensus rule before NMS:
+1. **Image 215**, Query 0 (high-res scale): `paper` $\to$ `plastic_wrapper` (top-1 score `0.307247`)
+2. **Image 419**, Query 0 (standard scale): `paper` $\to$ `plastic_wrapper` (top-1 score `0.347176`)
+3. **Image 777**, Query 0 (standard scale): `paper` $\to$ `plastic_film` (top-1 score `0.309664`)
+
+### Visual Review GUI Replay
+
+The Native Tk visual review tool supports switching between single-scale champion replay and multi-scale replay via the CLI flag `--prediction-source` or interactively via the GUI dropdown:
+
+```powershell
+# Default single-scale champion replay
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --prediction-source single_scale_champion
+
+# Multi-scale fused replay (384/576 + 448/672)
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --prediction-source multiscale_384_448
+```
+
+---
+
+## 8. Verification and Reproducibility
+
+- Unit tests: `tests/test_stage5_multiscale_consensus.py` passed (`0.035s`) and `tests/test_stage5_d086_highres.py` passed (`0.614s`).
 - Guarded suite: `.venv-training\Scripts\python.exe -B scripts\verify_stage4_guarded.py` verified zero writes to protected artifacts and zero test splits opened.

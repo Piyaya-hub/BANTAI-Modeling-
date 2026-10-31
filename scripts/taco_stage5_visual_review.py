@@ -31,7 +31,8 @@ from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, 
                                                     prepare_rows, scheme_names)
 from scripts.taco_stage5_display_profiles import (NMS_CHOICES, THRESHOLD_CHOICES,
                                                    visible_rows)
-from scripts.taco_stage5_consensus_tiebreak import apply_to_query_rows
+from scripts.taco_stage5_consensus_tiebreak import apply_to_query_rows, apply_consensus_tiebreak
+import numpy as np
 
 # 9 distinct high-contrast colors for waste categories
 CLASS_COLORS = [
@@ -50,6 +51,8 @@ CLASS_COLORS = [
 DEFAULT_TIER1_RUN = Path("runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337")
 DEFAULT_SCORE_VECTOR_DIR = Path("runs/training/stage5-score-vectors-5619e219fa264287aa0564c4565a2472")
 CONSENSUS_STATE = "Tier 2 + D074 champion soup"
+MULTISCALE_STATE = "Multi-Scale Fused (384/576 + 448/672)"
+PREDICTION_SOURCES = ["single_scale_champion", "multiscale_384_448"]
 ORGANIC_SHOWCASE_FILTER = "Organic Showcase (4 Images: 68, 72, 92, 841)"
 ORGANIC_9_STATE = "Organic Showcase 9-Prompt (384/576)"
 ORGANIC_10_STATE = "Organic Showcase 10-Prompt (Hybrid)"
@@ -86,6 +89,26 @@ def discover_d083_run(explicit=None, root=ROOT):
             if (report.get('authorization') == 'D-083' and report.get('status') == 'complete'
                     and report.get('training_updates') == 379 and report.get('validation_forwards') == 336
                     and (candidate / 'checkpoints/best-inference/soup_manifest.json').is_file()):
+                candidates.append(candidate)
+        except (OSError, ValueError, KeyError):
+            continue
+    return max(candidates, key=lambda p: (p / 'report.json').stat().st_mtime) if candidates else None
+
+
+def discover_d086_run(explicit=None, root=ROOT):
+    """Discover only a completed local D-086 run with multi-scale artifacts."""
+    if explicit is not None:
+        return Path(explicit)
+    candidates = []
+    for candidate in (Path(root) / 'runs/training').glob('stage5-d086-highres-*'):
+        report_path = candidate / 'report.json'
+        if not report_path.is_file():
+            continue
+        try:
+            report = strict_load(report_path)
+            if (report.get('authorization') == 'D-086' and report.get('status') == 'complete'
+                    and (candidate / 'multiscale-consensus-replay.json').is_file()
+                    and (candidate / 'scores-multiscale-consensus.npz').is_file()):
                 candidates.append(candidate)
         except (OSError, ValueError, KeyError):
             continue
@@ -193,7 +216,7 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
     return kept
 
 
-def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None):
+def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None, d086_run_dir: Path | None = None):
     val_json_path = dataset_dir / "validation.json"
     val_data = strict_load(val_json_path)
 
@@ -287,6 +310,28 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
             for row in rows:
                 preds_by_state[label][row['image_id']].append(row)
 
+    multiscale_preds = None
+    multiscale_vectors = None
+    if d086_run_dir is not None:
+        ms_replay_file = d086_run_dir / "multiscale-consensus-replay.json"
+        ms_scores_file = d086_run_dir / "scores-multiscale-consensus.npz"
+        if ms_replay_file.is_file() and ms_scores_file.is_file():
+            ms_data = strict_load(ms_replay_file)
+            ms_rows = ms_data.get("raw_queries", [])
+            preds_by_state[MULTISCALE_STATE] = defaultdict(list)
+            multiscale_preds = defaultdict(list)
+            for row in ms_rows:
+                preds_by_state[MULTISCALE_STATE][row["image_id"]].append(row)
+                multiscale_preds[row["image_id"]].append(row)
+            with np.load(ms_scores_file, allow_pickle=False) as ms_npz:
+                ms_img_ids = ms_npz["image_ids"].tolist()
+                ms_scores = ms_npz["scores"].copy()
+            multiscale_vectors = {
+                "scores_by_image": {img_id: ms_scores[idx] for idx, img_id in enumerate(ms_img_ids)},
+                "shape": list(ms_scores.shape),
+                "dtype": str(ms_scores.dtype),
+            }
+
     # Sort predictions by score descending
     for state in preds_by_state:
         for img_id in preds_by_state[state]:
@@ -305,6 +350,8 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
         "ground_truth": annotations_by_img,
         "predictions": preds_by_state,
         "consensus_score_vectors": consensus,
+        "multiscale_predictions": multiscale_preds,
+        "multiscale_score_vectors": multiscale_vectors,
         "organic_showcase": organic_showcase,
         "metrics": {
             "Baseline": baseline_data.get("combined_65", {}),
@@ -362,7 +409,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
 
 class Stage5ViewerGUI:
-    def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 15):
+    def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 15, prediction_source: str = PREDICTION_SOURCES[0]):
         configure_tcl_tk_environment()
         import tkinter as tk
         from tkinter import ttk
@@ -374,8 +421,11 @@ class Stage5ViewerGUI:
         self.gt = data["ground_truth"]
         self.preds = data["predictions"]
         self.consensus_vectors = data.get("consensus_score_vectors")
+        self.multiscale_preds = data.get("multiscale_predictions")
+        self.multiscale_vectors = data.get("multiscale_score_vectors")
         self.organic_showcase = data.get("organic_showcase")
         self.dataset_root = data["dataset_root"]
+        self.prediction_source = prediction_source
 
         # Identify which images have paper
         self.paper_img_ids = set()
@@ -440,10 +490,20 @@ class Stage5ViewerGUI:
         taxonomy_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
         state_frame = ttk.Frame(self.root)
         state_frame.pack(side="top", fill="x")
+        ttk.Label(state_frame, text="Replay Source:").pack(side="left", padx=(10, 2))
+        self.pred_source_var = tk.StringVar(value=prediction_source if prediction_source in PREDICTION_SOURCES else PREDICTION_SOURCES[0])
+        source_cb = ttk.Combobox(state_frame, textvariable=self.pred_source_var,
+                                 values=PREDICTION_SOURCES, state="readonly", width=22)
+        source_cb.pack(side="left", padx=2)
+        source_cb.bind("<<ComboboxSelected>>", self.on_prediction_source_change)
+
         ttk.Label(state_frame, text="Fourth panel state:").pack(side="left", padx=6)
         choices=[n for n in self.preds if n not in ("Baseline", "Stage 5 (256/384)")]
-        initial=(CONSENSUS_STATE if self.consensus_vectors and CONSENSUS_STATE in choices else
-                 "Tier 1 + blend2575 soup" if "Tier 1 + blend2575 soup" in choices else choices[0])
+        if prediction_source == "multiscale_384_448" and MULTISCALE_STATE in choices:
+            initial = MULTISCALE_STATE
+        else:
+            initial=(CONSENSUS_STATE if self.consensus_vectors and CONSENSUS_STATE in choices else
+                     "Tier 1 + blend2575 soup" if "Tier 1 + blend2575 soup" in choices else choices[0])
         self.review_state_var=tk.StringVar(value=initial)
         state_cb=ttk.Combobox(state_frame, textvariable=self.review_state_var, values=choices,
                               state="readonly", width=38)
@@ -543,6 +603,17 @@ class Stage5ViewerGUI:
         else:
             first_id = sorted(self.paper_img_ids)[0] if self.paper_img_ids else sorted(self.images.keys())[0]
             self.set_current_image(first_id)
+
+    def on_prediction_source_change(self, event=None):
+        src = self.pred_source_var.get()
+        if src == "multiscale_384_448" and MULTISCALE_STATE in self.preds:
+            self.review_state_var.set(MULTISCALE_STATE)
+        elif src == "single_scale_champion":
+            initial = (CONSENSUS_STATE if self.consensus_vectors and CONSENSUS_STATE in self.preds
+                       else "D083 + D074 soup (50/50)" if "D083 + D074 soup (50/50)" in self.preds
+                       else list(self.preds.keys())[0])
+            self.review_state_var.set(initial)
+        self.update_plots()
 
     def populate_image_list(self):
         f = self.filter_var.get()
@@ -671,16 +742,39 @@ class Stage5ViewerGUI:
                       else self.preds["Stage 5 (256/384)"].get(img_id, []))
         highres_preds = self.preds[self.review_state_var.get()].get(img_id, [])
 
-        use_consensus = (self.consensus_var.get() and self.consensus_vectors is not None
-                         and self.review_state_var.get() == CONSENSUS_STATE
+        is_multiscale = (self.review_state_var.get() == MULTISCALE_STATE
+                         and self.multiscale_vectors is not None
+                         and img_id in self.multiscale_vectors["scores_by_image"])
+
+        use_consensus = (self.consensus_var.get()
                          and scheme == "bantai-5-category"
-                         and img_id in self.consensus_vectors["scores_by_image"]
-                         and self.taxonomy_var.get() != VIEWS[2])
+                         and self.taxonomy_var.get() != VIEWS[2]
+                         and ((is_multiscale)
+                              or (self.consensus_vectors is not None
+                                  and self.review_state_var.get() == CONSENSUS_STATE
+                                  and img_id in self.consensus_vectors["scores_by_image"])))
+
         if use_consensus:
-            highres_preds, _ = apply_to_query_rows(
-                highres_preds, self.consensus_vectors["scores_by_image"][img_id],
-                delta=0.016, coactivation="3 plastic subtypes >= 0.20",
-                confidence_mode="top1_score")
+            if is_multiscale:
+                # Multi-scale replay consensus application
+                s_vec = self.multiscale_vectors["scores_by_image"][img_id]
+                adj_rows = []
+                for r in highres_preds:
+                    qid = r.get("fused_query_id", r.get("query_id", 0))
+                    if 0 <= qid < len(s_vec):
+                        r_adj, _ = apply_consensus_tiebreak(
+                            r, s_vec[qid], delta=0.016,
+                            coactivation="3 plastic subtypes >= 0.20",
+                            confidence_mode="top1_score")
+                        adj_rows.append(r_adj)
+                    else:
+                        adj_rows.append(r)
+                highres_preds = adj_rows
+            else:
+                highres_preds, _ = apply_to_query_rows(
+                    highres_preds, self.consensus_vectors["scores_by_image"][img_id],
+                    delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                    confidence_mode="top1_score")
 
         # Apply score threshold and optional containment NMS
         def filter_preds(plist):
@@ -791,6 +885,8 @@ def main() -> int:
     parser.add_argument("--tier1-run-dir", type=Path, default=None, help="Explicit Tier1 replay directory; auto-discovers the completed local D074 run by default")
     parser.add_argument("--tier2-run-dir",type=Path,default=None,help="Explicit Tier2 run, otherwise newest complete local Tier2 run")
     parser.add_argument("--d083-run-dir", type=Path, default=None, help="Explicit D-083 replay run; otherwise discover newest completed local run")
+    parser.add_argument("--d086-run-dir", type=Path, default=None, help="Explicit D-086 replay run; otherwise discover newest completed local run")
+    parser.add_argument("--prediction-source", type=str, choices=PREDICTION_SOURCES, default=PREDICTION_SOURCES[0], help="Prediction source / replay mode")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
@@ -804,6 +900,7 @@ def main() -> int:
     args.tier1_run_dir = discover_tier1_run(args.tier1_run_dir)
     args.tier2_run_dir = discover_tier2_run(args.tier2_run_dir)
     args.d083_run_dir = discover_d083_run(args.d083_run_dir)
+    args.d086_run_dir = discover_d086_run(args.d086_run_dir)
     if args.tier2_run_dir is not None and not args.tier2_run_dir.is_dir():
         print("ERROR: Explicit Tier2 replay directory is missing",file=sys.stderr)
         return 1
@@ -813,11 +910,14 @@ def main() -> int:
     if args.d083_run_dir is not None and not args.d083_run_dir.is_dir():
         print(f"ERROR: Explicit D-083 replay directory is missing: {args.d083_run_dir}", file=sys.stderr)
         return 1
+    if args.d086_run_dir is not None and not args.d086_run_dir.is_dir():
+        print(f"ERROR: Explicit D-086 replay directory is missing: {args.d086_run_dir}", file=sys.stderr)
+        return 1
     if not (args.dataset_dir / "validation.json").is_file():
         print("ERROR: Saved review needs the private validation export; no model will be run.", file=sys.stderr)
         return 1
     try:
-        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir)
+        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir, args.d086_run_dir)
     except (OSError, ValueError, KeyError) as exc:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1
@@ -828,6 +928,7 @@ def main() -> int:
             initial_image_id=args.image_id,
             default_threshold=args.score_threshold,
             default_top_k=args.box_top_k,
+            prediction_source=args.prediction_source,
         )
         app.run()
     else:
