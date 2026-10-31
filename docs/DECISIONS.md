@@ -1,5 +1,19 @@
 # Decision register
 
+## D-084: Documentation synchronization and exact JSON table alignment - 2026-10-31
+
+Owner authorization D-084 executed locally on eat/stage5-paper-category as a strictly CPU-only documentation and verification alignment task. Zero GPU calls, model forwards, or test-split reads occurred.
+
+Manual transcription discrepancies in docs/TACO_STAGE_5_D083_CORE_TRAINING.md were corrected against
+uns/training/stage5-d083-core-20261031-a/report.json,
+esolution-comparison.json, and d079-score-preserving-consensus.json:
+- Part A 448/672 per-class APs aligned (plastic_bottle: 0.453533, plastic_film: 0.066377, plastic_wrapper: 0.019519, drink_can: 0.545545, plastic_cup: 0.319802, styrofoam_piece: 0.074257, paper: 0.370481). Scale-bucket progressions documented (AP_small: 0.059641 -> 0.073440; AP_medium: 0.063247 -> 0.184431).
+- Part B candidate states aligned: D083-Core E1 (combined-65 AP 0.233825, AR100 0.375472, legacy-47 AP 0.255879, mean loss 3.949181), soup_d083_d074_5050 (combined-65 AP 0.236129, AR100 0.378128, legacy-47 AP 0.252820, mean loss 3.985499), and soup_d083_d076_5050 (combined-65 AP 0.232746, AR100 0.373000, legacy-47 AP 0.253044, mean loss 3.963570).
+- BANTAI 5-Category metrics aligned: raw AP 0.401563 (AP50 0.495005), consensus AP 0.405701 (50.05% AP50 = 0.500456), and consensus 9-specific AP 0.236393.
+- README.md and docs/PHASES.md updated through D-084.
+
+Guarded suite: **333 tests, 317 passed, 16 documented skips, zero failures/errors**. Markdown links and git diff --check passed.
+
 ## D-083: Controlled Stage 5 fine-tuning and resolution evaluation - 2026-10-31
 
 Owner authorization D-083 executed locally on `feat/stage5-paper-category`. No unaudited classes were introduced; active supervised classes remain fixed to `0..8` with `paper` strictly bound to its Tier 1 baseline without new paper sources. The mapping registry in `scripts/taco_stage5_material_hierarchy.py` was refactored into a table-driven `OBJECT_REGISTRY` with `register_object_class()` for extensible future audited classes.

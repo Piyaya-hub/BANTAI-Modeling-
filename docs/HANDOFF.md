@@ -1,5 +1,19 @@
 # BANTAI Stage 4 handoff
 
+## D-084: Documentation synchronization and exact JSON table alignment - 2026-10-31
+
+Owner authorization D-084 was executed locally on eat/stage5-paper-category as a strictly CPU-only synchronization and table verification task. Zero GPU calls, model forwards, or test-split reads occurred.
+
+All manual transcription discrepancies in docs/TACO_STAGE_5_D083_CORE_TRAINING.md were corrected against the verified JSON run artifacts (
+eport.json,
+esolution-comparison.json, and d079-score-preserving-consensus.json):
+- Part A 448/672 per-class APs and scale buckets (AP_small 0.059641 -> 0.073440, AP_medium 0.063247 -> 0.184431) aligned.
+- Part B candidate states (D083-Core E1 legacy-47 AP 0.255879, mean loss 3.949181; soup_d083_d074_5050 combined-65 AP 0.236129, mean loss 3.985499; soup_d083_d076_5050 combined-65 AP 0.232746) aligned.
+- BANTAI 5-Category metrics aligned: raw AP 0.401563 (AP50 0.495005), consensus AP 0.405701 (50.05% AP50), consensus 9-specific AP 0.236393.
+- README.md, docs/PHASES.md, and docs/DECISIONS.md synchronized through D-084.
+
+Guarded suite: **333 tests: 317 passed, 16 skips, zero failures/errors**. Markdown links and git diff --check passed.
+
 ## D-083: Controlled Stage 5 fine-tuning and resolution evaluation - 2026-10-31
 
 Owner authorization D-083 was executed locally on `feat/stage5-paper-category`. Zero unaudited classes were added; active supervised classes remain strictly fixed to `0..8` with `paper` strictly mapped from the Tier 1 baseline with zero new paper source categories. `scripts/taco_stage5_material_hierarchy.py` was refactored with a table-driven `OBJECT_REGISTRY` and `register_object_class()` interface.

@@ -1,16 +1,18 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-078
+## Current Stage 5 state through D-084
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. The best measured Stage5 combined
-**nine-specific validation AP through D-078 is 0.235994**, from the D076 Tier2/D074
-champion 50/50 soup at 384/576. D075 also persists the D074 `soup_tier1_hr_blend2575`
-(AP 0.231226) as an inference/replay-only bundle. Both remain private and unpromoted;
-neither is wired into `scripts/detect_images.py`. This is validation evidence, not
-test generalization or production promotion; no merge is authorized.
+validation / 65-image test memberships frozen. Under D-083/D-084, the best measured
+Stage 5 combined **nine-specific validation AP is 0.236129** (and **0.236393** with D-079
+score-preserving consensus) from soup_d083_d074_5050 (50/50 D074 champion + D083 E1)
+at 384/576. The legacy 47-image 8-class AP reached **0.255879** (D083-Core E1) / **0.252820**
+(soup_d083_d074_5050). The BANTAI 5-Category AP reached **0.401563 raw / 0.405701 consensus**
+(**50.05% AP50**). All models remain private and unpromoted; none is wired into
+scripts/detect_images.py. This is validation evidence, not test generalization or
+production promotion; no merge is authorized.
 
-| Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic 5-material / 4-material AP |
+| Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
 | --- | --- | --- | --- |
 | D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
 | D-071 | 384/576 saved blend2575; HR E1 | 0.171262; 0.202020 | - |
@@ -21,6 +23,11 @@ test generalization or production promotion; no merge is authorized.
 | D-076 | Tier 2: 384 training images; 384/576 E1 and 50/50 D074-champion soup | **0.235994** | 0.342725 / 0.400957 |
 | D-077 | Display floors and balanced soups; negative for GT259 correction | no promoted state | diagnostic operating points only |
 | D-078 | 65 saved vectors; one failed attempt made 66 forwards total; pooling degraded AP; Tcl/Tk fixed | references D-076 | raw material argmax retained |
+| D-079 | Canonical BANTAI 5-category view and score-preserving consensus | 0.235994 -> 0.236283 (consensus) | 0.400957 -> 0.405106 (consensus) |
+| D-080 | Organic / Food waste support audit (8 boxes on 7 images); keep 0..8 | CPU audit only | no supervised class 9 added |
+| D-081/82 | Organic hybrid-prompt non-held-out showcase (4 images, 8 forwards) | diagnostic showcase | spatial IoU vs Organic GT |
+| D-083 | 448/672 evaluation + 1-epoch D083 core training + 50/50 soup | **0.236129** (soup D083+D074) | **0.401563 raw / 0.405701 consensus** |
+| D-084 | Documentation sync and exact JSON table alignment | **0.236129** (consensus **0.236393**) | **50.05% AP50** on BANTAI 5-Cat |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

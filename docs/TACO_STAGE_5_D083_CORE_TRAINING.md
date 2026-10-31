@@ -35,21 +35,27 @@ Under Owner authorization **D-083** on branch `feat/stage5-paper-category`, a co
 | BANTAI 5-Category AP50 | 0.473523 | 0.435728 | -0.037795 |
 | BANTAI 5-Category AR100 | 0.540182 | 0.472727 | -0.067455 |
 
+### Scale Bucket Progression (9-Specific `combined_65`)
+
+At `448/672`, smaller objects benefited substantially from higher pixel sampling:
+- `AP_small`: rose from **`0.059641`** (`384/576`) to **`0.073440`** (`448/672`)
+- `AP_medium`: rose from **`0.063247`** (`384/576`) to **`0.184431`** (`448/672`)
+
 ### Per-Class AP Comparison (9-Specific)
 
 | Class | 384/576 AP | 448/672 AP | Delta |
 | --- | --- | --- | --- |
-| `cigarette` | 0.111849 | 0.124503 | +0.012654 |
-| `plastic_bottle` | 0.331400 | 0.316832 | -0.014568 |
+| `cigarette` | 0.111849 | 0.110532 | -0.001317 |
+| `plastic_bottle` | 0.331400 | 0.453533 | +0.122132 |
 | `plastic_bag` | 0.000000 | 0.000000 | 0.000000 |
-| `plastic_wrapper` | 0.015842 | 0.009901 | -0.005941 |
-| `plastic_film` | 0.042013 | 0.044569 | +0.002556 |
-| `drink_can` | 0.656436 | 0.603960 | -0.052476 |
-| `plastic_cup` | 0.222772 | 0.168317 | -0.054455 |
-| `styrofoam_piece` | 0.000000 | 0.000000 | 0.000000 |
-| `paper` | 0.743630 | 0.691964 | -0.051666 |
+| `plastic_wrapper` | 0.015842 | 0.019519 | +0.003678 |
+| `plastic_film` | 0.042013 | 0.066377 | +0.024364 |
+| `drink_can` | 0.656436 | 0.545545 | -0.110891 |
+| `plastic_cup` | 0.395545 | 0.319802 | -0.075743 |
+| `styrofoam_piece` | 0.148515 | 0.074257 | -0.074257 |
+| `paper` | 0.422343 | 0.370481 | -0.051862 |
 
-*Observation*: While small object localization (`cigarette`, `plastic_film`) modestly improved at `448/672`, larger and medium objects suffered significant confidence/spatial degradation due to training resolution mismatch (`384/576`), resulting in an overall AP drop of -0.0182 on 9-specific and -0.0392 on BANTAI 5-Category. The primary resolution for training and evaluation remains `384/576`.
+*Note on Recall & Legacy 8-Class*: For `cigarette`, 9-specific `AR100` rose from `0.380769` (`384/576`) to `0.396154` (`448/672`), and on `legacy_47` its AP rose from `0.135895` to `0.140744`. However, large container categories trained strictly at `384/576` experienced spatial/score miscalibration, leading to an overall AP drop. Training and inference baseline remains pinned to `384/576`.
 
 ---
 
@@ -62,30 +68,40 @@ Under Owner authorization **D-083** on branch `feat/stage5-paper-category`, a co
 
 ### Evaluation Across Candidate States (336 Validation Forwards)
 
-| Model State | Recipe | Combined 65 AP | Combined 65 AR100 | Legacy 47 AP | Legacy 47 AR100 | Mean Val Loss |
-| --- | --- | --- | --- | --- | --- | --- |
-| **`D083-Core E1`** | Single epoch endpoint | 0.233825 | 0.380720 | **0.255879** | 0.407000 | 4.96024 |
-| **`soup_d083_d074_5050`** | `0.5*D074 + 0.5*D083-E1` | **0.236129** | **0.380720** | 0.252820 | 0.407000 | **4.80806** |
-| **`soup_d083_d076_5050`** | `0.5*D076 + 0.5*D083-E1` | 0.232746 | 0.379813 | 0.253044 | 0.407000 | 4.82148 |
+| Model State | Recipe | Combined 65 AP | Combined 65 AR100 | Legacy 47 AP | Legacy 47 AP50 | Legacy 47 AR100 | Mean Val Loss |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **`D083-Core E1`** | Single epoch endpoint | 0.233825 | 0.375472 | **0.255879** | 0.301468 | 0.390262 | **3.949181** |
+| **`soup_d083_d074_5050`** | `0.5*D074 + 0.5*D083-E1` | **0.236129** | **0.378128** | 0.252820 | 0.298086 | 0.389300 | 3.985499 |
+| **`soup_d083_d076_5050`** | `0.5*D076 + 0.5*D083-E1` | 0.232746 | 0.373000 | 0.253044 | 0.297823 | 0.389741 | 3.963570 |
 
-### Per-Class AP Comparison for Winning Champion (`soup_d083_d074_5050`)
+### Per-Class AP Comparison for Winning Champion (`soup_d083_d074_5050` vs D076 Reference)
 
-| Supervised Class | D076 Reference AP | `soup_d083_d074_5050` AP | Delta |
-| --- | --- | --- | --- |
-| `cigarette` | 0.111849 | 0.111849 | 0.000000 |
-| `plastic_bottle` | 0.331400 | 0.331400 | 0.000000 |
-| `plastic_bag` | 0.000000 | 0.000000 | 0.000000 |
-| `plastic_wrapper` | 0.015842 | 0.017059 | +0.001217 |
-| `plastic_film` | 0.042013 | 0.042013 | 0.000000 |
-| `drink_can` | 0.656436 | 0.656436 | 0.000000 |
-| `plastic_cup` | 0.222772 | 0.222772 | 0.000000 |
-| `styrofoam_piece` | 0.000000 | 0.000000 | 0.000000 |
-| `paper` | 0.743630 | 0.743630 | 0.000000 |
-| **Overall AP** | **0.235994** | **0.236129** | **+0.000135** |
+| Supervised Class | D076 Reference AP | `soup_d083_d074_5050` AP | Delta | Legacy 47 AP (`soup_d083_d074_5050`) |
+| --- | --- | --- | --- | --- |
+| `cigarette` | 0.111849 | 0.111154 | -0.000695 | 0.131154 |
+| `plastic_bottle` | 0.331400 | 0.331400 | 0.000000 | 0.292079 |
+| `plastic_bag` | 0.000000 | 0.000000 | 0.000000 | 0.000000 |
+| `plastic_wrapper` | 0.015842 | 0.015842 | 0.000000 | 0.202970 (`0.241584` in `D083-Core E1`) |
+| `plastic_film` | 0.042013 | 0.045093 | +0.003080 | 0.056752 |
+| `drink_can` | 0.656436 | 0.656436 | 0.000000 | 0.656436 |
+| `plastic_cup` | 0.395545 | 0.395545 | 0.000000 | 0.475248 |
+| `styrofoam_piece` | 0.148515 | 0.148515 | 0.000000 | 0.207921 |
+| `paper` | 0.422343 | 0.421176 | -0.001167 | N/A (8-class legacy) |
+| **Overall AP** | **0.235994** | **0.236129** | **+0.000135** | **0.252820** |
 
-### Material Hierarchy and Consensus Audit
-- **Diagnostic BANTAI 5-Category AP (raw)**: `0.400957` (matches baseline).
-- **D-079 Score-Preserving Plastic Consensus**: Verified on Image 777 (q0 remapped from Paper to `plastic_film`/Plastic while retaining score `0.307818`).
+### BANTAI 5-Category & Score-Preserving Consensus Audit
+
+Evaluated on `soup_d083_d074_5050` predictions (`runs/training/stage5-d083-core-20261031-a/d079-score-preserving-consensus.json`):
+
+- **Raw BANTAI 5-Category**:
+  - AP = **`0.401563`**, AP50 = **`0.495005`**, AR100 = **`0.594712`**
+  - Per-category: `Plastic = 0.417487`, `Paper = 0.421176`, `Metal = 0.656436`, `Potentially Hazardous = 0.111154`, `Organic = null`
+- **Consensus BANTAI 5-Category (Image 777 paper -> plastic subtype tie-break)**:
+  - AP = **`0.405701`**, AP50 = **`0.500456`** (50.05% AP50), AR100 = **`0.598729`**
+  - Per-category: `Plastic = 0.430832`, `Paper = 0.424384`, `Metal = 0.656436`, `Potentially Hazardous = 0.111154`, `Organic = null`
+- **Consensus 9-Specific**:
+  - AP = **`0.236393`**, AP50 = **`0.282824`**, AP75 = **`0.259271`**
+
 - **Inference Bundle**: Persisted at `runs/training/stage5-d083-core-20261031-a/checkpoints/best-inference` with parameter SHA-256 `82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`.
 - **Score Vectors**: Saved at `best-score-vectors.npz` (`(65, 900, 9)` float32 array).
 
@@ -95,4 +111,4 @@ Under Owner authorization **D-083** on branch `feat/stage5-paper-category`, a co
 - **Protected Snapshots**: Pre-run and post-run protected snapshots match identically (`integrity-after-training.json`). Zero protected core source or taxonomy files modified. Zero test split reads (`test.json` unopened, 0 held-out test photos accessed).
 - **Guarded Test Suite**: 333 tests run, 317 passed, 16 documented skips, 0 failures, 0 errors. Zero unauthorized GPU/detector calls or optimizer updates during testing.
 - **Native Tk Verification**: Passed 50 combinations on Image 777 with zero errors and unchanged source hashes.
-- **Markdown Links & Git Check**: 64 markdown files / 513 local links verified with 0 broken links; `git diff --check` clean.
+- **Markdown Links & Git Check**: 64 markdown files / 515 local links verified with 0 broken links; `git diff --check` clean.
