@@ -1,5 +1,27 @@
 # Decision register
 
+## D-088: Class-Calibrated Multi-Scale Query Routing + D-079 Consensus Optimization - 2026-10-31
+
+Owner authorization D-088 executed locally on `feat/stage5-paper-category` as a strictly CPU-only routing optimization and evaluation task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+1. **Routing Policy Evaluation Grid (`scripts/taco_stage5_multiscale_consensus.py`)**:
+   - In D-087, uniform pooling degraded `styrofoam_piece` (`0.148515 -> 0.074257`) and `plastic_cup` (`0.395545 -> 0.357673`) due to uncalibrated high-resolution candidate outscoring.
+   - Evaluated a 36-combination grid across 2 pairings (`D083_Champion_384 + D086_HR448` and `D086_Soup2575_384 + D086_HR448`), 6 routing policies (`uniform_both`, `std_only_cup_styrofoam`, `hr_small_medium_classes_only`, `hr_small_medium_plus_can_paper`, `box_area_gated_010`, `box_area_discount_095`), and 3 consensus modes (`none`, `pre_nms`, `post_nms`).
+   - Gating or discounting HR queries by box area was strictly inferior to class-calibrated routing (`0.237004` gated vs `0.258410` calibrated).
+   - **Winning Configuration**: `D086_Soup2575_384 + D086_HR448` with `hr_small_medium_plus_can_paper` (and `std_only_cup_styrofoam`) under `pre_nms` consensus:
+     - Combined-65 9-Specific AP: **`0.258410`** (AP50 `0.306843`, AP75 `0.281577`, AR100 `0.415315`), representing a `+0.012458` gain over D-087 uniform fusion (`0.245952`) and `+0.022281` over D-083 single-scale champion (`0.236129`).
+     - Scale breakdown: `AP_small 0.077975`, `AP_medium 0.175067`, `AP_large 0.283233` (`+0.015254` over D-087 `0.267979`).
+     - Combined-65 BANTAI 5-Category AP: **`0.430072`** (AP50 `0.524870` / **`52.49% AP50`**, AP75 `0.455971`, AR100 `0.646394`).
+     - Both `plastic_cup` (AP `0.395545`) and `styrofoam_piece` (AP `0.148515`) were fully restored to peak baseline performance, while all high-resolution gains on `cigarette` (`0.123328`), `plastic_bottle` (`0.419554`), `plastic_wrapper` (`0.041867`), `plastic_film` (`0.068693`), `drink_can` (`0.680693`), and `paper` (`0.447498`) were preserved.
+2. **Updated Replay Artifacts**:
+   - `runs/training/stage5-d086-highres-20261031-a/multiscale-consensus-replay.json` (6,500 queries, 100/image with scale and routing provenance recorded).
+   - `runs/training/stage5-d086-highres-20261031-a/scores-multiscale-consensus.npz` (shape `(65, 100, 9)`, float32).
+   - `runs/training/stage5-d086-highres-20261031-a/multiscale-consensus-audit.json` (complete 36-combination grid).
+3. **GUI Verification**:
+   - Verified Native Tk visual review tool on Image 777 in both CLI and GUI modes with zero Tcl/Tk errors.
+
+Full report: [D-086, D-087 & D-088 report](TACO_STAGE_5_D086_HIGHRES_TRAINING.md#8-class-calibrated-multi-scale-query-routing--d-079-consensus-optimization-d-088).
+
 ## D-087: Multi-Scale Query Fusion + D-079 Consensus Integration and Native Tk Review Replay Mode - 2026-10-31
 
 Owner authorization D-087 executed locally on `feat/stage5-paper-category` as a strictly CPU-only integration and evaluation task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.

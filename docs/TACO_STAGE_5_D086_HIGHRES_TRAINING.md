@@ -187,7 +187,81 @@ The Native Tk visual review tool supports switching between single-scale champio
 
 ---
 
-## 8. Verification and Reproducibility
+## 8. Class-Calibrated Multi-Scale Query Routing + D-079 Consensus Optimization (D-088)
 
-- Unit tests: `tests/test_stage5_multiscale_consensus.py` passed (`0.035s`) and `tests/test_stage5_d086_highres.py` passed (`0.614s`).
+Owner authorization **D-088** completed a strictly CPU-only evaluation of class-calibrated and scale-calibrated multi-scale query routing policies across pairings and consensus modes in `scripts/taco_stage5_multiscale_consensus.py`.
+
+In D-087, uniform pooling of `384/576` and `448/672` queries achieved strong gains across `cigarette`, `plastic_bottle`, `plastic_wrapper`, `plastic_film`, `drink_can`, and `paper`, but degraded `styrofoam_piece` (`0.148515 -> 0.074257`) and `plastic_cup` (`0.395545 -> 0.357673`) because uncalibrated `448/672` queries for those two classes outscored better-localized `384/576` queries.
+
+D-088 evaluated a 36-combination grid across 2 candidate pairings (`D083_Champion_384 + D086_HR448` and `D086_Soup2575_384 + D086_HR448`), 6 routing policies, and 3 consensus modes:
+
+### Multi-Scale Routing Grid Evaluation (`multiscale-consensus-audit.json`)
+
+Results on `D086_Soup2575_384_plus_D086_HR448`:
+
+| Routing Policy | Consensus Mode | 9-Specific AP | 9-Specific AP50 | 9-Specific AR100 | BANTAI 5-Cat AP | BANTAI 5-Cat AP50 | Changes |
+|---|---|---|---|---|---|---|---|
+| `uniform_both` (D-087 baseline) | `none` | `0.242913` | `0.290692` | `0.406768` | `0.423197` | `0.516810` | 0 |
+| `uniform_both` (D-087 baseline) | `pre_nms` | `0.245952` | `0.293917` | `0.415315` | `0.426502` | `0.520115` | 3 |
+| `uniform_both` (D-087 baseline) | `post_nms` | `0.243151` | `0.290831` | `0.406768` | `0.423412` | `0.516582` | 2 |
+| `std_only_cup_styrofoam` | `none` | `0.255371` | `0.303618` | `0.406768` | `0.426862` | `0.521705` | 0 |
+| `std_only_cup_styrofoam` | `pre_nms` | `0.258410` | `0.306843` | `0.415315` | `0.430063` | `0.524857` | 3 |
+| `std_only_cup_styrofoam` | `post_nms` | `0.255610` | `0.303757` | `0.406768` | `0.426981` | `0.521281` | 2 |
+| `hr_small_medium_classes_only` | `none` | `0.250090` | `0.300245` | `0.396847` | `0.414988` | `0.514130` | 0 |
+| `hr_small_medium_classes_only` | `pre_nms` | `0.253721` | `0.304184` | `0.405394` | `0.419521` | `0.518887` | 3 |
+| `hr_small_medium_classes_only` | `post_nms` | `0.253592` | `0.303927` | `0.405394` | `0.419521` | `0.518887` | 2 |
+| `hr_small_medium_plus_can_paper` | `none` | `0.255371` | `0.303618` | `0.406768` | `0.426872` | `0.521719` | 0 |
+| **`hr_small_medium_plus_can_paper`** | **`pre_nms` (Winner)** | **`0.258410`** | **`0.306843`** | **`0.415315`** | **`0.430072`** | **`0.524870`** | **3** |
+| `hr_small_medium_plus_can_paper` | `post_nms` | `0.255610` | `0.303757` | `0.406768` | `0.426991` | `0.521294` | 2 |
+| `box_area_gated_010` | `pre_nms` | `0.237004` | `0.284333` | `0.370352` | `0.406260` | `0.502840` | 3 |
+| `box_area_discount_095` | `pre_nms` | `0.244684` | `0.292743` | `0.413098` | `0.429052` | `0.521507` | 3 |
+
+*Reference Pairing `D083_Champion_384_plus_D086_HR448` with `pre_nms`*:
+- `std_only_cup_styrofoam`: 9-Specific AP = `0.257038`, BANTAI 5-Cat AP = `0.426387`.
+- `hr_small_medium_plus_can_paper`: 9-Specific AP = `0.257038`, BANTAI 5-Cat AP = `0.426396`.
+
+### Winning State Breakdown (`D086_Soup2575_384 + D086_HR448`, `hr_small_medium_plus_can_paper`, `pre_nms`)
+
+- **Official 9-Specific Detection Metrics**:
+  - AP: **`0.258410`** (`+0.012458` vs D-087 uniform fusion `0.245952`, `+0.022281` vs D-083 single-scale champion `0.236129`)
+  - AP50: **`0.306843`** (`+0.012926` vs D-087 `0.293917`)
+  - AP75: **`0.281577`** (`+0.012927` vs D-087 `0.268650`)
+  - AR100: **`0.415315`**
+- **Scale Buckets**:
+  - `AP_small`: **`0.077975`** (AR_small: `0.145833`)
+  - `AP_medium`: **`0.175067`** (AR_medium: `0.346429`)
+  - `AP_large`: **`0.283233`** (`+0.015254` vs D-087 `0.267979`) (AR_large: `0.431811`)
+- **BANTAI 5-Category Aggregation**:
+  - AP: **`0.430072`** (`+0.003570` vs D-087 `0.426502`)
+  - AP50: **`0.524870`** (**`52.49% AP50`**, `+0.004755` vs D-087 `0.520115`)
+  - AP75: **`0.455971`** (`+0.003665` vs D-087 `0.452306`)
+  - AR100: **`0.646394`**
+
+### Per-Class Performance (Class-Calibrated Fused vs Prior States)
+
+| Class | D-083 Champion (`384/576`) | `D086-HR448 E1` (`448/672`) | D-087 Uniform Fused | D-088 Calibrated Fused | Status |
+|---|---|---|---|---|---|
+| `cigarette` | `0.111154` | `0.116874` | `0.123328` | **`0.123328`** | High-Res gain retained |
+| `plastic_bottle` | `0.331400` | `0.490174` | `0.419554` | **`0.419554`** | High-Res gain retained |
+| `plastic_bag` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | Consistent 0 AP |
+| `plastic_wrapper` | `0.015842` | `0.019650` | `0.041867` | **`0.041867`** | High-Res gain retained |
+| `plastic_film` | `0.045093` | `0.068783` | `0.068697` | **`0.068693`** | High-Res gain retained |
+| `drink_can` | `0.656436` | `0.555941` | `0.680693` | **`0.680693`** | Fused peak retained |
+| `plastic_cup` | `0.395545` | `0.319802` | `0.357673` | **`0.395545`** | **Fully restored to peak** |
+| `styrofoam_piece` | `0.148515` | `0.074257` | `0.074257` | **`0.148515`** | **Fully restored to peak** |
+| `paper` | `0.421176` | `0.370209` | `0.447498` | **`0.447498`** | Fused peak retained |
+
+### BANTAI 5-Category Breakdown (Winning State)
+
+- **`Plastic`**: AP = **`0.468770`** (`+0.014282` vs D-087 `0.454488`), AR100 = `0.751786`
+- **`Paper`**: AP = **`0.447498`**, AR100 = `0.725000`
+- **`Metal`**: AP = **`0.680693`**, AR100 = `0.685714`
+- **`Potentially Hazardous`**: AP = **`0.123328`**, AR100 = `0.423077`
+- **`Organic`**: Unannotated on validation split (`None`).
+
+---
+
+## 9. Verification and Reproducibility
+
+- Unit tests: `tests/test_stage5_multiscale_consensus.py` passed (`0.067s`) and `tests/test_stage5_d086_highres.py` passed (`0.614s`).
 - Guarded suite: `.venv-training\Scripts\python.exe -B scripts\verify_stage4_guarded.py` verified zero writes to protected artifacts and zero test splits opened.

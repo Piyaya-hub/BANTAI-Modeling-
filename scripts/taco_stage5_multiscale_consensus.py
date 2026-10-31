@@ -1,8 +1,8 @@
-"""Multi-Scale Query Fusion + D-079 Consensus Integration (D-087).
+"""Class-Calibrated Multi-Scale Query Routing + D-079 Consensus Integration (D-088).
 
 CPU-only evaluation and artifact generator combining standard-resolution (384/576)
-and high-resolution (448/672) validation queries and score vectors for 9 active
-supervised classes (0..8) without GPU or model forwards.
+and high-resolution (448/672) validation queries, class-calibrated scale routing,
+and score vectors for 9 active supervised classes (0..8) without GPU or model forwards.
 """
 from __future__ import annotations
 
@@ -28,17 +28,24 @@ VAL_JSON = ROOT / "exports/taco/strict-clean-stage5-d083-core-v1/validation.json
 D083_RUN = ROOT / "runs/training/stage5-d083-core-20261031-a"
 D086_RUN = ROOT / "runs/training/stage5-d086-highres-20261031-a"
 
+ROUTING_POLICIES = [
+    "uniform_both",
+    "std_only_cup_styrofoam",
+    "hr_small_medium_classes_only",
+    "hr_small_medium_plus_can_paper",
+    "box_area_gated_010",
+    "box_area_discount_095",
+]
+
+CONSENSUS_MODES = ["none", "pre_nms", "post_nms"]
+
 
 def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, hr_vecs, hr_img_map,
-                      consensus_mode="none"):
+                      routing_policy="uniform_both", consensus_mode="none"):
     """
-    Fuses 900 standard-resolution and 900 high-resolution queries per image using
-    class-aware IoU 0.55 NMS (keeping top 100 queries per image).
-    
-    consensus_mode:
-      - 'none': raw multi-scale query fusion
-      - 'pre_nms': D-079 consensus tiebreak applied before NMS
-      - 'post_nms': D-079 consensus tiebreak applied to kept queries after NMS
+    Fuses standard-resolution (384/576) and high-resolution (448/672) queries per image
+    under a class-calibrated routing policy and consensus mode using class-aware IoU 0.55 NMS
+    (keeping top 100 queries per image).
     """
     by_img = defaultdict(lambda: {"std": [], "hr": []})
     for r in std_queries:
@@ -58,21 +65,56 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
         combined = []
         for r in pools["std"]:
             v = std_v[r["query_id"]]
+            r_use = dict(r)
+            r_use["scale"] = "std"
+            r_use["routing_policy"] = routing_policy
             if consensus_mode == "pre_nms":
-                r_adj, ch = apply_consensus_tiebreak(r, v, delta=0.016, coactivation="3 plastic subtypes >= 0.20", confidence_mode="top1_score")
+                r_adj, ch = apply_consensus_tiebreak(
+                    r_use, v, delta=0.016, coactivation="3 plastic subtypes >= 0.20", confidence_mode="top1_score"
+                )
                 if ch:
-                    changes.append({"image_id": img_id, "query_id": r["query_id"], "scale": "std", "from": r["category_id"], "to": r_adj["category_id"], "score": r["score"]})
-                r = r_adj
-            combined.append((r, v))
+                    changes.append({
+                        "image_id": img_id, "query_id": r["query_id"], "scale": "std",
+                        "from": r_use["category_id"], "to": r_adj["category_id"], "score": r_use["score"]
+                    })
+                r_use = r_adj
+            combined.append((r_use, v))
 
         for r in pools["hr"]:
             v = hr_v[r["query_id"]]
+            r_use = dict(r)
+            r_use["scale"] = "hr"
+            r_use["routing_policy"] = routing_policy
             if consensus_mode == "pre_nms":
-                r_adj, ch = apply_consensus_tiebreak(r, v, delta=0.016, coactivation="3 plastic subtypes >= 0.20", confidence_mode="top1_score")
+                r_adj, ch = apply_consensus_tiebreak(
+                    r_use, v, delta=0.016, coactivation="3 plastic subtypes >= 0.20", confidence_mode="top1_score"
+                )
                 if ch:
-                    changes.append({"image_id": img_id, "query_id": r["query_id"], "scale": "hr", "from": r["category_id"], "to": r_adj["category_id"], "score": r["score"]})
-                r = r_adj
-            combined.append((r, v))
+                    changes.append({
+                        "image_id": img_id, "query_id": r["query_id"], "scale": "hr",
+                        "from": r_use["category_id"], "to": r_adj["category_id"], "score": r_use["score"]
+                    })
+                r_use = r_adj
+
+            cat = r_use["category_id"]
+            # Apply routing policy to high-resolution candidate queries
+            if routing_policy == "std_only_cup_styrofoam":
+                if cat in (6, 7):
+                    continue
+            elif routing_policy == "hr_small_medium_classes_only":
+                if cat not in (0, 1, 3, 4):
+                    continue
+            elif routing_policy == "hr_small_medium_plus_can_paper":
+                if cat not in (0, 1, 3, 4, 5, 8):
+                    continue
+            elif routing_policy == "box_area_gated_010":
+                if r_use["bbox"][2] * r_use["bbox"][3] > 0.10:
+                    continue
+            elif routing_policy == "box_area_discount_095":
+                if r_use["bbox"][2] * r_use["bbox"][3] > 0.10:
+                    r_use["score"] = r_use["score"] * 0.95
+
+            combined.append((r_use, v))
 
         combined.sort(key=lambda item: -item[0]["score"])
         kept = []
@@ -92,9 +134,14 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
         if consensus_mode == "post_nms":
             final_kept = []
             for r, v in kept:
-                r_adj, ch = apply_consensus_tiebreak(r, v, delta=0.016, coactivation="3 plastic subtypes >= 0.20", confidence_mode="top1_score")
+                r_adj, ch = apply_consensus_tiebreak(
+                    r, v, delta=0.016, coactivation="3 plastic subtypes >= 0.20", confidence_mode="top1_score"
+                )
                 if ch:
-                    changes.append({"image_id": img_id, "query_id": r["query_id"], "scale": "fused", "from": r["category_id"], "to": r_adj["category_id"], "score": r["score"]})
+                    changes.append({
+                        "image_id": img_id, "query_id": r["query_id"], "scale": r.get("scale", "fused"),
+                        "from": r["category_id"], "to": r_adj["category_id"], "score": r["score"]
+                    })
                 final_kept.append((r_adj, v))
             kept = final_kept
 
@@ -112,6 +159,7 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
     m5 = evaluate_case(val_data, fused_pool, "bantai-5-category", "raw")
 
     return {
+        "routing_policy": routing_policy,
         "consensus_mode": consensus_mode,
         "fused_query_count": len(fused_pool),
         "changes_count": len(changes),
@@ -123,7 +171,7 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
     }
 
 
-def run_d087_multiscale_consensus(output_dir: Path = D086_RUN):
+def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
     start = time.perf_counter()
     output_dir = Path(output_dir).resolve()
     val_data = strict_load(VAL_JSON)
@@ -164,29 +212,37 @@ def run_d087_multiscale_consensus(output_dir: Path = D086_RUN):
     winning_pool = None
     winning_vectors = None
     winning_pair_name = None
+    winning_policy = None
     winning_mode = None
     highest_ap = -1.0
+    highest_ap5 = -1.0
 
     for pair_name, cfg in pairings.items():
         results[pair_name] = {}
-        for mode in ("none", "pre_nms", "post_nms"):
-            eval_res = fuse_and_evaluate(
-                val_data, cfg["std_queries"], cfg["hr_queries"],
-                cfg["std_vecs"], cfg["std_img_map"],
-                cfg["hr_vecs"], cfg["hr_img_map"],
-                consensus_mode=mode,
-            )
-            pool = eval_res.pop("fused_pool")
-            vecs = eval_res.pop("fused_vectors_by_img")
-            results[pair_name][mode] = eval_res
+        for pol in ROUTING_POLICIES:
+            results[pair_name][pol] = {}
+            for mode in CONSENSUS_MODES:
+                eval_res = fuse_and_evaluate(
+                    val_data, cfg["std_queries"], cfg["hr_queries"],
+                    cfg["std_vecs"], cfg["std_img_map"],
+                    cfg["hr_vecs"], cfg["hr_img_map"],
+                    routing_policy=pol,
+                    consensus_mode=mode,
+                )
+                pool = eval_res.pop("fused_pool")
+                vecs = eval_res.pop("fused_vectors_by_img")
+                results[pair_name][pol][mode] = eval_res
 
-            ap9 = eval_res["9_specific"]["AP"]
-            if ap9 > highest_ap:
-                highest_ap = ap9
-                winning_pool = pool
-                winning_vectors = vecs
-                winning_pair_name = pair_name
-                winning_mode = mode
+                ap9 = eval_res["9_specific"]["AP"]
+                ap5 = eval_res["bantai_5_category"]["AP"]
+                if (ap9, ap5) > (highest_ap, highest_ap5):
+                    highest_ap = ap9
+                    highest_ap5 = ap5
+                    winning_pool = pool
+                    winning_vectors = vecs
+                    winning_pair_name = pair_name
+                    winning_policy = pol
+                    winning_mode = mode
 
     # Align images in array for export
     sorted_image_ids = sorted(winning_vectors.keys())
@@ -199,32 +255,37 @@ def run_d087_multiscale_consensus(output_dir: Path = D086_RUN):
 
     # Save multiscale-consensus-replay.json
     replay_meta = {
-        "authorization": "D-087",
+        "authorization": "D-088",
         "winning_pairing": winning_pair_name,
+        "winning_routing_policy": winning_policy,
         "winning_consensus_mode": winning_mode,
         "highest_9_specific_AP": highest_ap,
+        "highest_bantai_5_category_AP": highest_ap5,
         "vector_artifact": scores_npz_path.name,
         "vector_shape": list(scores_array.shape),
         "vector_dtype": str(scores_array.dtype),
         "fused_query_count": len(winning_pool),
         "all_pairings_summary": {
             pname: {
-                m: {
-                    "9_specific_AP": pdata[m]["9_specific"]["AP"],
-                    "9_specific_AP50": pdata[m]["9_specific"]["AP50"],
-                    "9_specific_AR100": pdata[m]["9_specific"]["AR100"],
-                    "bantai_5_category_AP": pdata[m]["bantai_5_category"]["AP"],
-                    "bantai_5_category_AP50": pdata[m]["bantai_5_category"]["AP50"],
-                    "bantai_5_category_AR100": pdata[m]["bantai_5_category"]["AR100"],
-                    "changes_count": pdata[m]["changes_count"],
+                pol: {
+                    m: {
+                        "9_specific_AP": pdata[pol][m]["9_specific"]["AP"],
+                        "9_specific_AP50": pdata[pol][m]["9_specific"]["AP50"],
+                        "9_specific_AR100": pdata[pol][m]["9_specific"]["AR100"],
+                        "bantai_5_category_AP": pdata[pol][m]["bantai_5_category"]["AP"],
+                        "bantai_5_category_AP50": pdata[pol][m]["bantai_5_category"]["AP50"],
+                        "bantai_5_category_AR100": pdata[pol][m]["bantai_5_category"]["AR100"],
+                        "changes_count": pdata[pol][m]["changes_count"],
+                    }
+                    for m in pdata[pol]
                 }
-                for m in pdata
+                for pol in pdata
             }
             for pname, pdata in results.items()
         },
         "winning_metrics": {
-            "9_specific": results[winning_pair_name][winning_mode]["9_specific"],
-            "bantai_5_category": results[winning_pair_name][winning_mode]["bantai_5_category"],
+            "9_specific": results[winning_pair_name][winning_policy][winning_mode]["9_specific"],
+            "bantai_5_category": results[winning_pair_name][winning_policy][winning_mode]["bantai_5_category"],
         },
         "raw_queries": winning_pool,
         "elapsed_seconds": time.perf_counter() - start,
@@ -232,12 +293,13 @@ def run_d087_multiscale_consensus(output_dir: Path = D086_RUN):
     atomic_json(output_dir / "multiscale-consensus-replay.json", replay_meta, replace=True)
 
     audit_summary = {
-        "authorization": "D-087",
+        "authorization": "D-088",
         "status": "complete",
         "winning_pairing": winning_pair_name,
+        "winning_routing_policy": winning_policy,
         "winning_consensus_mode": winning_mode,
         "winning_9_specific_AP": highest_ap,
-        "winning_bantai_5_category_AP": results[winning_pair_name][winning_mode]["bantai_5_category"]["AP"],
+        "winning_bantai_5_category_AP": results[winning_pair_name][winning_policy][winning_mode]["bantai_5_category"]["AP"],
         "results": results,
     }
     atomic_json(output_dir / "multiscale-consensus-audit.json", audit_summary, replace=True)
@@ -245,9 +307,10 @@ def run_d087_multiscale_consensus(output_dir: Path = D086_RUN):
     print(json.dumps({
         "status": "complete",
         "winning_pairing": winning_pair_name,
+        "winning_routing_policy": winning_policy,
         "winning_consensus_mode": winning_mode,
         "9_specific_AP": highest_ap,
-        "bantai_5_category_AP": results[winning_pair_name][winning_mode]["bantai_5_category"]["AP"],
+        "bantai_5_category_AP": results[winning_pair_name][winning_policy][winning_mode]["bantai_5_category"]["AP"],
         "scores_shape": list(scores_array.shape),
     }, indent=2))
     return audit_summary
@@ -257,4 +320,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=D086_RUN)
     args = parser.parse_args()
-    run_d087_multiscale_consensus(args.output_dir)
+    run_d088_multiscale_consensus(args.output_dir)

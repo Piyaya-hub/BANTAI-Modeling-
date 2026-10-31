@@ -36,6 +36,7 @@ production promotion; no merge is authorized.
 | D-085 | Extensible Class Audit across 60 TACO categories; 5-Category mapping | CPU audit only | Drink carton supervised candidate |
 | D-086 | High-Res 448/672 fine-tuning + weight soup + Multi-Scale Query Fusion | **0.235485** (soup 25:75) / **0.244213** (fusion) | **0.422337** (fusion BANTAI 5-Cat) |
 | D-087 | Multi-scale query fusion + D-079 consensus integration + Tk review replay | **0.245952** (fused consensus) | **0.426502** (52.01% AP50) |
+| D-088 | Class-calibrated multi-scale query routing + D-079 consensus optimization | **0.258410** (calibrated consensus) | **0.430072** (52.49% AP50) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
