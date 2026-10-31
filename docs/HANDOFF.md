@@ -1,5 +1,34 @@
 # BANTAI Stage 4 handoff
 
+## D-080: Organic support audit - 2026-10-30
+
+D-079 is committed locally as `287ac5f` on `feat/stage5-paper-category`; it was
+not pushed. D-080 completed a read-only metadata/physical audit with zero model or
+GPU execution, zero test.json reads, and zero held-out photo opens. Only seven
+non-held-out Food waste rasters were freshly checked; all raster dimensions, EXIF
+orientation 1, and hashes match the cached ledger.
+
+TACO contains **8 Food waste boxes on 7 images** and no other organic/biodegradable
+category found by the name audit. Strict Tier 1 with a hypothetical class 9 yields
+**2 candidate training images / 2 boxes**; Tier 2 siblings yields **4 / 4**; Tier
+3 accessory omission also yields **4 / 4**. None of the frozen 65 validation or
+65 test IDs contains Food waste. Unlabeled litter blocks two images (3 boxes) in
+all tiers; the remaining blocks are Food Can, Disposable food container, and
+Other plastic under applicable tier mappings. The complete annotation ledger,
+resized boxes, co-occurring categories, EXIF/raster checks, duplicate components,
+and strict dispositions are in the [D-080 report](TACO_STAGE_5_ORGANIC_AUDIT.md).
+
+Recommendation for owner review: do not create a supervised tenth class from
+2-4 images/boxes; that provides no fixed-split Organic validation support. Keep
+supervised labels 0..8 and consider a separately authorized zero-shot `"food
+waste."` route with representative validation, or a permissioned external
+supplement. No taxonomy/export/training changes were made. Guarded verification,
+Markdown link checking, and `git diff --check` passed. Guarded suite: **327 total,
+311 passed, 16 documented skips, zero failures/errors**; the guard observed no GPU,
+detector, optimizer, or protected-write activity. D-079 commit `287ac5f` remains
+local; all D-080 report/script/test changes remain uncommitted. Do not push; stop
+for owner review.
+
 ## D-079: Canonical five-category view and score-preserving consensus - 2026-10-30
 
 Owner authorization was executed locally on `feat/stage5-paper-category`; no

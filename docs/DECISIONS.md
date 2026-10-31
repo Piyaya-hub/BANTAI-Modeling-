@@ -1,5 +1,35 @@
 # Decision register
 
+## D-080: Organic / Food waste support audit - 2026-10-30
+
+D-079's verified taxonomy/consensus changes were committed locally first as
+`287ac5f` (`Stage 5: add D-079 BANTAI consensus replay`) on
+`feat/stage5-paper-category`; no push or merge. D-080 is a read-only CPU audit;
+no training/inference, test.json read, held-out photo access, or protected-artifact
+change occurred.
+
+Raw TACO has one organic-like category, `Food waste` (category 25): 8 annotations
+on 7 images. Fresh raster/EXIF checks were limited to those 7 after cached split
+metadata confirmed none belongs to frozen validation/test. Tier 1 + class 9 has
+2 candidate train images / 2 boxes; Tier 2 sibling mapping has 4 / 4; Tier 3
+accessory omission remains 4 / 4. All fixed 65 validation and 65 test images have
+zero Food waste GT boxes. The strict blockers are Unlabeled litter (three Food
+waste boxes on two images), plus Food Can / Disposable food container / Other
+plastic exclusions depending on tier. No audited Food waste image is in a frozen
+duplicate component. Details: [complete per-image D-080 ledger](TACO_STAGE_5_ORGANIC_AUDIT.md).
+
+Decision: TACO does not support a reliable tenth supervised class or validation
+estimate at 2-4 training images/boxes. Keep supervised IDs 0..8. Consider a
+separately authorized `"food waste."` zero-shot route with a representative,
+permissioned evaluation set, or obtain an external supplement before supervised
+Organic training. This is a recommendation for owner review, not an approved
+taxonomy change or measured zero-shot capability. D-080 audit/script/test and
+report remain uncommitted; stop for owner review. Guarded suite: **327 tests, 311
+passed, 16 documented skips, zero failures/errors**; zero GPU/detector/optimizer
+activity and protected writes. The four new tests cover mapping, sibling tiers,
+Unlabeled/accessory handling and resolution scaling. Markdown links and
+`git diff --check` passed.
+
 ## D-079: Canonical BANTAI 5-category display and score-preserving consensus - 2026-10-30
 
 Owner-authorized local diagnostic completed on `feat/stage5-paper-category`;
