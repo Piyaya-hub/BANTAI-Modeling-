@@ -1,14 +1,19 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-084
+## Current Stage 5 state through D-086
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-083/D-084, the best measured
+validation / 65-image test memberships frozen. Under D-083/D-084, the best single-pass
 Stage 5 combined **nine-specific validation AP is 0.236129** (and **0.236393** with D-079
-score-preserving consensus) from soup_d083_d074_5050 (50/50 D074 champion + D083 E1)
-at 384/576. The legacy 47-image 8-class AP reached **0.255879** (D083-Core E1) / **0.252820**
-(soup_d083_d074_5050). The BANTAI 5-Category AP reached **0.401563 raw / 0.405701 consensus**
-(**50.05% AP50**). All models remain private and unpromoted; none is wired into
+score-preserving consensus) from `soup_d083_d074_5050` (50/50 D074 champion + D083 E1)
+at 384/576. Under D-086, a 1-epoch high-resolution (`448/672`) fine-tuning run, multi-scale
+weight-soup evaluation, and CPU multi-scale query fusion audit were completed:
+`soup_d086_d083_2575_std384` reached **0.235485** (and **0.238178** consensus). Because no single-pass
+state strictly exceeded the D-083 champion baseline (0.236129), the repository default inference bundle
+remained at D-083 champion under the no-regression rule. Crucially, CPU Multi-Scale Query Fusion
+(384/576 standard + 448/672 high-res queries fused via IoU 0.55 NMS) demonstrated a new all-time high
+combined-65 AP of **0.244213** (+0.008084 over champion) and BANTAI 5-Category AP of **0.422337**
+(+0.021089 over champion; 51.70% AP50). All models remain private and unpromoted; none is wired into
 scripts/detect_images.py. This is validation evidence, not test generalization or
 production promotion; no merge is authorized.
 
@@ -28,6 +33,8 @@ production promotion; no merge is authorized.
 | D-081/82 | Organic hybrid-prompt non-held-out showcase (4 images, 8 forwards) | diagnostic showcase | spatial IoU vs Organic GT |
 | D-083 | 448/672 evaluation + 1-epoch D083 core training + 50/50 soup | **0.236129** (soup D083+D074) | **0.401563 raw / 0.405701 consensus** |
 | D-084 | Documentation sync and exact JSON table alignment | **0.236129** (consensus **0.236393**) | **50.05% AP50** on BANTAI 5-Cat |
+| D-085 | Extensible Class Audit across 60 TACO categories; 5-Category mapping | CPU audit only | Drink carton supervised candidate |
+| D-086 | High-Res 448/672 fine-tuning + weight soup + Multi-Scale Query Fusion | **0.235485** (soup 25:75) / **0.244213** (fusion) | **0.422337** (fusion BANTAI 5-Cat) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

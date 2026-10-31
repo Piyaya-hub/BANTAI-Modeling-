@@ -1,5 +1,24 @@
 # BANTAI Stage 4 handoff
 
+## D-086: Stage 5 High-Resolution (448/672) 1-Epoch Fine-Tuning & Multi-Scale Evaluation - 2026-10-31
+
+Owner authorization D-086 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Dataset: `exports/taco/strict-clean-stage5-d083-core-v1` (379 train / 731 boxes; 65 val / 109 boxes) with `work/stage5-paper/rights_d083_core.json`. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened).
+
+Warm-started from the verified D-083 champion bundle `runs/training/stage5-d083-core-20261031-a/checkpoints/best-inference` (`soup_d083_d074_5050`, parameter SHA-256 `82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`). Swin-T and BERT were strictly frozen (verifying `161c9814bffe1657ae0debd7e21b7ed1c41f29f3ba43fffe879ab31ba36a0b67`). High-resolution training at `448/672` square pad `(1, 3, 672, 672)` on the GTX 1660 Ti (6144 MiB VRAM) was stabilized under a 5800 MiB safety gate by offloading AdamW optimizer state tracking (`exp_avg`, `exp_avg_sq`) to CPU while keeping all forward and backward passes on CUDA. Peak VRAM was **`4135.3 MiB`**.
+
+Execution Budget: Exactly 379 training updates + 448 validation forwards (4 states x 112 forwards: 65 combined + 47 legacy). Mean training loss: `4.675446`. Elapsed seconds: `1648.45`.
+1. **Candidate State Evaluations**:
+   - `D086-HR448 E1` (`448/672`): combined-65 AP `0.223966`, AP50 `0.259868`, AR100 `0.363111`, legacy-47 AP `0.259092` (loss `3.640584`). Parameter hash: `c101467e18436f0157cb110c370f8be4b482945f82e4872978a0033cb8973f1c`.
+   - `soup_d086_d083_5050_hr448` (`448/672`): combined-65 AP `0.221398`, AP50 `0.257867`, AR100 `0.359390`, legacy-47 AP `0.258351` (loss `3.699244`). Parameter hash: `522e12757ad67413c6a103dc328b0c585f3d2db66ae46151ffb36359b595719d`.
+   - `soup_d086_d083_5050_std384` (`384/576`): combined-65 AP `0.233953`, AP50 `0.279831`, AR100 `0.374361`, legacy-47 AP `0.254587` (loss `3.956932`). Parameter hash: `522e12757ad67413c6a103dc328b0c585f3d2db66ae46151ffb36359b595719d`.
+   - `soup_d086_d083_2575_std384` (`384/576`): combined-65 AP **`0.235485`**, AP50 `0.280866`, AR100 `0.374587`, legacy-47 AP `0.252930` (loss `3.977407`). Parameter hash: `202ee007132838e381c43a7d9ed4b82d7dae728e0325e464c6c562a0b9ab92e7`.
+2. **No-Regression Promotion Rule**: The best D-086 single-pass candidate `soup_d086_d083_2575_std384` (`0.235485`) does not strictly exceed the verified D-083 champion baseline (`0.236129`). Under the promotion rule, the repository default inference bundle in `scripts/taco_stage5_visual_review.py` remains unchanged at the D-083 champion.
+3. **Multi-Scale Query Fusion**: Pooling standard-resolution (`384/576`) queries with high-resolution (`448/672`) queries via class-aware IoU 0.55 NMS achieved a new benchmark high AP of **`0.244213`** (`+0.008084` over champion) on 9-Specific detection and **`0.422337`** (`+0.021089` over champion) on BANTAI 5-Category aggregation.
+4. **D-079 Consensus Audit**: Applied to `soup_d086_d083_2575_std384`, consensus raised 9-Specific AP to **`0.238178`** and BANTAI 5-Category AP to **`0.410301`** while strictly preserving all bounding box coordinates and query scores.
+
+Full report: [D-086 report](TACO_STAGE_5_D086_HIGHRES_TRAINING.md).
+
+
 ## D-085: Candidate Extensible Object Class Dataset Coverage & BANTAI 5-Category Audit - 2026-10-31
 
 Owner authorization D-085 executed locally on `feat/stage5-paper-category` as a strictly CPU-only, read-only dataset and split coverage audit. Zero GPU execution, model forwards, training updates, test-split reads, or held-out photo opens occurred.
