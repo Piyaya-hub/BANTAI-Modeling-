@@ -1,12 +1,30 @@
 # Decision register
 
+## D-085: Candidate Extensible Object Class Dataset Coverage & BANTAI 5-Category Audit - 2026-10-31
+
+Owner authorization D-085 executed locally on `feat/stage5-paper-category` as a strictly CPU-only, read-only dataset and split coverage audit. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+In `docs/DECISIONS.md` and `docs/HANDOFF.md`, escaped control characters (`\x0c`, stray linebreaks) in the D-084 section were cleaned and verified.
+
+The deterministic audit script `scripts/taco_stage5_extensible_class_audit.py` (tested in `tests/test_stage5_extensible_class_audit.py`) inspected `annotations.json` across 1,500 TACO images and frozen split metadata:
+1. **Active Supervised Classes (`0..8`)**: Maintained strictly fixed at 9 classes (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`), comparing Tier 1 (637 boxes) vs D-083 Core (731 boxes) across 379 training images and 109 validation boxes.
+2. **Candidate Class Audit Across 5 Canonical BANTAI Categories**:
+   - `Plastic`: `plastic_straw` (157 pool boxes, 52 clean train, 0 val), `plastic_lid` (77 pool boxes, 31 clean train, 0 val), `other_plastic` (273 pool boxes, 118 clean train, 0 val), `plastic_utensil` (37 pool boxes, 15 clean train, 0 val) -> recommended `ZERO_SHOT_HYBRID_ONLY` due to 0 validation boxes. `six_pack_rings` is a `SUBTYPE_MERGE_CANDIDATE`.
+   - `Paper`: `drink_carton` (136 pool boxes, 59 clean train, 7 val) -> qualifies as `SUPERVISED_CANDIDATE`. `paper_cup` (66 pool boxes, 16 clean train, 1 val) -> `ZERO_SHOT_HYBRID_ONLY`. `plastified_paper_bag` has 0 instances in TACO.
+   - `Metal`: `scrap_metal` (119 pool boxes, 75 clean train, 0 val), `metal_bottle_cap` (90 pool boxes, 33 clean train, 0 val), `aluminium_foil` (68 pool boxes, 45 clean train, 0 val) -> `ZERO_SHOT_HYBRID_ONLY` due to 0 validation boxes. `food_can` is a `SUBTYPE_MERGE_CANDIDATE` (already merged into `drink_can`).
+   - `Potentially Hazardous`: `broken_glass` (138 pool boxes, 31 clean train, 0 val), `glass_bottle` (104 pool boxes, 43 clean train, 0 val), `aerosol` (10 pool boxes, 5 clean train, 0 val), `battery` (2 pool boxes, 1 clean train, 0 val) -> `ZERO_SHOT_HYBRID_ONLY`. `syringe` has 0 instances in TACO.
+   - `Organic`: `food_waste` (8 pool boxes, 4 clean train, 0 val) -> `ZERO_SHOT_HYBRID_ONLY`.
+3. Complete structured data stored in `work/stage5-paper/extensible_class_coverage_audit.json` and report in [D-085 report](TACO_STAGE_5_EXTENSIBLE_CLASS_AUDIT.md). Active supervised classes in `scripts/taco_stage5_material_hierarchy.py` were not modified.
+
+Guarded suite passed; Markdown links and `git diff --check` passed.
+
 ## D-084: Documentation synchronization and exact JSON table alignment - 2026-10-31
 
-Owner authorization D-084 executed locally on eat/stage5-paper-category as a strictly CPU-only documentation and verification alignment task. Zero GPU calls, model forwards, or test-split reads occurred.
+Owner authorization D-084 executed locally on `feat/stage5-paper-category` as a strictly CPU-only documentation and verification alignment task. Zero GPU calls, model forwards, or test-split reads occurred.
 
 Manual transcription discrepancies in docs/TACO_STAGE_5_D083_CORE_TRAINING.md were corrected against
-uns/training/stage5-d083-core-20261031-a/report.json,
-esolution-comparison.json, and d079-score-preserving-consensus.json:
+`runs/training/stage5-d083-core-20261031-a/report.json`,
+`resolution-comparison.json`, and d079-score-preserving-consensus.json:
 - Part A 448/672 per-class APs aligned (plastic_bottle: 0.453533, plastic_film: 0.066377, plastic_wrapper: 0.019519, drink_can: 0.545545, plastic_cup: 0.319802, styrofoam_piece: 0.074257, paper: 0.370481). Scale-bucket progressions documented (AP_small: 0.059641 -> 0.073440; AP_medium: 0.063247 -> 0.184431).
 - Part B candidate states aligned: D083-Core E1 (combined-65 AP 0.233825, AR100 0.375472, legacy-47 AP 0.255879, mean loss 3.949181), soup_d083_d074_5050 (combined-65 AP 0.236129, AR100 0.378128, legacy-47 AP 0.252820, mean loss 3.985499), and soup_d083_d076_5050 (combined-65 AP 0.232746, AR100 0.373000, legacy-47 AP 0.253044, mean loss 3.963570).
 - BANTAI 5-Category metrics aligned: raw AP 0.401563 (AP50 0.495005), consensus AP 0.405701 (50.05% AP50 = 0.500456), and consensus 9-specific AP 0.236393.

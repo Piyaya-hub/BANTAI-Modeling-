@@ -1,12 +1,22 @@
 # BANTAI Stage 4 handoff
 
+## D-085: Candidate Extensible Object Class Dataset Coverage & BANTAI 5-Category Audit - 2026-10-31
+
+Owner authorization D-085 executed locally on `feat/stage5-paper-category` as a strictly CPU-only, read-only dataset and split coverage audit. Zero GPU execution, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+Discrepancies and escaped control characters in the D-084 sections were repaired. `scripts/taco_stage5_extensible_class_audit.py` analyzed all 60 raw TACO categories across the 1,500-image dataset:
+- Active supervised classes (`0..8`) were preserved without modification.
+- Evaluated 23 candidate specific classes across `Plastic`, `Paper`, `Metal`, `Potentially Hazardous`, and `Organic`. Only `drink_carton` (7 validation boxes, 59 clean train boxes) met the criteria for `SUPERVISED_CANDIDATE`. Categories lacking fixed validation support (`broken_glass`, `plastic_straw`, `scrap_metal`, `food_waste`, `battery`, `aerosol`, `syringe`) are recommended for `ZERO_SHOT_HYBRID_ONLY`.
+- Full structured output written to `work/stage5-paper/extensible_class_coverage_audit.json` and human-readable tables in [D-085 report](TACO_STAGE_5_EXTENSIBLE_CLASS_AUDIT.md).
+
+Guarded suite passed; Markdown links and `git diff --check` clean.
+
 ## D-084: Documentation synchronization and exact JSON table alignment - 2026-10-31
 
-Owner authorization D-084 was executed locally on eat/stage5-paper-category as a strictly CPU-only synchronization and table verification task. Zero GPU calls, model forwards, or test-split reads occurred.
+Owner authorization D-084 was executed locally on `feat/stage5-paper-category` as a strictly CPU-only synchronization and table verification task. Zero GPU calls, model forwards, or test-split reads occurred.
 
-All manual transcription discrepancies in docs/TACO_STAGE_5_D083_CORE_TRAINING.md were corrected against the verified JSON run artifacts (
-eport.json,
-esolution-comparison.json, and d079-score-preserving-consensus.json):
+All manual transcription discrepancies in docs/TACO_STAGE_5_D083_CORE_TRAINING.md were corrected against the verified JSON run artifacts (`runs/training/stage5-d083-core-20261031-a/report.json`,
+`resolution-comparison.json`, and d079-score-preserving-consensus.json):
 - Part A 448/672 per-class APs and scale buckets (AP_small 0.059641 -> 0.073440, AP_medium 0.063247 -> 0.184431) aligned.
 - Part B candidate states (D083-Core E1 legacy-47 AP 0.255879, mean loss 3.949181; soup_d083_d074_5050 combined-65 AP 0.236129, mean loss 3.985499; soup_d083_d076_5050 combined-65 AP 0.232746) aligned.
 - BANTAI 5-Category metrics aligned: raw AP 0.401563 (AP50 0.495005), consensus AP 0.405701 (50.05% AP50), consensus 9-specific AP 0.236393.
