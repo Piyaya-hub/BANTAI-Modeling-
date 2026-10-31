@@ -1,5 +1,21 @@
 # BANTAI Stage 4 handoff
 
+## D-083: Controlled Stage 5 fine-tuning and resolution evaluation - 2026-10-31
+
+Owner authorization D-083 was executed locally on `feat/stage5-paper-category`. Zero unaudited classes were added; active supervised classes remain strictly fixed to `0..8` with `paper` strictly mapped from the Tier 1 baseline with zero new paper source categories. `scripts/taco_stage5_material_hierarchy.py` was refactored with a table-driven `OBJECT_REGISTRY` and `register_object_class()` interface.
+
+Part A evaluated the D076 champion at `448/672` (112 validation forwards: 65 `combined_65` + 47 `legacy_47`). Combined 9-specific AP dropped to `0.217783` (vs `0.235994` at `384/576`), legacy 8-class AP to `0.244212` (vs `0.250362`), and BANTAI 5-Category AP to `0.361760` (vs `0.400957`), confirming training geometry mismatch.
+
+Part B completed 1 bounded epoch of 379 updates on `exports/taco/strict-clean-stage5-d083-core-v1` (379 train images / 731 boxes; rights in `work/stage5-paper/rights_d083_core.json`) warm-started from champion parameter hash `cd29260abd5bd1675a2637ed365f4c1821dc1753cf37e852d4e3f1ab9f49a422` with Swin-T and BERT frozen. Candidate evaluation (336 validation forwards total across 3 candidate states):
+- `D083-Core E1`: combined-65 AP `0.233825`, legacy-47 AP `0.255879`.
+- `soup_d083_d074_5050`: combined-65 AP **0.236129**, legacy-47 AP `0.252820`.
+- `soup_d083_d076_5050`: combined-65 AP `0.232746`, legacy-47 AP `0.253044`.
+
+The champion `soup_d083_d074_5050` (parameter hash `82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`) was persisted to `checkpoints/best-inference` with `best-score-vectors.npz` and integrated into `scripts/taco_stage5_visual_review.py`. Full details in [D-083 training report](TACO_STAGE_5_D083_CORE_TRAINING.md).
+
+Verification: **333 guarded tests: 317 passed, 16 skips, 0 failures/errors**. Native Tk Image 777 passed 50 combinations. Markdown links and `git diff --check` passed.
+
+
 ## D-080: Organic support audit - 2026-10-30
 
 D-079 is committed locally as `287ac5f` on `feat/stage5-paper-category`; it was

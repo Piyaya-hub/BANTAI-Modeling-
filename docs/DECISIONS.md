@@ -1,5 +1,19 @@
 # Decision register
 
+## D-083: Controlled Stage 5 fine-tuning and resolution evaluation - 2026-10-31
+
+Owner authorization D-083 executed locally on `feat/stage5-paper-category`. No unaudited classes were introduced; active supervised classes remain fixed to `0..8` with `paper` strictly bound to its Tier 1 baseline without new paper sources. The mapping registry in `scripts/taco_stage5_material_hierarchy.py` was refactored into a table-driven `OBJECT_REGISTRY` with `register_object_class()` for extensible future audited classes.
+
+Part A evaluated the D076 champion at `448/672` (112 validation forwards: 65 `combined_65` + 47 `legacy_47`). 9-specific AP dropped from `0.235994` to `0.217783`, legacy 8-class AP from `0.250362` to `0.244212`, and BANTAI 5-Category AP from `0.400957` to `0.361760`, showing resolution mismatch against the `384/576` training geometry.
+
+Part B executed 1 bounded epoch of 379 updates on `strict-clean-stage5-d083-core-v1` (379 train images / 731 boxes; rights bound in `work/stage5-paper/rights_d083_core.json`) warm-started from the D074/D076 champion hash `cd29260abd5bd1675a2637ed365f4c1821dc1753cf37e852d4e3f1ab9f49a422`. Swin-T and BERT were frozen. Candidate evaluation (336 validation forwards across 3 states):
+- `D083-Core E1`: combined-65 AP `0.233825`, legacy-47 AP `0.255879`.
+- `soup_d083_d074_5050` (50/50 D074 champion + D083 E1): combined-65 AP **0.236129**, legacy-47 AP `0.252820`.
+- `soup_d083_d076_5050` (50/50 D076 champion + D083 E1): combined-65 AP `0.232746`, legacy-47 AP `0.253044`.
+
+Champion `soup_d083_d074_5050` (parameter hash `82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`) was serialized to `checkpoints/best-inference` with `best-score-vectors.npz` and wired into `scripts/taco_stage5_visual_review.py`. Full report: [D-083 report](TACO_STAGE_5_D083_CORE_TRAINING.md). Guarded verification: **333 tests: 317 passed, 16 skips, 0 failures/errors**. Native Tk Image 777 passed 50 combinations. Markdown links and `git diff --check` passed.
+
+
 ## D-080: Organic / Food waste support audit - 2026-10-30
 
 D-079's verified taxonomy/consensus changes were committed locally first as

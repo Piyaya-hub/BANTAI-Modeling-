@@ -27,7 +27,8 @@ sys.path.insert(0, str(ROOT))
 from scripts.configuration import strict_load
 from scripts.tk_runtime import configure_tcl_tk_environment
 from scripts.taco_training_labels_v2 import LABELS
-from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, COLORS, map_row, prepare_rows)
+from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, COLORS, map_row,
+                                                    prepare_rows, scheme_names)
 from scripts.taco_stage5_display_profiles import (NMS_CHOICES, THRESHOLD_CHOICES,
                                                    visible_rows)
 from scripts.taco_stage5_consensus_tiebreak import apply_to_query_rows
@@ -69,6 +70,26 @@ def discover_tier2_run(explicit=None, root=ROOT):
     candidates=[p for p in (Path(root)/'runs/training').glob('stage5-tier2-*')
                 if all((p/name).is_file() for name in required)]
     return max(candidates,key=lambda p:(p/'report.json').stat().st_mtime) if candidates else None
+
+
+def discover_d083_run(explicit=None, root=ROOT):
+    """Discover only a completed local D-083 run with all three replay states."""
+    if explicit is not None:
+        return Path(explicit)
+    candidates = []
+    for candidate in (Path(root) / 'runs/training').glob('stage5-d083-core-*'):
+        report_path = candidate / 'report.json'
+        if not report_path.is_file():
+            continue
+        try:
+            report = strict_load(report_path)
+            if (report.get('authorization') == 'D-083' and report.get('status') == 'complete'
+                    and report.get('training_updates') == 379 and report.get('validation_forwards') == 336
+                    and (candidate / 'checkpoints/best-inference/soup_manifest.json').is_file()):
+                candidates.append(candidate)
+        except (OSError, ValueError, KeyError):
+            continue
+    return max(candidates, key=lambda p: (p / 'report.json').stat().st_mtime) if candidates else None
 
 
 def load_consensus_score_vectors(tier2_run_dir, images, root=ROOT):
@@ -172,7 +193,7 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
     return kept
 
 
-def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None):
+def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None):
     val_json_path = dataset_dir / "validation.json"
     val_data = strict_load(val_json_path)
 
@@ -246,6 +267,26 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
             preds_by_state[label]=defaultdict(list)
             for row in rows:preds_by_state[label][row['image_id']].append(row)
 
+    if d083_run_dir is not None:
+        d083_report = strict_load(d083_run_dir / 'report.json')
+        if (d083_report.get('authorization') != 'D-083' or d083_report.get('status') != 'complete'
+                or d083_report.get('training_updates') != 379
+                or d083_report.get('validation_forwards') != 336):
+            raise ValueError('D-083 replay requires completed bounded training/evaluation evidence')
+        state_files = (
+            ('D083-Core E1 (384/576)', 'validation-d083-core-e1.json'),
+            ('D083 + D074 soup (50/50)', 'soup_d083_d074_5050.json'),
+            ('D083 + D076 soup (50/50)', 'soup_d083_d076_5050.json'),
+        )
+        for label, filename in state_files:
+            saved = strict_load(d083_run_dir / filename)
+            rows = saved.get('raw_queries', [])
+            if len(rows) != 65 * 900 or {r['image_id'] for r in rows} != set(images):
+                raise ValueError('D-083 saved replay does not contain exactly 65 x 900 queries')
+            preds_by_state[label] = defaultdict(list)
+            for row in rows:
+                preds_by_state[label][row['image_id']].append(row)
+
     # Sort predictions by score descending
     for state in preds_by_state:
         for img_id in preds_by_state[state]:
@@ -294,7 +335,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
         cid = obj["category_id"]
         color = CLASS_COLORS[cid] if 0 <= cid < len(CLASS_COLORS) else "#ffffff"
         label_name = obj.get("display_label", LABELS[cid] if 0 <= cid < len(LABELS) else f"cls_{cid}")
-        color = COLORS.get(obj.get("mapped_category"), color)
+        color = COLORS.get(obj.get("mapped_category"), obj.get("bantai_color", color))
 
         bx, by, bw, bh = obj["bbox"]
         linestyle = "-" if is_gt else "--"
@@ -616,7 +657,7 @@ class Stage5ViewerGUI:
         for child in self.legend_frame.winfo_children(): child.destroy()
         gt_rows = (self.organic_showcase["ground_truth"].get(str(img_id), []) if showcase_mode
                    else self.gt.get(img_id, []))
-        legend_names = list(NAMES[scheme])
+        legend_names = list(scheme_names(scheme))
         if any(row.get("specific_category_id", row.get("category_id")) == 9 for row in gt_rows):
             organic_name = "food_waste" if scheme == "9-specific" else "Organic"
             if organic_name not in legend_names:
@@ -749,6 +790,7 @@ def main() -> int:
     )
     parser.add_argument("--tier1-run-dir", type=Path, default=None, help="Explicit Tier1 replay directory; auto-discovers the completed local D074 run by default")
     parser.add_argument("--tier2-run-dir",type=Path,default=None,help="Explicit Tier2 run, otherwise newest complete local Tier2 run")
+    parser.add_argument("--d083-run-dir", type=Path, default=None, help="Explicit D-083 replay run; otherwise discover newest completed local run")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
@@ -761,17 +803,21 @@ def main() -> int:
 
     args.tier1_run_dir = discover_tier1_run(args.tier1_run_dir)
     args.tier2_run_dir = discover_tier2_run(args.tier2_run_dir)
+    args.d083_run_dir = discover_d083_run(args.d083_run_dir)
     if args.tier2_run_dir is not None and not args.tier2_run_dir.is_dir():
         print("ERROR: Explicit Tier2 replay directory is missing",file=sys.stderr)
         return 1
     if args.tier1_run_dir is not None and not args.tier1_run_dir.is_dir():
         print(f"ERROR: Explicit Tier1 saved replay directory is missing: {args.tier1_run_dir}", file=sys.stderr)
         return 1
+    if args.d083_run_dir is not None and not args.d083_run_dir.is_dir():
+        print(f"ERROR: Explicit D-083 replay directory is missing: {args.d083_run_dir}", file=sys.stderr)
+        return 1
     if not (args.dataset_dir / "validation.json").is_file():
         print("ERROR: Saved review needs the private validation export; no model will be run.", file=sys.stderr)
         return 1
     try:
-        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir)
+        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir)
     except (OSError, ValueError, KeyError) as exc:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1
