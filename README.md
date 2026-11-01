@@ -39,6 +39,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-089 | Tier 3 Core Expansion (576 img/1,240 box) + masking + cosine schedule + soup | **0.233812** (soup 75:25) / **0.256673** (fusion) | **0.398774 raw / 0.403616 consensus** |
 | D-090 | Tri-Model Class-Specialized Routing (D086+D089) + Paper-Plastic Audit | **0.260674** (tri-model consensus) | **0.435166 (53.27% AP50)** |
 | D-091 | Class-Balanced Tier 3 Core (576 img) + Proximal L2 Anchor + Soup 50/50 | **0.236288** (single model) / **0.238786** (consensus) | **0.405054 raw / 0.409769 consensus** |
+| D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | **0.236288** (single) / **0.238786** (consensus) | GUI replay & remote push |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

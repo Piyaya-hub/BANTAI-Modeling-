@@ -1,5 +1,24 @@
 # Decision register
 
+## D-092: Visual Review D-091 Single-Model Champion Integration & Remote Branch Push - 2026-11-02
+
+Owner authorization D-092 executed locally on `feat/stage5-paper-category` as a strictly CPU-only integration, verification, and remote push task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+1. **Visual Review Wiring (`scripts/taco_stage5_visual_review.py`)**:
+   - Added automatic discovery for completed D-091 runs (`discover_d091_run`), binding `runs/training/stage5-d091-balanced-tier3-20261101-a`.
+   - Wired the D-091 single-model champion (`soup_d091_d086s2575_5050`, AP `0.236288`) as `D-091 Champion (soup 50/50)` and its consensus state as `D-091 Champion + D-079 consensus` (AP `0.238786`, BANTAI 5-Category AP `0.409769` / `50.31% AP50`) directly into the Fourth-Panel State selector.
+   - Connected the "Score-preserving plastic consensus" checkbutton to dynamically apply D-079 consensus using `best-score-vectors.npz` (`(65, 900, 9)`) when `D-091 Champion (soup 50/50)` is active.
+   - Updated CLI summary output to report D-091 Champion detections when available.
+2. **GUI & Unit Test Verification**:
+   - Verified Native Tk GUI rendering on Image 1 and Image 777 with D-091 Champion and consensus states with zero Tcl/Tk errors.
+   - Passed `tests/windows_stage5_image777_check.py` (50 combinations + consensus toggle assertions).
+   - Added `test_d091_run_discovery_requires_complete_evidence` in `tests/test_stage5_d091_balanced_tier3.py` (all 8 tests passed).
+   - Passed full suite of visual review unit tests (`tests/test_stage5_score_vector_audit.py`, `tests/test_stage5_soup_persistence.py`, `tests/test_stage5_tier1.py`, `tests/test_stage5_tier2.py`, `tests/test_taco_stage5_d083_core.py`, `tests/windows_stage5_organic_showcase_check.py`).
+3. **Pre-Push Guarded Verification & Publication**:
+   - Passed `scripts/check_markdown_links.py` (0 broken links), `git diff --check` (clean whitespace), and CPU guarded verification (`scripts/verify_stage4_guarded.py`).
+   - Verified `git diff --stat origin/feat/stage5-paper-category..HEAD` contains no oversized binaries, no credentials, and zero test-split artifacts.
+   - Pushed `feat/stage5-paper-category` to `origin/feat/stage5-paper-category` without merging.
+
 ## D-091: Class-Balanced & Proximal L2-Anchored Tier 3 Core Fine-Tuning & Multi-Scale Update - 2026-11-01
 
 Owner authorization D-091 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened; file-system audithook enforced).

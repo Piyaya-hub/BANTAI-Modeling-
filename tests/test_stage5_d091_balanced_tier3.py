@@ -98,6 +98,22 @@ class TestStage5D091BalancedTier3(unittest.TestCase):
         d089_manifest = strict_load(D089_CHAMPION_BUNDLE / "soup_manifest.json")
         self.assertEqual(d089_manifest["parameter_sha256"], EXPECTED_D089_CHAMPION)
 
+    def test_d091_run_discovery_requires_complete_evidence(self):
+        from scripts.taco_stage5_visual_review import discover_d091_run
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            candidate = root / "runs/training/stage5-d091-balanced-tier3-incomplete"
+            candidate.mkdir(parents=True)
+            self.assertIsNone(discover_d091_run(root=root))
+            self.assertEqual(discover_d091_run(explicit=candidate, root=root), candidate)
+
+        # Real run discovery
+        real_d091 = discover_d091_run(root=ROOT)
+        self.assertIsNotNone(real_d091)
+        self.assertTrue((real_d091 / "soup_d091_d086s2575_5050.json").is_file())
+        self.assertTrue((real_d091 / "best-score-vectors.npz").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
