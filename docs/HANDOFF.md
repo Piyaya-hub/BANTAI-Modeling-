@@ -1,5 +1,26 @@
 # BANTAI Stage 4 handoff
 
+## D-090: Tri-Model Class-Specialized Query Routing & Paper-Plastic Disambiguation Audit - 2026-11-01
+
+Owner authorization D-090 executed locally on `feat/stage5-paper-category` as a strictly CPU-only routing optimization and cross-class disambiguation audit. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+1. **Tri-Model Architecture & Sourcing (`scripts/taco_stage5_multiscale_consensus.py`)**:
+   - Combined standard-resolution (`384/576`), high-resolution (`448/672`), and Tier 3 Core expanded-dataset (`576` images) validation queries:
+     - `D086_Soup2575` (`384/576`): Base queries for `styrofoam_piece` (`0.148515`) and `plastic_cup` (`0.395545`).
+     - `D086_HR448` (`448/672`): High-resolution detail for small/medium objects (`cigarette` `0.123328`, `plastic_bottle` `0.419554`, `plastic_wrapper` `0.041867`, `plastic_film` `0.068693`).
+     - `D089_S5050` (`384/576`, Tier 3 Core 576 images / 1,240 boxes): Expanded-dataset queries for non-plastic objects (`drink_can` `0.680693`, `paper` `0.467871`).
+2. **All-Time High Benchmark Numbers**:
+   - Combined-65 9-Specific AP reached **`0.260674`** (AP50 `0.310330`, AR100 `0.418648`), beating D-088 (`0.258410`) by `+0.002264` and D-083 single-scale champion (`0.236129`) by `+0.024545`.
+   - Combined-65 BANTAI 5-Category AP reached **`0.435166`** (AP50 `0.532717` / **`53.27% AP50`**, AR100 `0.653894`), beating D-088 (`0.430072`) by `+0.005094`.
+3. **Paper-vs-Plastic Disambiguation Audit**:
+   - Evaluated cross-class IoU suppression between paper and plastic across thresholds `0.90`, `0.85`, `0.80`, `0.75`, `0.70` vs `None`.
+   - Confirmed that naive cross-class suppression degrades AP (drops BANTAI AP from `0.435166` to `0.409050`) by suppressing legitimate co-occurring objects (e.g. plastic inside cartons), while class-aware independent NMS achieves peak performance.
+4. **Replay Artifacts & Verification**:
+   - `multiscale-consensus-replay.json`, `scores-multiscale-consensus.npz` (shape `(65, 100, 9)`), and `multiscale-consensus-audit.json` updated with `Tri_Model_D086_S2575_HR448_D089_S5050` winning configuration.
+   - All tests in `tests/test_stage5_multiscale_consensus.py` and `tests/windows_stage5_image777_check.py` passed cleanly.
+
+Full report: [D-090 report](TACO_STAGE_5_D090_TRI_MODEL_ROUTING.md).
+
 ## D-089: Stage 5 Tier 3 Core Expansion (576 Train Images / 1,240 Boxes) with Omitted-Accessory Masking & Soup Evaluation - 2026-11-01
 
 Owner authorization D-089 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened).

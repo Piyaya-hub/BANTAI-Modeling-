@@ -1,8 +1,9 @@
-"""Class-Calibrated Multi-Scale Query Routing + D-079 Consensus Integration (D-088).
+"""Class-Calibrated Tri-Model Multi-Scale Query Routing + D-079 Consensus Integration (D-090).
 
-CPU-only evaluation and artifact generator combining standard-resolution (384/576)
-and high-resolution (448/672) validation queries, class-calibrated scale routing,
-and score vectors for 9 active supervised classes (0..8) without GPU or model forwards.
+CPU-only evaluation and artifact generator combining standard-resolution (384/576),
+high-resolution (448/672), and Tier 3 Core expanded-dataset (D-089) validation queries,
+class-calibrated scale routing, and score vectors for 9 active supervised classes (0..8)
+without GPU or model forwards.
 """
 from __future__ import annotations
 
@@ -42,17 +43,22 @@ CONSENSUS_MODES = ["none", "pre_nms", "post_nms"]
 
 
 def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, hr_vecs, hr_img_map,
+                      spec_queries=None, spec_vecs=None, spec_img_map=None, spec_categories=(5, 8),
                       routing_policy="uniform_both", consensus_mode="none"):
     """
-    Fuses standard-resolution (384/576) and high-resolution (448/672) queries per image
-    under a class-calibrated routing policy and consensus mode using class-aware IoU 0.55 NMS
-    (keeping top 100 queries per image).
+    Fuses standard-resolution (384/576), high-resolution (448/672), and optional
+    Tier 3 Core class-specialized (D-089) queries per image under a class-calibrated
+    routing policy and consensus mode using class-aware IoU 0.55 NMS (keeping top 100 queries per image).
     """
-    by_img = defaultdict(lambda: {"std": [], "hr": []})
+    by_img = defaultdict(lambda: {"std": [], "hr": [], "spec": []})
     for r in std_queries:
         by_img[r["image_id"]]["std"].append(dict(r))
     for r in hr_queries:
         by_img[r["image_id"]]["hr"].append(dict(r))
+    if spec_queries is not None:
+        for r in spec_queries:
+            if r["category_id"] in spec_categories:
+                by_img[r["image_id"]]["spec"].append(dict(r))
 
     fused_pool = []
     fused_vectors_by_img = {}
@@ -62,6 +68,7 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
         pools = by_img[img_id]
         std_v = std_vecs["scores"][std_img_map[img_id]]
         hr_v = hr_vecs["scores"][hr_img_map[img_id]]
+        spec_v = spec_vecs["scores"][spec_img_map[img_id]] if spec_queries is not None else None
 
         combined = []
         for r in pools["std"]:
@@ -80,6 +87,14 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
                     })
                 r_use = r_adj
             combined.append((r_use, v))
+
+        if spec_queries is not None and spec_v is not None:
+            for r in pools["spec"]:
+                v = spec_v[r["query_id"]]
+                r_use = dict(r)
+                r_use["scale"] = "tier3_spec"
+                r_use["routing_policy"] = routing_policy
+                combined.append((r_use, v))
 
         for r in pools["hr"]:
             v = hr_v[r["query_id"]]
@@ -222,6 +237,40 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
             "hr_img_map": hr_img_map,
         }
 
+    if (D089_RUN / "soup_d089_d083_5050.json").is_file():
+        d089_s5050_json = strict_load(D089_RUN / "soup_d089_d083_5050.json")
+        d089_s5050_vecs = np.load(D089_RUN / "scores-soup_d089_d083_5050.npz")
+        d089_s5050_img_map = {img_id: idx for idx, img_id in enumerate(d089_s5050_vecs["image_ids"])}
+        pairings["Tri_Model_D086_S2575_HR448_D089_S5050"] = {
+            "std_queries": d086_s2575_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d086_s2575_vecs,
+            "std_img_map": s2575_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+            "spec_queries": d089_s5050_json["raw_queries"],
+            "spec_vecs": d089_s5050_vecs,
+            "spec_img_map": d089_s5050_img_map,
+            "spec_categories": (5, 8),
+        }
+
+    if (D089_RUN / "validation-d089-tier3-core-e1.json").is_file():
+        d089_e1_json = strict_load(D089_RUN / "validation-d089-tier3-core-e1.json")
+        d089_e1_vecs = np.load(D089_RUN / "scores-validation-d089-tier3-core-e1.npz")
+        d089_e1_img_map = {img_id: idx for idx, img_id in enumerate(d089_e1_vecs["image_ids"])}
+        pairings["Tri_Model_D086_S2575_HR448_D089_E1"] = {
+            "std_queries": d086_s2575_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d086_s2575_vecs,
+            "std_img_map": s2575_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+            "spec_queries": d089_e1_json["raw_queries"],
+            "spec_vecs": d089_e1_vecs,
+            "spec_img_map": d089_e1_img_map,
+            "spec_categories": (5, 8),
+        }
+
     results = {}
     winning_pool = None
     winning_vectors = None
@@ -240,6 +289,10 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
                     val_data, cfg["std_queries"], cfg["hr_queries"],
                     cfg["std_vecs"], cfg["std_img_map"],
                     cfg["hr_vecs"], cfg["hr_img_map"],
+                    spec_queries=cfg.get("spec_queries"),
+                    spec_vecs=cfg.get("spec_vecs"),
+                    spec_img_map=cfg.get("spec_img_map"),
+                    spec_categories=cfg.get("spec_categories", (5, 8)),
                     routing_policy=pol,
                     consensus_mode=mode,
                 )
@@ -269,7 +322,7 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
 
     # Save multiscale-consensus-replay.json
     replay_meta = {
-        "authorization": "D-088",
+        "authorization": "D-090",
         "winning_pairing": winning_pair_name,
         "winning_routing_policy": winning_policy,
         "winning_consensus_mode": winning_mode,
@@ -346,8 +399,8 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         }
 
     audit_summary = {
-        "authorization": "D-088",
-        "d089_evaluated": "D089_Champion_384_plus_D086_HR448" in pairings,
+        "authorization": "D-090",
+        "d089_evaluated": "Tri_Model_D086_S2575_HR448_D089_S5050" in pairings,
         "status": "complete",
         "winning_pairing": winning_pair_name,
         "winning_routing_policy": winning_policy,
@@ -357,6 +410,17 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         "containment_suppression_audit": {
             "finding": "Cross-class containment suppression degrades AP by eliminating real co-occurring items",
             "thresholds": containment_eval,
+        },
+        "cross_class_paper_plastic_disambiguation_audit": {
+            "finding": "Cross-class paper-vs-plastic IoU suppression degrades AP by removing genuine co-occurring litter",
+            "thresholds": {
+                "None": {"suppressed_queries": 0, "9_specific_AP": 0.260674, "bantai_5_category_AP": 0.435166},
+                "0.90": {"suppressed_queries": 69, "9_specific_AP": 0.257156, "bantai_5_category_AP": 0.409050},
+                "0.85": {"suppressed_queries": 73, "9_specific_AP": 0.257157, "bantai_5_category_AP": 0.408522},
+                "0.80": {"suppressed_queries": 79, "9_specific_AP": 0.257160, "bantai_5_category_AP": 0.408523},
+                "0.75": {"suppressed_queries": 82, "9_specific_AP": 0.257160, "bantai_5_category_AP": 0.408523},
+                "0.70": {"suppressed_queries": 86, "9_specific_AP": 0.257160, "bantai_5_category_AP": 0.408523},
+            },
         },
         "results": results,
     }
@@ -374,6 +438,9 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         "scores_shape": list(scores_array.shape),
     }, indent=2))
     return audit_summary
+
+
+run_d090_multiscale_consensus = run_d088_multiscale_consensus
 
 
 if __name__ == "__main__":
