@@ -1,5 +1,36 @@
 # Decision register
 
+## D-091: Class-Balanced & Proximal L2-Anchored Tier 3 Core Fine-Tuning & Multi-Scale Update - 2026-11-01
+
+Owner authorization D-091 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened; file-system audithook enforced).
+
+1. **Stabilization Formulations (`scripts/taco_stage5_d091_balanced_tier3.py`)**:
+   - **Inverse-Square-Root Class Frequency Weighting**: Scaled sample loss relative to reference median count ($N_{\text{ref}} = 151$ instances of `plastic_bottle`), clipped strictly to $[0.75, 1.80]$ ($w_c = \text{clip}(\sqrt{151 / N_c}, 0.75, 1.80)$). Assigned $w_7 = 1.5482$ (`styrofoam_piece`), $w_2 = 1.8000$ (`plastic_bag`), $w_6 = 1.4189$ (`plastic_cup`), $w_3 = 1.2477$ (`plastic_wrapper`). Image-level weight $w_{\text{img}} = \max_{c \in \text{image}} w_c$ (mean $1.1162$).
+   - **Proximal L2 Parameter Anchor**: Added $\frac{\lambda_{\text{anchor}}}{2} \|\theta - \theta_0\|_2^2$ with $\lambda_{\text{anchor}} = 0.005$ anchored to initial warm-start weights $\theta_0$ (`soup_d086_d083_2575_std384`, parameter SHA-256 `202ee007132838e381c43a7d9ed4b82d7dae728e0325e464c6c562a0b9ab92e7`).
+   - Backbones frozen: Swin-T + BERT (`161c9814bffe1657ae0debd7e21b7ed1c41f29f3ba43fffe879ab31ba36a0b67`).
+2. **Training Dynamics & Verification**:
+   - Executed exactly 576 updates at `384/576` FP32 with AdamW under cosine annealing ($8.0 \times 10^{-7} \to 1.5 \times 10^{-7}$). Peak VRAM `3860.0 MiB`, elapsed `960.0 s`.
+   - Verified 6 checkpoints saved at steps 100, 200, 300, 400, 500, and epoch-01.
+3. **Validation Evaluation Across 4 States (448 forwards)**:
+   - Evaluated `D091-Balanced-Tier3 E1`, `soup_d091_d086s2575_5050`, `soup_d091_d083_5050`, `soup_d091_d083_2575` on `combined_65` (109 boxes) and `legacy_47` (75 boxes).
+   - **Winning Champion**: `soup_d091_d086s2575_5050` (50% D086 Soup2575 + 50% D091 E1), parameter SHA-256 `4146517bd69837e2e11932e4c3ecee5951cd3e862f414e6f8ba45e1ed20212ee`:
+     - Achieved **`0.236288`** single-model 9-Specific validation AP (AP50 `0.282958`, AR100 `0.378677`), the highest single-model AP in project history (exceeding D-083 Champion `0.235994` and D-089 `0.233812`).
+     - Legacy 47 AP: `0.253725` (AR100 `0.392764`).
+     - Completely resolved rare-class forgetting: `styrofoam_piece` AP is **`0.148515`** (100% preserved vs. `0.0000` in D-089).
+     - Single-model `paper` AP pushed to an all-time record **`0.435637`** (up from `0.429627` in D-089 and `0.423660` in D-083).
+     - `drink_can` AP held at peak **`0.670297`**; `plastic_cup` AP reached **`0.384724`**.
+4. **D-079 Score-Preserving Consensus Audit**:
+   - Exactly 1 query reassigned (image `419`, query `0`: `paper` -> `plastic_wrapper`, score `0.350395` preserved).
+   - 9-Specific consensus AP rose to **`0.238786`** (`+0.002498`).
+   - BANTAI 5-Category consensus AP rose to **`0.409769`** (`+0.004715`, **`50.31% AP50`**).
+   - `plastic_wrapper` AP rose from `0.000000` to `0.015842`.
+5. **Multi-Scale Query Routing Update**:
+   - Fusing D-091 Champion with D-086 HR448 (`D091_Champion_384 + D086_HR448`) achieved **`0.258014`** 9-Specific AP and **`0.431918`** BANTAI 5-Category AP.
+   - Tri-Model combination `Tri_Model_D086_S2575_HR448_D091_Champ` achieved **`0.260171`** 9-Specific AP and **`0.434033`** BANTAI 5-Category AP.
+   - The all-time project benchmark champion remains `Tri_Model_D086_S2575_HR448_D089_S5050` with **`0.260674`** 9-Specific AP and **`0.435166`** BANTAI 5-Category AP (53.27% AP50).
+
+Full report: [D-091 report](TACO_STAGE_5_D091_BALANCED_TIER3_TRAINING.md).
+
 ## D-090: Tri-Model Class-Specialized Query Routing & Paper-Plastic Disambiguation Audit - 2026-11-01
 
 Owner authorization D-090 executed locally on `feat/stage5-paper-category` as a strictly CPU-only routing optimization and cross-class disambiguation audit. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.

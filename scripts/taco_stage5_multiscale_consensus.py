@@ -29,6 +29,7 @@ VAL_JSON = ROOT / "exports/taco/strict-clean-stage5-d083-core-v1/validation.json
 D083_RUN = ROOT / "runs/training/stage5-d083-core-20261031-a"
 D086_RUN = ROOT / "runs/training/stage5-d086-highres-20261031-a"
 D089_RUN = ROOT / "runs/training/stage5-d089-tier3-core-20261031-a"
+D091_RUN = ROOT / "runs/training/stage5-d091-balanced-tier3-20261101-a"
 
 ROUTING_POLICIES = [
     "uniform_both",
@@ -268,6 +269,48 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
             "spec_queries": d089_e1_json["raw_queries"],
             "spec_vecs": d089_e1_vecs,
             "spec_img_map": d089_e1_img_map,
+            "spec_categories": (5, 8),
+        }
+
+    if (D091_RUN / "soup_d091_d086s2575_5050.json").is_file():
+        d091_champ_json = strict_load(D091_RUN / "soup_d091_d086s2575_5050.json")
+        d091_champ_vecs = np.load(D091_RUN / "best-score-vectors.npz")
+        d091_img_map = {img_id: idx for idx, img_id in enumerate(d091_champ_vecs["image_ids"])}
+        pairings["D091_Champion_384_plus_D086_HR448"] = {
+            "std_queries": d091_champ_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d091_champ_vecs,
+            "std_img_map": d091_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+        }
+        pairings["Tri_Model_D086_S2575_HR448_D091_Champ"] = {
+            "std_queries": d086_s2575_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d086_s2575_vecs,
+            "std_img_map": s2575_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+            "spec_queries": d091_champ_json["raw_queries"],
+            "spec_vecs": d091_champ_vecs,
+            "spec_img_map": d091_img_map,
+            "spec_categories": (5, 8),
+        }
+
+    if (D091_RUN / "validation-d091-balanced-tier3-e1.json").is_file():
+        d091_e1_json = strict_load(D091_RUN / "validation-d091-balanced-tier3-e1.json")
+        d091_e1_vecs = np.load(D091_RUN / "scores-validation-d091-balanced-tier3-e1.npz")
+        d091_e1_img_map = {img_id: idx for idx, img_id in enumerate(d091_e1_vecs["image_ids"])}
+        pairings["Tri_Model_D086_S2575_HR448_D091_E1"] = {
+            "std_queries": d086_s2575_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d086_s2575_vecs,
+            "std_img_map": s2575_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+            "spec_queries": d091_e1_json["raw_queries"],
+            "spec_vecs": d091_e1_vecs,
+            "spec_img_map": d091_e1_img_map,
             "spec_categories": (5, 8),
         }
 

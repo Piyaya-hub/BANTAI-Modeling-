@@ -1,20 +1,19 @@
 # Development phases
 
-## Current Stage 5 state through D-090
+## Current Stage 5 state through D-091
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-083/D-084, the best single-pass
-Stage 5 combined **nine-specific validation AP is 0.236129** (and **0.236393** with D-079
-score-preserving consensus) from `soup_d083_d074_5050` (50/50 D074 champion + D083 E1)
-at 384/576. Under D-086, high-resolution (`448/672`) fine-tuning and multi-scale query fusion
-were established. Under D-088, class-calibrated multi-scale query routing achieved **0.258410**
-9-specific AP and **0.430072** BANTAI 5-Category AP. Under D-089, Tier 3 Core dataset expansion
-(576 training images, 1,240 boxes) unlocked specialized non-plastic queries (`paper` `0.429627`,
-`drink_can` `0.670297`). Under D-090, Tri-Model Class-Specialized query routing (`D086_S2575` +
-`D086_HR448` + `D089_S5050`) established new all-time high validation benchmarks:
-**0.260674** 9-specific AP (AP50 `0.310330`) and **0.435166** BANTAI 5-Category AP (53.27% AP50).
-An exhaustive paper-vs-plastic IoU disambiguation audit confirmed that independent class-aware
-NMS is optimal and that cross-class suppression degrades AP by removing legitimate co-occurrences.
+validation / 65-image test memberships frozen. Under D-091, class-balanced inverse-square-root
+sample weighting and proximal L2 parameter anchoring achieved the project's highest single-model
+validation benchmark: **0.236288** nine-specific validation AP (and **0.238786** with D-079
+score-preserving consensus) from `soup_d091_d086s2575_5050` (50% D086 Soup2575 + 50% D091 E1)
+at 384/576, with 100% rare-class preservation (`styrofoam_piece` at `0.148515`) and record
+single-pass `paper` AP (`0.435637`). Under D-090, Tri-Model Class-Specialized query routing
+(`D086_S2575` + `D086_HR448` + `D089_S5050`) established the project's all-time highest validation
+benchmarks: **0.260674** 9-specific AP (AP50 `0.310330`) and **0.435166** BANTAI 5-Category AP
+(53.27% AP50). An exhaustive paper-vs-plastic IoU disambiguation audit confirmed that independent
+class-aware NMS is optimal and that cross-class suppression degrades AP by removing legitimate
+co-occurrences.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -40,6 +39,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-088 | Class-calibrated multi-scale query routing + D-079 consensus optimization | **0.258410** (calibrated consensus) | **0.430072** (52.49% AP50) |
 | D-089 | Tier 3 Core Expansion (576 img/1,240 box) + masking + cosine schedule + soup | **0.233812** (soup 75:25) / **0.256673** (fusion) | **0.398774 raw / 0.403616 consensus** |
 | D-090 | Tri-Model Class-Specialized Routing (D086+D089) + Paper-Plastic Audit | **0.260674** (tri-model consensus) | **0.435166 (53.27% AP50)** |
+| D-091 | Class-Balanced Tier 3 Core (576 img) + L2 anchor + 4-state soup | **0.236288** (consensus **0.238786**) | **0.405054 raw / 0.409769 consensus** (50.31% AP50) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
