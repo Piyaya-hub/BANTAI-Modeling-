@@ -1,5 +1,31 @@
 # Decision register
 
+## D-094: D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing - 2026-11-02
+
+Owner authorization D-094 executed locally on `feat/stage5-paper-category` as a strictly CPU-only per-class audit and multi-checkpoint query routing optimization task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
+
+1. **Per-Class Audit Across D093-HN States on Combined-65 and Legacy-47**:
+   - Evaluated all five saved D-093 inference states (`D093-HN E1`, `D093-HN E2`, `D093-HN E3`, `soup_5050`, `soup_2575`).
+   - `D093-HN E3` on Legacy-47 achieved an all-time benchmark of **`0.284742` AP** (`AP50: 0.333934`, `AR100: 0.415101`). Multi-epoch absent-class suppression loss ($\mathcal{L}_{\text{absent}}$) severely suppressed false-positive background noise across absent classes on legacy scenes.
+   - On Combined-65, `D093-HN E3` achieved peak cigarette AP of **`0.126224`** (`AR100: 0.392308`).
+   - On validation Image 1 (`000008.jpg`), paper confidence rose to **`0.372`** on `D093-HN E3`, decisively outranking `plastic_film` (`0.319`).
+2. **Multi-Checkpoint Routing Integration (`scripts/taco_stage5_multiscale_consensus.py`)**:
+   - Added `Class_Optimal_Multi_Checkpoint_Ensemble` and `class_optimal_hn_e3_cig` routing policy to `scripts/taco_stage5_multiscale_consensus.py`.
+   - Evaluated 11 pairings across 7 routing policies and 3 consensus modes (231 evaluations total).
+   - Winning pairing `Tri_Model_D086_S2575_HR448_D093_Champ` under `hr_small_medium_plus_can_paper` policy with `pre_nms` consensus established new all-time project benchmark records:
+     - 9-Specific AP: **`0.261603`** (AP50 `0.310963`, AP75 `0.285697`, AR100 `0.418648`).
+     - BANTAI 5-Category AP: **`0.437255`** (AP50 `0.528602`, AP75 `0.458641`, AR100 `0.647740`).
+     - `paper` AP: **`0.472763`** (`AR100: 0.755000`, all-time record, +0.0047 vs D-090).
+     - `drink_can` AP: **`0.684158`** (`AR100: 0.685714`, all-time record, +0.0277 vs D-086).
+     - `plastic_bottle`: **`0.419554`**, `plastic_cup`: **`0.395545`**, `styrofoam_piece`: **`0.148515`**, `plastic_film`: **`0.068693`**, `plastic_wrapper`: **`0.041867`**, `cigarette`: **`0.123328`**.
+   - `Class_Optimal_Multi_Checkpoint_Ensemble` under `class_optimal_hn_e3_cig` / `pre_nms` achieved **`0.261394`** 9-Specific AP and **`0.436786`** BANTAI 5-Category AP, routing cigarette exclusively from `D093-HN E3` (`0.126224` AP).
+3. **Artifact Persistence & Verification**:
+   - Persisted updated `multiscale-consensus-replay.json`, `scores-multiscale-consensus.npz` (`(65, 100, 9)` float32 array), and `multiscale-consensus-audit.json` under authorization `D-094`.
+   - Unit tests passed in `tests/test_stage5_multiscale_consensus.py`.
+   - Native Tk smoke passed in `tests/windows_stage5_image777_check.py` (50 GUI state combinations).
+
+Full report: [D-093 & D-094 report](TACO_STAGE_5_D093_MULTIEPOCH_HN_TRAINING.md).
+
 ## D-093: 3-Epoch Hard-Negative & Absent-Class-Suppressed Fine-Tuning Run & Multi-Scale Update - 2026-11-02
 
 Owner authorization D-093 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened; file-system audithook enforced).

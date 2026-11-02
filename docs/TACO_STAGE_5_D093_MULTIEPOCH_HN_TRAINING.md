@@ -105,3 +105,36 @@ When integrated into the class-calibrated multi-scale query routing pipeline (`s
 - **D-091 Champion @ 0.10**: 4 cigarettes detected (`0.13, 0.12, 0.11, 0.11`).
 - **D-093 Champion @ 0.10**: 4 cigarettes detected with increased confidence (`0.13, 0.13, 0.11, 0.11`).
 - **Full GUI Smoke Test**: `tests/windows_stage5_image777_check.py` passed all 50 interactive UI combinations.
+
+---
+
+## 6. D-094 Multi-Checkpoint Query Routing and False-Positive Suppression Audit
+
+Under owner authorization **D-094**, a strictly CPU-only per-class audit across all five D-093 evaluation states on `combined_65` and `legacy_47` was conducted, along with class-optimal multi-checkpoint routing and false-positive suppression integration in `scripts/taco_stage5_multiscale_consensus.py`.
+
+### 1. D093-HN State Comparison & Absent-Class Suppression Effects
+- **`D093-HN E3` on Legacy-47**: Reached an all-time legacy benchmark of **`0.284742` AP** (`AP50: 0.333934`, `AR100: 0.415101`). Multi-epoch absent-class suppression loss ($\mathcal{L}_{\text{absent}}$) severely punishes false-positive background activations on non-annotated classes, cleaning predictions on legacy scenes.
+- **`D093-HN E3` on `combined_65` Cigarette**: Peaked at **`0.126224` AP** (`AR100: 0.392308`), highest among all D-093 individual states.
+- **Image 1 (`000008.jpg`) Paper Confidence**: On `D093-HN E3`, Paper confidence reached an all-time peak of **`0.372`**, decisively outranking `plastic_film` (`0.319`).
+
+### 2. Multi-Checkpoint Routing Benchmark Results
+Evaluating 11 pairings across 7 routing policies and 3 consensus modes (231 evaluations total) confirmed new all-time project records:
+
+| Pairing / Configuration | Routing Policy | Mode | 9-Specific AP | BANTAI 5-Category AP | Paper AP | Drink Can AP |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| D-090 Winner (`Tri_Model_D086_S2575_HR448_D089_S5050`) | `hr_small_medium_plus_can_paper` | `pre_nms` | 0.260674 | 0.435166 | 0.468014 | 0.656436 |
+| `Class_Optimal_Multi_Checkpoint_Ensemble` | `class_optimal_hn_e3_cig` | `pre_nms` | 0.261394 | 0.436786 | 0.468014 | 0.684158 |
+| **`Tri_Model_D086_S2575_HR448_D093_Champ` (D-094 Champion)** | `hr_small_medium_plus_can_paper` | `pre_nms` | **0.261603** | **0.437255** | **0.472763** | **0.684158** |
+
+### 3. All-Time Per-Class AP Breakdown (`Tri_Model_D086_S2575_HR448_D093_Champ`)
+- `0: cigarette`: **`0.123328`** (`AR100: 0.423077`)
+- `1: plastic_bottle`: **`0.419554`** (`AR100: 0.577778`)
+- `2: plastic_bag`: **`0.000000`**
+- `3: plastic_wrapper`: **`0.041867`** (`AR100: 0.146154`)
+- `4: plastic_film`: **`0.068693`** (`AR100: 0.570588`)
+- `5: drink_can`: **`0.684158`** (`AR100: 0.685714`, +0.0277 vs D-086)
+- `6: plastic_cup`: **`0.395545`** (`AR100: 0.466667`)
+- `7: styrofoam_piece`: **`0.148515`** (`AR100: 0.142857`)
+- `8: paper`: **`0.472763`** (`AR100: 0.755000`, all-time record, +0.0047 vs D-090)
+- **9-Specific AP**: **`0.261603`** (AP50 `0.310963`, AP75 `0.285697`, AR100 `0.418648`)
+- **BANTAI 5-Category AP**: **`0.437255`** (AP50 `0.528602`, AP75 `0.458641`, AR100 `0.647740`)
