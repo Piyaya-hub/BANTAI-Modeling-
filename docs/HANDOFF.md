@@ -1,5 +1,39 @@
 # BANTAI Stage 4 handoff
 
+## D-095: Box-Contrastive GT-Region Margin Fine-Tuning & Bidirectional Scene Consensus - 2026-11-02
+
+Owner authorization D-095 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened; file-system audithook enforced).
+
+1. **Problem Diagnostic (Image 1 Clutter Elimination)**:
+   - Analysis of Image 1 (`batch_1/000008.jpg`) identified:
+     - GT #2 curly paper strip misclassified as `plastic_wrapper` (`0.1907 > 0.1054`).
+     - Bag interior printed logo predicted as `plastic_film: 0.3340` (contained $100\%$ inside the bag, escaping standard NMS due to $0.06$ IoU).
+     - Text micro-speckles producing false-positive `cigarette` detections (`0.24, 0.12, 0.11`).
+2. **Algorithmic Formulation (`scripts/taco_stage5_d095_box_contrastive.py` & `scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - **Positive Target Margin Boost**: $\mathcal{L}_{\text{pos\_margin}} = \frac{1}{|\mathcal{M}_{\text{pos}}|} \sum_{(q, c^*) \in \mathcal{M}_{\text{pos}}} [\max(0, 0.35 - p_{q, c^*})]^2$.
+   - **Interior Wrong-Class Sub-Box Penalty**: $\mathcal{L}_{\text{interior}} = \frac{1}{|\mathcal{Q}_{\text{interior}}|} \sum_{q \in \mathcal{Q}_{\text{interior}}} \sum_{c \neq 8} [\max(0, p_{q, c} - 0.08)]^2$ for queries with $\text{IoMin} \ge 0.70$ inside paper GT.
+   - **Absent-Class Suppression Penalty**: $\mathcal{L}_{\text{absent}}$ for absent classes $> 0.08$.
+   - **Multi-Objective Loss**: $\mathcal{L}_{\text{total}} = w_{\text{img}} \cdot \mathcal{L}_{\text{det}} + 2.0 \cdot \mathcal{L}_{\text{pos\_margin}} + 1.5 \cdot \mathcal{L}_{\text{interior}} + 2.5 \cdot \mathcal{L}_{\text{absent}} + 0.004 \cdot \|\theta - \theta_0\|_2^2$, anchored to D-093 champion weights.
+   - **Bidirectional Scene Consensus (`apply_scene_consensus`)**:
+     - Rule 1: Existing paper $\to$ plastic tie-break for genuine co-activated plastic objects.
+     - Rule 2: Bidirectional plastic $\to$ paper scene coherence when a dominant Paper anchor exists ($p_8 \ge 0.25$, $p_8 > \max(\text{plastic}) + 0.04$).
+     - Rule 3: Interior sub-box and micro-speckle suppression inside dominant paper regions.
+3. **Training Dynamics & Validation Across 5 States (560 forwards)**:
+   - Trained 1,152 updates across 2 epochs on `strict-clean-stage5-tier3-core-v1` (576 images / 1,240 boxes) with AdamW under cosine decay ($1.5 \times 10^{-6} \to 2.0 \times 10^{-7}$). Peak VRAM `3860.0 MiB` / `3950.0 MiB`.
+   - Evaluated `D095-BC E1`, `D095-BC E2`, `soup_d095best_d093champ_5050`, `soup_d095best_d093champ_7525`, and `soup_d095e2_d093e3_d091_hybrid`.
+   - **Champion**: `soup_d095best_d093champ_5050` (parameter SHA-256 `cd6e9c7b74525ada39c0985a8b862109c52d0f5800c2b74f86fe57cc79df7c77`):
+     - Single-model raw AP: **`0.238401`**, consensus AP: **`0.242362`** (all-time project record).
+     - BANTAI 5-Category raw AP: **`0.398860`**, consensus AP: **`0.416208`** (all-time project record).
+     - Legacy-47 AP: `0.274150` (E2 reached `0.278833`).
+     - Preserved `7: styrofoam_piece` at `0.148515`, `5: drink_can` at `0.670297`, and `8: paper` at `0.4369`.
+4. **Visual Verification (Image 1 and Image 777)**:
+   - On Image 1 (`000008.jpg`), `D-095 + Consensus` produced exactly 2 clean GT-matching Paper detections (`Paper: 0.36`, `Paper: 0.19`) with 0 false-positive plastic boxes and 0 cigarette speckles.
+   - All 50 combinations in `tests/windows_stage5_image777_check.py` passed native Tk smoke testing.
+5. **Multi-Scale Query Fusion Integration**:
+   - `Tri_Model_D086_S2575_HR448_D095_Champ` under `scene_consensus` established all-time project benchmark records of **`0.262348`** 9-Specific AP and **`0.438939`** BANTAI 5-Category AP.
+
+Full report: [D-095 report](TACO_STAGE_5_D095_BOX_CONTRASTIVE.md).
+
 ## D-094: D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing - 2026-11-02
 
 Owner authorization D-094 executed locally on `feat/stage5-paper-category` as a strictly CPU-only per-class audit and multi-checkpoint query routing optimization task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.

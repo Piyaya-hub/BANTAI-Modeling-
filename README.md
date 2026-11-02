@@ -44,6 +44,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | **0.236288** (single) / **0.238786** (consensus) | GUI replay & remote push |
 | D-093 | 3-Epoch Hard-Negative & Absent-Class-Suppression + Multi-Scale Update | **0.241412** (single-model) / **0.261603** (tri-model consensus) | **0.406022** (single-model) / **0.437255** (consensus) |
 | D-094 | D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing | **0.261603** (consensus champion) / **0.284742** (legacy-47) | **0.437255** (5-Category champion) |
+| D-095 | Box-Contrastive GT Margin Fine-Tuning + Bidirectional Scene Consensus | **0.242362** (single-model consensus) / **0.262348** (tri-model consensus) | **0.416208** (single-model) / **0.438939** (tri-model consensus) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

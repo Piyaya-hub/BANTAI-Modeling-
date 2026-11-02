@@ -31,6 +31,7 @@ D086_RUN = ROOT / "runs/training/stage5-d086-highres-20261031-a"
 D089_RUN = ROOT / "runs/training/stage5-d089-tier3-core-20261031-a"
 D091_RUN = ROOT / "runs/training/stage5-d091-balanced-tier3-20261101-a"
 D093_RUN = ROOT / "runs/training/stage5-d093-multiepoch-hn-20261102-a"
+D095_RUN = ROOT / "runs/training/stage5-d095-box-contrastive-20261102-a"
 
 ROUTING_POLICIES = [
     "uniform_both",
@@ -42,7 +43,7 @@ ROUTING_POLICIES = [
     "box_area_discount_095",
 ]
 
-CONSENSUS_MODES = ["none", "pre_nms", "post_nms"]
+CONSENSUS_MODES = ["none", "pre_nms", "post_nms", "scene_consensus"]
 
 
 def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, hr_vecs, hr_img_map,
@@ -197,15 +198,45 @@ def fuse_and_evaluate(val_data, std_queries, hr_queries, std_vecs, std_img_map, 
                 final_kept.append((r_adj, v))
             kept = final_kept
 
-        # Assign clean query_id 0..99 for the 100 fused queries per image
-        clean_rows = []
-        for new_qid, (r, v) in enumerate(kept):
-            row_copy = dict(r)
-            row_copy["fused_query_id"] = new_qid
-            clean_rows.append(row_copy)
+        if consensus_mode == "scene_consensus":
+            from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus
+            img_dims = {img["id"]: (img["width"], img["height"]) for img in val_data["images"]}
+            w, h = img_dims.get(img_id, (None, None))
+            tagged_rows = []
+            for idx, (r, v) in enumerate(kept):
+                r_tag = dict(r)
+                r_tag["fused_query_id"] = idx
+                tagged_rows.append(r_tag)
+            kept_vecs = np.stack([item[1] for item in kept], axis=0)
+            adj_rows, changed_qids, supp_qids = apply_scene_consensus(
+                tagged_rows, kept_vecs, image_width=w, image_height=h,
+                coactivation="3 plastic subtypes >= 0.20",
+            )
+            for ch_qid in changed_qids:
+                changes.append({
+                    "image_id": img_id, "query_id": ch_qid, "scale": "fused",
+                    "mode": "scene_consensus"
+                })
+            clean_rows = adj_rows
+            fused_pool.extend(clean_rows)
+            if len(kept_vecs) < 100:
+                pad = np.zeros((100 - len(kept_vecs), 9), dtype=np.float32)
+                kept_vecs = np.concatenate([kept_vecs, pad], axis=0)
+            fused_vectors_by_img[img_id] = kept_vecs.astype(np.float32)
+        else:
+            # Assign clean query_id 0..99 for the 100 fused queries per image
+            clean_rows = []
+            for new_qid, (r, v) in enumerate(kept):
+                row_copy = dict(r)
+                row_copy["fused_query_id"] = new_qid
+                clean_rows.append(row_copy)
 
-        fused_pool.extend(clean_rows)
-        fused_vectors_by_img[img_id] = np.stack([item[1] for item in kept], axis=0).astype(np.float32)
+            fused_pool.extend(clean_rows)
+            vecs_stack = np.stack([item[1] for item in kept], axis=0).astype(np.float32)
+            if len(vecs_stack) < 100:
+                pad = np.zeros((100 - len(vecs_stack), 9), dtype=np.float32)
+                vecs_stack = np.concatenate([vecs_stack, pad], axis=0)
+            fused_vectors_by_img[img_id] = vecs_stack
 
     m9 = evaluate_case(val_data, fused_pool, "9-specific", "raw")
     m5 = evaluate_case(val_data, fused_pool, "bantai-5-category", "raw")
@@ -399,6 +430,31 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
                 "cig_img_map": d093_e3_img_map,
             }
 
+    if (D095_RUN / "soup_d095best_d093champ_5050.json").is_file():
+        d095_champ_json = strict_load(D095_RUN / "soup_d095best_d093champ_5050.json")
+        d095_champ_vecs = np.load(D095_RUN / "best-score-vectors.npz")
+        d095_img_map = {img_id: idx for idx, img_id in enumerate(d095_champ_vecs["image_ids"])}
+        pairings["D095_Champion_384_plus_D086_HR448"] = {
+            "std_queries": d095_champ_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d095_champ_vecs,
+            "std_img_map": d095_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+        }
+        pairings["Tri_Model_D086_S2575_HR448_D095_Champ"] = {
+            "std_queries": d086_s2575_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d086_s2575_vecs,
+            "std_img_map": s2575_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+            "spec_queries": d095_champ_json["raw_queries"],
+            "spec_vecs": d095_champ_vecs,
+            "spec_img_map": d095_img_map,
+            "spec_categories": (5, 8),
+        }
+
     results = {}
     winning_pool = None
     winning_vectors = None
@@ -457,7 +513,7 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
 
     # Save multiscale-consensus-replay.json
     replay_meta = {
-        "authorization": "D-094",
+        "authorization": "D-095",
         "winning_pairing": winning_pair_name,
         "winning_routing_policy": winning_policy,
         "winning_consensus_mode": winning_mode,
@@ -534,8 +590,9 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         }
 
     audit_summary = {
-        "authorization": "D-094",
+        "authorization": "D-095",
         "d089_evaluated": "Tri_Model_D086_S2575_HR448_D089_S5050" in pairings,
+        "d095_evaluated": "Tri_Model_D086_S2575_HR448_D095_Champ" in pairings,
         "status": "complete",
         "winning_pairing": winning_pair_name,
         "winning_routing_policy": winning_policy,
@@ -564,6 +621,8 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         atomic_json(D089_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
     if D093_RUN.exists():
         atomic_json(D093_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
+    if D095_RUN.exists():
+        atomic_json(D095_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
 
     print(json.dumps({
         "status": "complete",

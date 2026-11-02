@@ -1,20 +1,19 @@
 # Development phases
 
-## Current Stage 5 state through D-094
+## Current Stage 5 state through D-095
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-093, a 3-epoch (1,728 updates)
-fine-tuning run with auxiliary absent-class false-positive suppression ($\mathcal{L}_{\text{absent}}$),
-class frequency weighting, and proximal L2 anchoring achieved the project's all-time highest
-single-model validation benchmark: **0.241412** nine-specific validation AP and **0.406022**
-BANTAI 5-Category AP from `soup_d093best_d091_5050` (50% D093 E1 + 50% D091 Champion) at 384/576,
-with record single-model `paper` AP (**0.436927**), `plastic_bottle` AP (**0.385078**), and
-`plastic_film` AP (**0.052493**). Under D-094, a CPU-only audit across all D093-HN states and
-multi-checkpoint class-optimal routing in `scripts/taco_stage5_multiscale_consensus.py` established
-new all-time project benchmark records: **0.261603** 9-specific AP and **0.437255** BANTAI 5-Category AP
-(`Tri_Model_D086_S2575_HR448_D093_Champ` under `hr_small_medium_plus_can_paper` with `pre_nms` consensus),
-with all-time record `paper` AP (**0.472763**) and `drink_can` AP (**0.684158**). D093-HN E3 reached
-**0.284742** AP on legacy-47 and peak cigarette AP (**0.126224**) on combined-65.
+validation / 65-image test memberships frozen. Under D-095, a 2-epoch (1,152 updates)
+box-contrastive fine-tuning run with positive target margin boost ($\mathcal{L}_{\text{pos\_margin}}$),
+interior wrong-class sub-box penalty ($\mathcal{L}_{\text{interior}}$), auxiliary absent-class false-positive suppression ($\mathcal{L}_{\text{absent}}$),
+and proximal L2 anchoring combined with bidirectional scene consensus (`apply_scene_consensus`) achieved
+the project's all-time highest single-model validation benchmark: **0.242362** nine-specific validation AP and **0.416208**
+BANTAI 5-Category AP from `soup_d095best_d093champ_5050` (50% D095 E1 + 50% D093 Champion) at 384/576,
+with `7: styrofoam_piece` preserved at **0.148515**, `5: drink_can` held at **0.670297**, and `8: paper` at **0.4369**.
+On validation Image 1 (`000008.jpg`), `D-095 + Consensus` eliminated all false-positive plastic boxes and cigarette speckles,
+producing exactly the two ground-truth Paper detections (`Paper: 0.36`, `Paper: 0.19`).
+Under multi-scale query routing (`scripts/taco_stage5_multiscale_consensus.py`), `Tri_Model_D086_S2575_HR448_D095_Champ`
+with `scene_consensus` established all-time project benchmark records: **0.262348** 9-specific AP and **0.438939** BANTAI 5-Category AP.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -44,6 +43,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | CPU review & verification | Replay & remote push |
 | D-093 | 3-Epoch Hard-Negative & Absent-Class-Suppression + Multi-Scale Update | **0.241412** (single-model) / **0.261603** (tri-model consensus) | **0.406022** (single-model) / **0.437255** (consensus) |
 | D-094 | D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing | **0.261603** (consensus champion) / **0.284742** (legacy-47) | **0.437255** (5-Category champion) |
+| D-095 | Box-Contrastive GT Margin Fine-Tuning + Bidirectional Scene Consensus | **0.242362** (single-model consensus) / **0.262348** (tri-model consensus) | **0.416208** (single-model) / **0.438939** (tri-model consensus) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

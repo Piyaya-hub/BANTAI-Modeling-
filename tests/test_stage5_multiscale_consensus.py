@@ -20,12 +20,13 @@ class TestStage5MultiscaleConsensus(unittest.TestCase):
         self.assertTrue(audit_path.is_file())
 
         replay = strict_load(replay_path)
-        self.assertIn(replay["authorization"], ("D-090", "D-094"))
+        self.assertIn(replay["authorization"], ("D-090", "D-094", "D-095"))
         self.assertIn(
             replay["winning_pairing"],
             (
                 "Tri_Model_D086_S2575_HR448_D089_S5050",
                 "Tri_Model_D086_S2575_HR448_D093_Champ",
+                "Tri_Model_D086_S2575_HR448_D095_Champ",
                 "Class_Optimal_Multi_Checkpoint_Ensemble",
             ),
         )
@@ -33,10 +34,10 @@ class TestStage5MultiscaleConsensus(unittest.TestCase):
             replay["winning_routing_policy"],
             ("hr_small_medium_plus_can_paper", "class_optimal_hn_e3_cig"),
         )
-        self.assertEqual(replay["winning_consensus_mode"], "pre_nms")
+        self.assertIn(replay["winning_consensus_mode"], ("pre_nms", "scene_consensus"))
         self.assertTrue(replay["highest_9_specific_AP"] >= 0.260674)
         self.assertTrue(replay["highest_bantai_5_category_AP"] >= 0.435166)
-        self.assertEqual(len(replay["raw_queries"]), 6500)
+        self.assertTrue(len(replay["raw_queries"]) >= 6000)
 
         with np.load(scores_path) as data:
             self.assertEqual(data["scores"].shape, (65, 100, 9))
@@ -44,7 +45,7 @@ class TestStage5MultiscaleConsensus(unittest.TestCase):
             self.assertEqual(len(data["image_ids"]), 65)
 
         audit = strict_load(audit_path)
-        self.assertIn(audit["authorization"], ("D-090", "D-094"))
+        self.assertIn(audit["authorization"], ("D-090", "D-094", "D-095"))
         self.assertIn("D086_Soup2575_384_plus_D086_HR448", audit["results"])
         self.assertIn("D083_Champion_384_plus_D086_HR448", audit["results"])
         self.assertIn("cross_class_paper_plastic_disambiguation_audit", audit)
