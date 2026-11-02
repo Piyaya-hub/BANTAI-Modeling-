@@ -747,6 +747,13 @@ class Stage5ViewerGUI:
             variable=self.consensus_var, command=self.update_plots,
             state="normal" if has_vectors else "disabled")
         self.consensus_check.pack(side="left", padx=8)
+
+        self.scene_consensus_var = tk.BooleanVar(value=has_vectors)
+        self.scene_consensus_check = ttk.Checkbutton(
+            state_frame, text="Scene consensus (experimental)",
+            variable=self.scene_consensus_var, command=self.update_plots,
+            state="normal" if has_vectors else "disabled")
+        self.scene_consensus_check.pack(side="left", padx=8)
         ttk.Label(state_frame, text="Threshold Mode:").pack(side="left", padx=(14, 2))
         self.threshold_mode_var = tk.StringVar(value=THRESHOLD_CHOICES[0])
         threshold_cb = ttk.Combobox(state_frame, textvariable=self.threshold_mode_var,
@@ -989,7 +996,9 @@ class Stage5ViewerGUI:
                          and self.d095_vectors is not None
                          and img_id in self.d095_vectors["scores_by_image"])
 
-        use_consensus = (self.consensus_var.get()
+        rule1_active = bool(self.consensus_var.get())
+        scene_active = bool(self.scene_consensus_var.get())
+        use_consensus = ((rule1_active or scene_active)
                          and scheme == "bantai-5-category"
                          and self.taxonomy_var.get() != VIEWS[2]
                          and ((is_multiscale)
@@ -1001,45 +1010,94 @@ class Stage5ViewerGUI:
                                   and img_id in self.consensus_vectors["scores_by_image"])))
 
         if use_consensus:
+            from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus, apply_to_query_rows
+            w, h = self.current_pil.size
             if is_d095_champ:
-                from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus
-                w, h = self.current_pil.size
                 highres_preds, _, _ = apply_scene_consensus(
                     highres_preds, self.d095_vectors["scores_by_image"][img_id],
                     image_width=w, image_height=h,
                     delta=0.016, coactivation="3 plastic subtypes >= 0.20",
                     confidence_mode="top1_score",
+                    enable_rule1=rule1_active,
+                    enable_rule2=scene_active,
+                    enable_rule3=scene_active,
                 )
             elif is_multiscale:
-                # Multi-scale replay consensus application
                 s_vec = self.multiscale_vectors["scores_by_image"][img_id]
-                adj_rows = []
-                for r in highres_preds:
-                    qid = r.get("fused_query_id", r.get("query_id", 0))
-                    if 0 <= qid < len(s_vec):
-                        r_adj, _ = apply_consensus_tiebreak(
-                            r, s_vec[qid], delta=0.016,
-                            coactivation="3 plastic subtypes >= 0.20",
-                            confidence_mode="top1_score")
-                        adj_rows.append(r_adj)
-                    else:
-                        adj_rows.append(r)
-                highres_preds = adj_rows
+                if scene_active:
+                    highres_preds, _, _ = apply_scene_consensus(
+                        highres_preds, s_vec,
+                        image_width=w, image_height=h,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score",
+                        enable_rule1=rule1_active,
+                        enable_rule2=True,
+                        enable_rule3=True,
+                    )
+                else:
+                    adj_rows = []
+                    for r in highres_preds:
+                        qid = r.get("fused_query_id", r.get("query_id", 0))
+                        if 0 <= qid < len(s_vec):
+                            r_adj, _ = apply_consensus_tiebreak(
+                                r, s_vec[qid], delta=0.016,
+                                coactivation="3 plastic subtypes >= 0.20",
+                                confidence_mode="top1_score")
+                            adj_rows.append(r_adj)
+                        else:
+                            adj_rows.append(r)
+                    highres_preds = adj_rows
             elif is_d093_champ:
-                highres_preds, _ = apply_to_query_rows(
-                    highres_preds, self.d093_vectors["scores_by_image"][img_id],
-                    delta=0.016, coactivation="3 plastic subtypes >= 0.20",
-                    confidence_mode="top1_score")
+                s_vec = self.d093_vectors["scores_by_image"][img_id]
+                if scene_active:
+                    highres_preds, _, _ = apply_scene_consensus(
+                        highres_preds, s_vec,
+                        image_width=w, image_height=h,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score",
+                        enable_rule1=rule1_active,
+                        enable_rule2=True,
+                        enable_rule3=True,
+                    )
+                else:
+                    highres_preds, _ = apply_to_query_rows(
+                        highres_preds, s_vec,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score")
             elif is_d091_champ:
-                highres_preds, _ = apply_to_query_rows(
-                    highres_preds, self.d091_vectors["scores_by_image"][img_id],
-                    delta=0.016, coactivation="3 plastic subtypes >= 0.20",
-                    confidence_mode="top1_score")
+                s_vec = self.d091_vectors["scores_by_image"][img_id]
+                if scene_active:
+                    highres_preds, _, _ = apply_scene_consensus(
+                        highres_preds, s_vec,
+                        image_width=w, image_height=h,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score",
+                        enable_rule1=rule1_active,
+                        enable_rule2=True,
+                        enable_rule3=True,
+                    )
+                else:
+                    highres_preds, _ = apply_to_query_rows(
+                        highres_preds, s_vec,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score")
             else:
-                highres_preds, _ = apply_to_query_rows(
-                    highres_preds, self.consensus_vectors["scores_by_image"][img_id],
-                    delta=0.016, coactivation="3 plastic subtypes >= 0.20",
-                    confidence_mode="top1_score")
+                s_vec = self.consensus_vectors["scores_by_image"][img_id]
+                if scene_active:
+                    highres_preds, _, _ = apply_scene_consensus(
+                        highres_preds, s_vec,
+                        image_width=w, image_height=h,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score",
+                        enable_rule1=rule1_active,
+                        enable_rule2=True,
+                        enable_rule3=True,
+                    )
+                else:
+                    highres_preds, _ = apply_to_query_rows(
+                        highres_preds, s_vec,
+                        delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                        confidence_mode="top1_score")
 
         # Apply score threshold and optional containment NMS
         def filter_preds(plist):
@@ -1125,6 +1183,10 @@ def print_cli_summary(data: dict, score_thresh: float, top_k: int, image_id: int
         print(f"  Ground Truth ({len(gt_list)}): {', '.join(gt_names) if gt_names else 'None'}")
         print(f"  Stage 5 Run 1  @ {score_thresh:.2f} ({len(run1_preds)}): {', '.join(pred1_desc) if pred1_desc else 'None'}")
         print(f"  Stage 5 HighRes @ {score_thresh:.2f} ({len(hr_preds)}): {', '.join(hr_desc) if hr_desc else 'None'}")
+        if CONSENSUS_STATE in data["predictions"]:
+            c_preds = [p for p in data["predictions"][CONSENSUS_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
+            c_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in c_preds]
+            print(f"  Tier 2 Champion @ {score_thresh:.2f} ({len(c_preds)}): {', '.join(c_desc) if c_desc else 'None'}")
         if D091_CHAMPION_STATE in data["predictions"]:
             d091_preds = [p for p in data["predictions"][D091_CHAMPION_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
             d091_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in d091_preds]

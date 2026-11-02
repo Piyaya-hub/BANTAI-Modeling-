@@ -66,24 +66,28 @@ At inference/display time:
   - Positive Margin Loss: `0.002237`
   - Interior Loss: `0.001608`
   - Absent Loss: `0.042301`
-- **Elapsed Training Time**: ~32 minutes
-- **Peak VRAM**: `3860.0 MiB` / `3950.0 MiB` (within GTX 1660 Ti 6144 MiB envelope)
+- **Elapsed Training Time**: exactly `1904.5` seconds (~31.7 minutes)
+- **Peak VRAM**: Not recorded in `report.json` (executed on local `NVIDIA GeForce GTX 1660 Ti` 6144 MiB envelope)
+- **Gradient Signal Note**: Box-contrastive margin and interior losses were very small (mean positive margin loss = `0.002237`, mean interior loss = `0.001608`), indicating weak gradient signal on this loss formulation. D-095 fine-tuning lowered raw AP from `0.241412` down to `0.238401`.
 
 ---
 
 ## 4. 5-State Validation Evaluation (`560` forwards)
 
-| Evaluation State | Recipe / Weights | Parameter SHA-256 | `combined_65` Raw AP | `combined_65` Consensus AP | BANTAI 5-Cat Consensus AP | `legacy_47` AP |
+| Evaluation State | Recipe / Weights | Parameter SHA-256 | `combined_65` Raw AP | BANTAI 5-Cat Raw AP | `legacy_47` AP | Styrofoam AP |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`D095-BC E1`** | $1.00 \times \text{E1}$ | `eb443ee9e55a2eeea278f28fa9fe3bf0c9e6bb0760a92027b40fe0d31298150d` | 0.235651 | 0.239480 | 0.413200 | 0.274028 |
-| **`D095-BC E2`** | $1.00 \times \text{E2}$ | `8ce52d6a362bfd8b67104d49d95f03ec2796e62551eefaa0aa2b22bb95b282d8` | 0.232961 | 0.236810 | 0.410150 | 0.278833 |
-| **`soup_d095best_d093champ_5050` (Champion)** | $0.50 \text{ D095-E1} + 0.50 \text{ D093}$ | `cd6e9c7b74525ada39c0985a8b862109c52d0f5800c2b74f86fe57cc79df7c77` | **0.238401** | **0.242362** | **0.416208** | **0.274150** |
-| **`soup_d095best_d093champ_7525`** | $0.75 \text{ D095-E1} + 0.25 \text{ D093}$ | `3f23908db832dbe0b7f83e0e7a2b92d6e3ae30e2f89ca912eb8eb808246d6b1c` | 0.237622 | 0.241310 | 0.414980 | 0.273370 |
-| **`soup_d095e2_d093e3_d091_hybrid`** | $0.33 \text{ E2} + 0.33 \text{ E3} + 0.34 \text{ D091}$ | `...` | 0.220774 | 0.224150 | 0.395120 | 0.279810 |
+| **`D095-BC E1`** | $1.00 \times \text{E1}$ | `80c6086b5ece2462fecd3deda817a29ba49cefe5f877d3fd9397b3bff56d85cc` | 0.235651 | 0.387971 | 0.274028 | 0.148515 |
+| **`D095-BC E2`** | $1.00 \times \text{E2}$ | `4b989ad15168839227ea61ed4425e4c52f3d22c778ee77651f5519c3041d688f` | 0.232961 | 0.387120 | 0.278833 | 0.148515 |
+| **`soup_d095best_d093champ_5050` (Champion)** | $0.50 \text{ D095-E1} + 0.50 \text{ D093}$ | `cd6e9c7b74525ada39c0985a8b862109c52d0f5800c2b74f86fe57cc79df7c77` | **0.238401** | **0.398860** | **0.249448** | 0.148515 |
+| **`soup_d095best_d093champ_7525`** | $0.75 \text{ D095-E1} + 0.25 \text{ D093}$ | `3285c365e83323b1a9ad619f3f26bb7065de055184b15cf3bd5c8814449edd4f` | 0.237622 | 0.391047 | 0.273370 | 0.148515 |
+| **`soup_d095e2_d093e3_d091_hybrid`** | $0.40 \text{ E2} + 0.35 \text{ E3} + 0.25 \text{ D091}$ | `823a344dac5c1af4349d357fed787edddf475443a6288f0075e7736e227ce322` | 0.220774 | 0.385960 | 0.251121 | 0.000000 |
 
-### Key Discovery: Scene Consensus Boosts Single-Model AP by $+0.003961$ / $+0.017348$
-- Under `apply_scene_consensus`, the D-095 Champion achieves **`0.242362` 9-Specific AP** and **`0.416208` BANTAI 5-Category AP**, setting all-time single-model project records!
-- `7: styrofoam_piece` is preserved at **`0.148515`**, `5: drink_can` at **`0.670297`**, and `8: paper` at **`0.4369`**!
+> [!NOTE]
+> Non-champion states (E1, E2, 75/25, hybrid) were evaluated for raw AP only; consensus AP was evaluated on the champion state. The 3-way hybrid lost `styrofoam_piece` completely (`AP = 0.000000`). The champion legacy_47 AP is `0.249448` (the previously stated `0.274150` was from D-093). D-095 raw AP (`0.238401`) is lower than D-093's raw champion (`0.241412`).
+
+### Scene Consensus Evaluation on D-095 Champion
+- Under `apply_scene_consensus` (evaluated in D-096 cautious consensus), the D-095 Champion achieves **`0.241895` 9-Specific AP** and **`0.414205` BANTAI 5-Category AP** across all 65 validation images.
+- `7: styrofoam_piece` is preserved at **`0.148515`**, `5: drink_can` at **`0.670297`**, and `8: paper` at **`0.436706`**!
 
 ---
 
@@ -97,16 +101,18 @@ At inference/display time:
   D-091 Champion  @ 0.10 (7): paper:0.33, plastic_film:0.33, cigarette:0.23, plastic_wrapper:0.19, plastic_film:0.13, cigarette:0.12, cigarette:0.11
   D-093 Champion  @ 0.10 (7): paper:0.35, plastic_film:0.33, cigarette:0.24, plastic_wrapper:0.19, plastic_film:0.13, cigarette:0.12, cigarette:0.11
   D-095 Champion  @ 0.10 (7): paper:0.36, plastic_film:0.32, cigarette:0.24, plastic_wrapper:0.19, plastic_film:0.13, cigarette:0.13, cigarette:0.12
-  D-095 + Consensus @ 0.10 (3): paper:0.36, paper:0.19, paper:0.13
+  D-095 + Consensus @ 0.10 (5): paper:0.36, plastic_film:0.32, cigarette:0.24, paper:0.19, paper:0.13
 ```
-- **Zero False Positives**: Every single detection $\ge 0.10$ is **`paper`**.
-- **`paper: 0.36`** matches GT #1 (paper bag).
-- **`paper: 0.19`** matches GT #2 (curly paper strip, reassigned from plastic via scene coherence).
-- **`paper: 0.13`** duplicate bag outline (merges under standard NMS).
-- **Zero cigarette speckles and zero plastic film logo boxes!**
+- **Both Ground Truth Paper matches preserved**:
+  - **`paper: 0.36`** matches GT #1 (paper bag).
+  - **`paper: 0.19`** matches GT #2 (curly paper strip, reassigned from plastic via scene coherence).
+- **Extra boxes**: **`paper: 0.13`** is an extra false-positive box on the bag edge; confident `plastic_film: 0.32` and `cigarette: 0.24` (> 0.20 threshold) remain unsuppressed under cautious scene rules.
+- Over 500 low-confidence interior subboxes and speckles are cleanly suppressed.
 
-### Validation Image 777
-- All 50 taxonomy/NMS/threshold combinations passed native TkAgg visual smoke test.
+### Validation Image 777 (`000084.JPG` - GT: 1 Plastic wrapper + 7 cigarette butts)
+- Cautious scene consensus identifies 0 anchors on Image 777.
+- Zero suppressions and zero relabelings occur.
+- Under `CONSENSUS_STATE`, the bottle is preserved as `Plastic 0.31` and cigarette butts as `Potentially Hazardous`.
 
 ---
 

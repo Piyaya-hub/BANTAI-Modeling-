@@ -1,19 +1,17 @@
 # Development phases
 
-## Current Stage 5 state through D-095
+## Current Stage 5 state through D-096
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-095, a 2-epoch (1,152 updates)
-box-contrastive fine-tuning run with positive target margin boost ($\mathcal{L}_{\text{pos\_margin}}$),
-interior wrong-class sub-box penalty ($\mathcal{L}_{\text{interior}}$), auxiliary absent-class false-positive suppression ($\mathcal{L}_{\text{absent}}$),
-and proximal L2 anchoring combined with bidirectional scene consensus (`apply_scene_consensus`) achieved
-the project's all-time highest single-model validation benchmark: **0.242362** nine-specific validation AP and **0.416208**
-BANTAI 5-Category AP from `soup_d095best_d093champ_5050` (50% D095 E1 + 50% D093 Champion) at 384/576,
-with `7: styrofoam_piece` preserved at **0.148515**, `5: drink_can` held at **0.670297**, and `8: paper` at **0.4369**.
-On validation Image 1 (`000008.jpg`), `D-095 + Consensus` eliminated all false-positive plastic boxes and cigarette speckles,
-producing exactly the two ground-truth Paper detections (`Paper: 0.36`, `Paper: 0.19`).
-Under multi-scale query routing (`scripts/taco_stage5_multiscale_consensus.py`), `Tri_Model_D086_S2575_HR448_D095_Champ`
-with `scene_consensus` established all-time project benchmark records: **0.262348** 9-specific AP and **0.438939** BANTAI 5-Category AP.
+validation / 65-image test memberships frozen. Under D-096, cautious scene consensus
+rules were validated under 2-fold cross-validation on the combined 65-image validation
+set, achieving **0.241895** single-model 9-specific AP and **0.414205** BANTAI 5-Category AP
+on the D-095 champion (`soup_d095best_d093champ_5050`) with zero true positives lost across all
+65 images. In the visual review GUI, a dedicated "Scene consensus (experimental)" checkbox
+separates Rule 1 (plastic co-activation tiebreak) from Rules 2 and 3 (cautious scene coherence
+and nested sub-box suppression). Under `CONSENSUS_STATE`, Image 777 preserves the bottle as
+Plastic with no spurious Paper detections. Multi-scale query routing champion (`Tri_Model_D086_S2575_HR448_D095_Champ`)
+maintains project benchmark records: **0.262348** 9-specific AP and **0.438939** BANTAI 5-Category AP.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -43,7 +41,8 @@ This is validation evidence, not test generalization or production promotion; no
 | D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | CPU review & verification | Replay & remote push |
 | D-093 | 3-Epoch Hard-Negative & Absent-Class-Suppression + Multi-Scale Update | **0.241412** (single-model) / **0.261603** (tri-model consensus) | **0.406022** (single-model) / **0.437255** (consensus) |
 | D-094 | D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing | **0.261603** (consensus champion) / **0.284742** (legacy-47) | **0.437255** (5-Category champion) |
-| D-095 | Box-Contrastive GT Margin Fine-Tuning + Bidirectional Scene Consensus | **0.242362** (single-model consensus) / **0.262348** (tri-model consensus) | **0.416208** (single-model) / **0.438939** (tri-model consensus) |
+| D-095 | Box-Contrastive GT Margin Fine-Tuning + Scene Consensus (D-096 corrected) | **0.238401** (raw champion) / **0.262348** (tri-model consensus) | **0.398860** (raw) / **0.438939** (tri-model consensus) |
+| D-096 | Scene-Consensus Regression Fix (Image 777), 2-Fold Held-Out Validation, D-095 Report Correction | **0.241895** (single-model cautious consensus) / **0.262348** (multi-scale) | **0.414205** (single-model) / **0.438939** (multi-scale) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
