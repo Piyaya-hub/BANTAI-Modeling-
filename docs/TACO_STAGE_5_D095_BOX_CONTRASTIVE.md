@@ -66,7 +66,7 @@ At inference/display time:
   - Positive Margin Loss: `0.002237`
   - Interior Loss: `0.001608`
   - Absent Loss: `0.042301`
-- **Elapsed Training Time**: exactly `1904.5` seconds (~31.7 minutes)
+- **Elapsed Training Time**: `1904.5` seconds (~31.7 minutes), recorded in `runs/training/stage5-d095-box-contrastive-20261102-a/report.json` under field `total_seconds` (`1904.4990426000004`).
 - **Peak VRAM**: Not recorded in `report.json` (executed on local `NVIDIA GeForce GTX 1660 Ti` 6144 MiB envelope)
 - **Gradient Signal Note**: Box-contrastive margin and interior losses were very small (mean positive margin loss = `0.002237`, mean interior loss = `0.001608`), indicating weak gradient signal on this loss formulation. D-095 fine-tuning lowered raw AP from `0.241412` down to `0.238401`.
 
@@ -80,10 +80,10 @@ At inference/display time:
 | **`D095-BC E2`** | $1.00 \times \text{E2}$ | `4b989ad15168839227ea61ed4425e4c52f3d22c778ee77651f5519c3041d688f` | 0.232961 | 0.387120 | 0.278833 | 0.148515 |
 | **`soup_d095best_d093champ_5050` (Champion)** | $0.50 \text{ D095-E1} + 0.50 \text{ D093}$ | `cd6e9c7b74525ada39c0985a8b862109c52d0f5800c2b74f86fe57cc79df7c77` | **0.238401** | **0.398860** | **0.249448** | 0.148515 |
 | **`soup_d095best_d093champ_7525`** | $0.75 \text{ D095-E1} + 0.25 \text{ D093}$ | `3285c365e83323b1a9ad619f3f26bb7065de055184b15cf3bd5c8814449edd4f` | 0.237622 | 0.391047 | 0.273370 | 0.148515 |
-| **`soup_d095e2_d093e3_d091_hybrid`** | $0.40 \text{ E2} + 0.35 \text{ E3} + 0.25 \text{ D091}$ | `823a344dac5c1af4349d357fed787edddf475443a6288f0075e7736e227ce322` | 0.220774 | 0.385960 | 0.251121 | 0.000000 |
+| **`soup_d095e2_d093e3_d091_hybrid`** | $0.40 \text{ E2} + 0.30 \text{ E3} + 0.30 \text{ D091}$ | `823a344dac5c1af4349d357fed787edddf475443a6288f0075e7736e227ce322` | 0.220774 | 0.385960 | 0.251121 | 0.000000 |
 
 > [!NOTE]
-> Non-champion states (E1, E2, 75/25, hybrid) were evaluated for raw AP only; consensus AP was evaluated on the champion state. The 3-way hybrid lost `styrofoam_piece` completely (`AP = 0.000000`). The champion legacy_47 AP is `0.249448` (the previously stated `0.274150` was from D-093). D-095 raw AP (`0.238401`) is lower than D-093's raw champion (`0.241412`).
+> Non-champion states (E1, E2, 75/25, hybrid) were evaluated for raw AP only; consensus AP was evaluated on the champion state. The 3-way hybrid recipe is `0.40 D095-E2 + 0.30 D093-E3 + 0.30 D091 Champion` (matching `scripts/taco_stage5_d095_box_contrastive.py` line 854) and lost `styrofoam_piece` completely (`AP = 0.000000`). The champion legacy_47 AP is `0.249448` (the previously stated `0.274150` was not supported by `report.json`; D-093 champion legacy_47 is `0.256137`). D-095 raw AP (`0.238401`) is lower than D-093's raw champion (`0.241412`).
 
 ### Scene Consensus Evaluation on D-095 Champion
 - Under `apply_scene_consensus` (evaluated in D-096 cautious consensus), the D-095 Champion achieves **`0.241895` 9-Specific AP** and **`0.414205` BANTAI 5-Category AP** across all 65 validation images.
@@ -113,6 +113,9 @@ At inference/display time:
 - Cautious scene consensus identifies 0 anchors on Image 777.
 - Zero suppressions and zero relabelings occur.
 - Under `CONSENSUS_STATE`, the bottle is preserved as `Plastic 0.31` and cigarette butts as `Potentially Hazardous`.
+
+> [!NOTE]
+> On Image 777 (GT 408 is `plastic_wrapper`), the D-091, D-093, and D-095 champions all predict `paper` (~0.32). The cautious scene consensus correctly leaves it unchanged, so this remains an open model-level paper/plastic-wrapper confusion. The scene-consensus thresholds were set before the 2-fold split, not chosen on fold A.
 
 ---
 

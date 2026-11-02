@@ -6,6 +6,7 @@ Owner authorization D-096 executed on `feat/stage5-paper-category`. Active super
 
 1. **Image 777 & Scene Consensus Diagnostic**:
    - Detailed query inspection revealed that the `paper: 0.3230` label on GT 408 (bottle/wrapper) was directly predicted by raw models (D-093 raw: `0.3221`, D-091 raw: `0.3126`, D-095 raw: `0.3230`), and was not created by D-095 training or scene consensus.
+   - On Image 777 (GT `plastic_wrapper`), the D-091, D-093, and D-095 champions all predict `paper` (~0.32). The cautious scene consensus correctly leaves it unchanged, so this remains an open model-level paper/plastic-wrapper confusion.
    - However, the initial D-095 scene consensus rule was overly aggressive, causing 1,867 candidate suppressions across the validation set.
 2. **Cautious Scene-Consensus Rules (`scripts/taco_stage5_consensus_tiebreak.py`)**:
    - **Paper Anchor Definition**: `category_id == 8`, `score >= 0.30` (raised from 0.25), `v[8] - max(v[1..7]) >= 0.10` (raised from 0.04), `v[1] < 0.15` (prevents misclassified bottles from anchoring), `norm_area >= 0.08`.
@@ -13,6 +14,7 @@ Owner authorization D-096 executed on `feat/stage5-paper-category`. Active super
    - **Rule 2 (Coherence Relabeling)**: NEVER relabels if candidate overlaps another detected object of different class (`IoU >= 0.50`). Requires `v[8] >= 0.50 * v[cat]` with anchor present.
    - **Rule 1**: Preserved intact (`apply_consensus_tiebreak`).
 3. **2-Fold Cross-Validation & Metric Adoption**:
+   - The scene-consensus thresholds were set before the 2-fold split, not chosen on fold A.
    - **Fold A (Even indices, 33 images)**: Raw 9-Specific AP `0.152148` $\to$ Cautious Scene `0.156051` ($+0.003903$); 5-Category AP `0.249090` $\to$ `0.264257` ($+0.015167$).
    - **Fold B (Odd indices, 32 images)**: Raw 9-Specific AP `0.336864` $\to$ Cautious Scene `0.339452` ($+0.002588$); 5-Category AP `0.590474` $\to$ `0.603430` ($+0.012956$).
    - **Full 65 Images**: Raw 9-Specific AP `0.238401` $\to$ Cautious Scene `0.241895` ($+0.003494$); 5-Category AP `0.398860` $\to$ `0.414205` ($+0.015345$).
@@ -23,8 +25,9 @@ Owner authorization D-096 executed on `feat/stage5-paper-category`. Active super
    - Verified on Image 1: both GT Paper matches prominent, over 500 low-confidence interior speckles suppressed.
 5. **D-095 Documentation & Parameter Corrections**:
    - Corrected parameter SHA-256 digests in [D-095 report](TACO_STAGE_5_D095_BOX_CONTRASTIVE.md) for E1 (`80c6086b...`), E2 (`4b989ad1...`), 75/25 (`3285c365...`), and hybrid (`823a344d...`).
-   - Corrected Champion legacy_47 AP to `0.249448` (was misreported as 0.274150).
-   - Removed consensus AP claims for non-champion states; stated exact training wall-clock: `1904.5` seconds (~31.7 min).
+   - Corrected Champion legacy_47 AP to `0.249448` (the previously stated `0.274150` was not supported by `report.json`; D-093 champion legacy_47 is `0.256137`).
+   - Stated hybrid recipe accurately as `0.40 D095-E2 + 0.30 D093-E3 + 0.30 D091 Champion` (matching `scripts/taco_stage5_d095_box_contrastive.py` line 854).
+   - Removed consensus AP claims for non-champion states; cited exact training wall-clock time from `runs/training/stage5-d095-box-contrastive-20261102-a/report.json` field `total_seconds` (`1904.4990426000004` seconds, ~31.7 minutes).
    - Explicitly noted that D-095 margin fine-tuning dipped raw AP (`0.241412 -> 0.238401`) due to weak gradient signal from tiny margin/interior loss values (~0.002).
 
 ## D-095: Box-Contrastive GT-Region Margin Fine-Tuning & Bidirectional Scene Consensus - 2026-11-02
@@ -46,20 +49,19 @@ Owner authorization D-095 executed locally on `feat/stage5-paper-category`. Acti
      - Rule 2: Bidirectional plastic $\to$ paper scene coherence when a dominant Paper anchor exists ($p_8 \ge 0.25$, $p_8 > \max(\text{plastic}) + 0.04$).
      - Rule 3: Interior sub-box and micro-speckle suppression inside dominant paper regions.
 3. **Training Dynamics & Validation Across 5 States (560 forwards)**:
-   - Trained 1,152 updates across 2 epochs on `strict-clean-stage5-tier3-core-v1` (576 images / 1,240 boxes) with AdamW under cosine decay ($1.5 \times 10^{-6} \to 2.0 \times 10^{-7}$). Wall-clock time: exactly 1,904.5 seconds (~31.7 minutes).
+   - Trained 1,152 updates across 2 epochs on `strict-clean-stage5-tier3-core-v1` (576 images / 1,240 boxes) with AdamW under cosine decay ($1.5 \times 10^{-6} \to 2.0 \times 10^{-7}$). Wall-clock time: `1904.5` seconds (~31.7 minutes), recorded in `runs/training/stage5-d095-box-contrastive-20261102-a/report.json` under field `total_seconds` (`1904.4990426000004`).
    - Weak gradient signals from margin/interior losses (~0.002) led to a raw AP dip from `0.241412` down to `0.238401`.
-   - Evaluated `D095-BC E1` (SHA-256 `80c6086b...`), `D095-BC E2` (SHA-256 `4b989ad1...`), `soup_d095best_d093champ_5050` (SHA-256 `cd6e9c7b...`), `soup_d095best_d093champ_7525` (SHA-256 `3285c365...`), and `soup_d095e2_d093e3_d091_hybrid` (SHA-256 `823a344d...`).
+   - Evaluated `D095-BC E1` (SHA-256 `80c6086b...`), `D095-BC E2` (SHA-256 `4b989ad1...`), `soup_d095best_d093champ_5050` (SHA-256 `cd6e9c7b...`), `soup_d095best_d093champ_7525` (SHA-256 `3285c365...`), and `soup_d095e2_d093e3_d091_hybrid` (`0.40 D095-E2 + 0.30 D093-E3 + 0.30 D091 Champion`, SHA-256 `823a344d...`).
    - **Champion**: `soup_d095best_d093champ_5050` (parameter SHA-256 `cd6e9c7b74525ada39c0985a8b862109c52d0f5800c2b74f86fe57cc79df7c77`):
      - Single-model raw AP: **`0.238401`**, BANTAI 5-Category raw AP: **`0.398860`**.
-     - Legacy-47 AP: **`0.249448`**.
+     - Legacy-47 AP: **`0.249448`** (the previously stated `0.274150` was not supported by `report.json`; D-093 champion legacy_47 is `0.256137`).
      - Preserved `7: styrofoam_piece` at `0.148515`, `5: drink_can` at `0.670297`, and `8: paper` at `0.436706`.
 4. **Visual Verification (Image 1 and Image 777)**:
    - On Image 1 (`000008.jpg`), both GT Paper matches (`paper: 0.36`, `paper: 0.19`) are preserved.
+   - On Image 777 (GT `plastic_wrapper`), the D-091, D-093, and D-095 champions all predict `paper` (~0.32). The cautious scene consensus correctly leaves it unchanged, so this remains an open model-level paper/plastic-wrapper confusion.
    - All 50 combinations in `tests/windows_stage5_image777_check.py` passed native Tk smoke testing.
 5. **Multi-Scale Query Fusion Integration**:
    - `Tri_Model_D086_S2575_HR448_D095_Champ` established benchmark records of **`0.262348`** 9-Specific AP and **`0.438939`** BANTAI 5-Category AP.
-
-Full report: [D-095 report](TACO_STAGE_5_D095_BOX_CONTRASTIVE.md).
 
 Full report: [D-095 report](TACO_STAGE_5_D095_BOX_CONTRASTIVE.md).
 
