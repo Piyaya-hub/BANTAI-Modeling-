@@ -1,19 +1,18 @@
 # Development phases
 
-## Current Stage 5 state through D-091
+## Current Stage 5 state through D-093
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-091, class-balanced inverse-square-root
-sample weighting and proximal L2 parameter anchoring achieved the project's highest single-model
-validation benchmark: **0.236288** nine-specific validation AP (and **0.238786** with D-079
-score-preserving consensus) from `soup_d091_d086s2575_5050` (50% D086 Soup2575 + 50% D091 E1)
-at 384/576, with 100% rare-class preservation (`styrofoam_piece` at `0.148515`) and record
-single-pass `paper` AP (`0.435637`). Under D-090, Tri-Model Class-Specialized query routing
-(`D086_S2575` + `D086_HR448` + `D089_S5050`) established the project's all-time highest validation
-benchmarks: **0.260674** 9-specific AP (AP50 `0.310330`) and **0.435166** BANTAI 5-Category AP
-(53.27% AP50). An exhaustive paper-vs-plastic IoU disambiguation audit confirmed that independent
-class-aware NMS is optimal and that cross-class suppression degrades AP by removing legitimate
-co-occurrences.
+validation / 65-image test memberships frozen. Under D-093, a 3-epoch (1,728 updates)
+fine-tuning run with auxiliary absent-class false-positive suppression ($\mathcal{L}_{\text{absent}}$),
+class frequency weighting, and proximal L2 anchoring achieved the project's all-time highest
+single-model validation benchmark: **0.241412** nine-specific validation AP and **0.406022**
+BANTAI 5-Category AP from `soup_d093best_d091_5050` (50% D093 E1 + 50% D091 Champion) at 384/576,
+with record single-model `paper` AP (**0.436927**), `plastic_bottle` AP (**0.385078**), and
+`plastic_film` AP (**0.052493**). In class-calibrated multi-scale query routing (`scripts/taco_stage5_multiscale_consensus.py`),
+pairing the D-093 champion with D-086 High-Res (`448/672`) under `hr_small_medium_plus_can_paper`
+with `pre_nms` consensus established new all-time project benchmark records: **0.261603**
+9-specific AP and **0.437255** BANTAI 5-Category AP.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -41,6 +40,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-090 | Tri-Model Class-Specialized Routing (D086+D089) + Paper-Plastic Audit | **0.260674** (tri-model consensus) | **0.435166 (53.27% AP50)** |
 | D-091 | Class-Balanced Tier 3 Core (576 img) + L2 anchor + 4-state soup | **0.236288** (consensus **0.238786**) | **0.405054 raw / 0.409769 consensus** (50.31% AP50) |
 | D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | CPU review & verification | Replay & remote push |
+| D-093 | 3-Epoch Hard-Negative & Absent-Class-Suppression + Multi-Scale Update | **0.241412** (single-model) / **0.261603** (tri-model consensus) | **0.406022** (single-model) / **0.437255** (consensus) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

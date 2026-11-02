@@ -54,6 +54,8 @@ CONSENSUS_STATE = "Tier 2 + D074 champion soup"
 MULTISCALE_STATE = "Multi-Scale Fused (384/576 + 448/672)"
 D091_CHAMPION_STATE = "D-091 Champion (soup 50/50)"
 D091_CONSENSUS_STATE = "D-091 Champion + D-079 consensus"
+D093_CHAMPION_STATE = "D-093 Champion (soup 50/50)"
+D093_CONSENSUS_STATE = "D-093 Champion + D-079 consensus"
 PREDICTION_SOURCES = ["single_scale_champion", "multiscale_384_448"]
 ORGANIC_SHOWCASE_FILTER = "Organic Showcase (4 Images: 68, 72, 92, 841)"
 ORGANIC_9_STATE = "Organic Showcase 9-Prompt (384/576)"
@@ -131,6 +133,27 @@ def discover_d091_run(explicit=None, root=ROOT):
             if (report.get('authorization') == 'D-091' and report.get('status') == 'complete'
                     and report.get('training_updates') == 576
                     and (candidate / 'soup_d091_d086s2575_5050.json').is_file()
+                    and (candidate / 'best-score-vectors.npz').is_file()):
+                candidates.append(candidate)
+        except (OSError, ValueError, KeyError):
+            continue
+    return max(candidates, key=lambda p: (p / 'report.json').stat().st_mtime) if candidates else None
+
+
+def discover_d093_run(explicit=None, root=ROOT):
+    """Discover only a completed local D-093 run with hard-negative multi-epoch artifacts."""
+    if explicit is not None:
+        return Path(explicit)
+    candidates = []
+    for candidate in (Path(root) / 'runs/training').glob('stage5-d093-multiepoch-hn-*'):
+        report_path = candidate / 'report.json'
+        if not report_path.is_file():
+            continue
+        try:
+            report = strict_load(report_path)
+            if (report.get('authorization') == 'D-093' and report.get('status') == 'complete'
+                    and report.get('training_updates') == 1728
+                    and (candidate / 'soup_d093best_d091_5050.json').is_file()
                     and (candidate / 'best-score-vectors.npz').is_file()):
                 candidates.append(candidate)
         except (OSError, ValueError, KeyError):
@@ -239,7 +262,7 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
     return kept
 
 
-def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None, d086_run_dir: Path | None = None, d091_run_dir: Path | None = None):
+def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None, d086_run_dir: Path | None = None, d091_run_dir: Path | None = None, d093_run_dir: Path | None = None):
     val_json_path = dataset_dir / "validation.json"
     val_data = strict_load(val_json_path)
 
@@ -405,6 +428,57 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
                             c_rows.append(r_c)
                         preds_by_state[D091_CONSENSUS_STATE][img_id] = c_rows
 
+    d093_vectors = None
+    if d093_run_dir is not None:
+        d093_report = strict_load(d093_run_dir / "report.json")
+        if (d093_report.get("authorization") != "D-093" or d093_report.get("status") != "complete"
+                or d093_report.get("training_updates") != 1728):
+            raise ValueError("D-093 replay requires completed bounded training evidence")
+
+        state_files = (
+            ("D-093 Hard-Negative E1 (384/576)", "validation-d093-hn-e1.json"),
+            ("D-093 Hard-Negative E2 (384/576)", "validation-d093-hn-e2.json"),
+            ("D-093 Hard-Negative E3 (384/576)", "validation-d093-hn-e3.json"),
+            (D093_CHAMPION_STATE, "soup_d093best_d091_5050.json"),
+            ("D-093 + D091 soup (25/75)", "soup_d093best_d091_2575.json"),
+        )
+        for label, filename in state_files:
+            file_path = d093_run_dir / filename
+            if not file_path.is_file():
+                continue
+            saved = strict_load(file_path)
+            rows = saved.get("raw_queries", [])
+            if len(rows) != 65 * 900 or {r["image_id"] for r in rows} != set(images):
+                raise ValueError(f"D-093 saved replay {filename} does not contain exactly 65 x 900 queries")
+            preds_by_state[label] = defaultdict(list)
+            for row in rows:
+                preds_by_state[label][row["image_id"]].append(row)
+
+        vec_path = d093_run_dir / "best-score-vectors.npz"
+        if vec_path.is_file():
+            with np.load(vec_path, allow_pickle=False) as npz:
+                v_ids = npz["image_ids"].tolist()
+                v_scores = npz["scores"].copy()
+            if v_scores.shape == (65, 900, 9) and set(v_ids) == set(images):
+                d093_vectors = {
+                    "scores_by_image": {img_id: v_scores[idx] for idx, img_id in enumerate(v_ids)},
+                    "shape": list(v_scores.shape),
+                    "dtype": str(v_scores.dtype),
+                }
+                if D093_CHAMPION_STATE in preds_by_state:
+                    preds_by_state[D093_CONSENSUS_STATE] = defaultdict(list)
+                    for img_id, rows in preds_by_state[D093_CHAMPION_STATE].items():
+                        s_vec = d093_vectors["scores_by_image"][img_id]
+                        c_rows = []
+                        for r in rows:
+                            r_c, _ = apply_consensus_tiebreak(
+                                r, s_vec[r["query_id"]], delta=0.016,
+                                coactivation="3 plastic subtypes >= 0.20",
+                                confidence_mode="top1_score",
+                            )
+                            c_rows.append(r_c)
+                        preds_by_state[D093_CONSENSUS_STATE][img_id] = c_rows
+
     # Sort predictions by score descending
     for state in preds_by_state:
         for img_id in preds_by_state[state]:
@@ -424,6 +498,7 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
         "predictions": preds_by_state,
         "consensus_score_vectors": consensus,
         "d091_score_vectors": d091_vectors,
+        "d093_score_vectors": d093_vectors,
         "multiscale_predictions": multiscale_preds,
         "multiscale_score_vectors": multiscale_vectors,
         "organic_showcase": organic_showcase,
@@ -498,6 +573,7 @@ class Stage5ViewerGUI:
         self.multiscale_preds = data.get("multiscale_predictions")
         self.multiscale_vectors = data.get("multiscale_score_vectors")
         self.d091_vectors = data.get("d091_score_vectors")
+        self.d093_vectors = data.get("d093_score_vectors")
         self.organic_showcase = data.get("organic_showcase")
         self.dataset_root = data["dataset_root"]
         self.prediction_source = prediction_source
@@ -576,6 +652,8 @@ class Stage5ViewerGUI:
         choices=[n for n in self.preds if n not in ("Baseline", "Stage 5 (256/384)")]
         if prediction_source == "multiscale_384_448" and MULTISCALE_STATE in choices:
             initial = MULTISCALE_STATE
+        elif D093_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
+            initial = D093_CHAMPION_STATE
         elif D091_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
             initial = D091_CHAMPION_STATE
         else:
@@ -586,7 +664,7 @@ class Stage5ViewerGUI:
                               state="readonly", width=38)
         state_cb.pack(side="left")
         state_cb.bind("<<ComboboxSelected>>", lambda e:self.update_plots())
-        has_vectors = bool(self.consensus_vectors or self.multiscale_vectors or self.d091_vectors)
+        has_vectors = bool(self.consensus_vectors or self.multiscale_vectors or self.d091_vectors or self.d093_vectors)
         self.consensus_var = tk.BooleanVar(value=has_vectors)
         self.consensus_check = ttk.Checkbutton(
             state_frame, text="Score-preserving plastic consensus",
@@ -687,7 +765,8 @@ class Stage5ViewerGUI:
         if src == "multiscale_384_448" and MULTISCALE_STATE in self.preds:
             self.review_state_var.set(MULTISCALE_STATE)
         elif src == "single_scale_champion":
-            initial = (D091_CHAMPION_STATE if D091_CHAMPION_STATE in self.preds
+            initial = (D093_CHAMPION_STATE if D093_CHAMPION_STATE in self.preds
+                       else D091_CHAMPION_STATE if D091_CHAMPION_STATE in self.preds
                        else CONSENSUS_STATE if self.consensus_vectors and CONSENSUS_STATE in self.preds
                        else "D083 + D074 soup (50/50)" if "D083 + D074 soup (50/50)" in self.preds
                        else list(self.preds.keys())[0])
@@ -827,12 +906,16 @@ class Stage5ViewerGUI:
         is_d091_champ = (self.review_state_var.get() == D091_CHAMPION_STATE
                          and self.d091_vectors is not None
                          and img_id in self.d091_vectors["scores_by_image"])
+        is_d093_champ = (self.review_state_var.get() == D093_CHAMPION_STATE
+                         and self.d093_vectors is not None
+                         and img_id in self.d093_vectors["scores_by_image"])
 
         use_consensus = (self.consensus_var.get()
                          and scheme == "bantai-5-category"
                          and self.taxonomy_var.get() != VIEWS[2]
                          and ((is_multiscale)
                               or (is_d091_champ)
+                              or (is_d093_champ)
                               or (self.consensus_vectors is not None
                                   and self.review_state_var.get() == CONSENSUS_STATE
                                   and img_id in self.consensus_vectors["scores_by_image"])))
@@ -853,6 +936,11 @@ class Stage5ViewerGUI:
                     else:
                         adj_rows.append(r)
                 highres_preds = adj_rows
+            elif is_d093_champ:
+                highres_preds, _ = apply_to_query_rows(
+                    highres_preds, self.d093_vectors["scores_by_image"][img_id],
+                    delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                    confidence_mode="top1_score")
             elif is_d091_champ:
                 highres_preds, _ = apply_to_query_rows(
                     highres_preds, self.d091_vectors["scores_by_image"][img_id],
@@ -952,6 +1040,10 @@ def print_cli_summary(data: dict, score_thresh: float, top_k: int, image_id: int
             d091_preds = [p for p in data["predictions"][D091_CHAMPION_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
             d091_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in d091_preds]
             print(f"  D-091 Champion  @ {score_thresh:.2f} ({len(d091_preds)}): {', '.join(d091_desc) if d091_desc else 'None'}")
+        if D093_CHAMPION_STATE in data["predictions"]:
+            d093_preds = [p for p in data["predictions"][D093_CHAMPION_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
+            d093_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in d093_preds]
+            print(f"  D-093 Champion  @ {score_thresh:.2f} ({len(d093_preds)}): {', '.join(d093_desc) if d093_desc else 'None'}")
 
 
 def main() -> int:
@@ -979,6 +1071,7 @@ def main() -> int:
     parser.add_argument("--d083-run-dir", type=Path, default=None, help="Explicit D-083 replay run; otherwise discover newest completed local run")
     parser.add_argument("--d086-run-dir", type=Path, default=None, help="Explicit D-086 replay run; otherwise discover newest completed local run")
     parser.add_argument("--d091-run-dir", type=Path, default=None, help="Explicit D-091 replay run; otherwise discover newest completed local run")
+    parser.add_argument("--d093-run-dir", type=Path, default=None, help="Explicit D-093 replay run; otherwise discover newest completed local run")
     parser.add_argument("--prediction-source", type=str, choices=PREDICTION_SOURCES, default=PREDICTION_SOURCES[0], help="Prediction source / replay mode")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
@@ -995,6 +1088,7 @@ def main() -> int:
     args.d083_run_dir = discover_d083_run(args.d083_run_dir)
     args.d086_run_dir = discover_d086_run(args.d086_run_dir)
     args.d091_run_dir = discover_d091_run(args.d091_run_dir)
+    args.d093_run_dir = discover_d093_run(args.d093_run_dir)
     if args.tier2_run_dir is not None and not args.tier2_run_dir.is_dir():
         print("ERROR: Explicit Tier2 replay directory is missing",file=sys.stderr)
         return 1
@@ -1010,11 +1104,14 @@ def main() -> int:
     if args.d091_run_dir is not None and not args.d091_run_dir.is_dir():
         print(f"ERROR: Explicit D-091 replay directory is missing: {args.d091_run_dir}", file=sys.stderr)
         return 1
+    if args.d093_run_dir is not None and not args.d093_run_dir.is_dir():
+        print(f"ERROR: Explicit D-093 replay directory is missing: {args.d093_run_dir}", file=sys.stderr)
+        return 1
     if not (args.dataset_dir / "validation.json").is_file():
         print("ERROR: Saved review needs the private validation export; no model will be run.", file=sys.stderr)
         return 1
     try:
-        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir, args.d086_run_dir, args.d091_run_dir)
+        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir, args.d086_run_dir, args.d091_run_dir, args.d093_run_dir)
     except (OSError, ValueError, KeyError) as exc:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1

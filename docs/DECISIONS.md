@@ -1,5 +1,36 @@
 # Decision register
 
+## D-093: 3-Epoch Hard-Negative & Absent-Class-Suppressed Fine-Tuning Run & Multi-Scale Update - 2026-11-02
+
+Owner authorization D-093 executed locally on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero test-split reads occurred (`test.json` unopened; 0 held-out test photos opened; file-system audithook enforced).
+
+1. **Algorithmic Formulation (`scripts/taco_stage5_d093_multiepoch_hn.py`)**:
+   - **Auxiliary Absent-Class Suppression Penalty**: For each training image, collected absent active categories $\mathcal{C}_{\text{absent}}$ and penalized the top-10 confidence activations exceeding baseline noise floor $\tau = 0.08$: $\mathcal{L}_{\text{absent}} = \frac{1}{|\mathcal{C}_{\text{absent}}|} \sum_{c \in \mathcal{C}_{\text{absent}}} \frac{1}{10} \sum_{k=1}^{10} [\max(0, p_{c, (k)} - 0.08)]^2$.
+   - **Multi-Objective Loss**: $\mathcal{L}_{\text{total}} = w_{\text{img}} \cdot \mathcal{L}_{\text{det}} + 2.5 \cdot \mathcal{L}_{\text{absent}} + 0.002 \cdot \|\theta - \theta_0\|_2^2$, anchored to D-091 Champion weights $\theta_0$ (`4146517bd69837e2e11932e4c3ecee5951cd3e862f414e6f8ba45e1ed20212ee`).
+   - Backbones frozen: Swin-T + BERT (`161c9814bffe1657ae0debd7e21b7ed1c41f29f3ba43fffe879ab31ba36a0b67`).
+2. **Training Run Dynamics**:
+   - Executed exactly 1,728 updates across 3 epochs on `strict-clean-stage5-tier3-core-v1` (576 images / 1,240 boxes) with AdamW under cosine annealing ($1.8 \times 10^{-6} \to 2.0 \times 10^{-7}$). Peak VRAM `3860.0 MiB` / `3950.0 MiB`.
+   - Verified 6 resumable checkpoints saved at `step-000288`, `epoch-01`, `step-000864`, `epoch-02`, `step-001440`, and `epoch-03`.
+3. **Validation Evaluation Across 5 States (560 forwards)**:
+   - Evaluated `D093-HN E1`, `D093-HN E2`, `D093-HN E3`, `soup_d093best_d091_5050`, and `soup_d093best_d091_2575` on `combined_65` (109 boxes) and `legacy_47` (75 boxes).
+   - **Overall Champion**: `soup_d093best_d091_5050` (50% D093 E1 + 50% D091 Champion), parameter SHA-256 `51ce99e6b7f2e9b08a070a7c237aba752b08467a84ffe482367e795dd1ad8fb7`:
+     - Achieved **`0.241412`** single-model 9-Specific validation AP (AP50 `0.292904`, AR100 `0.384577`), establishing an all-time single-model project record (breaking D-091's `0.236288` by `+0.005124`).
+     - Legacy 47 AP: `0.256137` (AR100 `0.395724`).
+     - `paper` AP reached an all-time record **`0.436927`**; `plastic_bottle` rose to **`0.385078`**; `plastic_film` reached **`0.052493`**; `plastic_cup` reached **`0.370297`**; `styrofoam_piece` preserved at `0.148515`; `drink_can` held at `0.670297`.
+     - BANTAI 5-Category AP reached **`0.406022`**.
+4. **Multi-Scale Query Routing Update (`scripts/taco_stage5_multiscale_consensus.py`)**:
+   - Winning pairing: `Tri_Model_D086_S2575_HR448_D093_Champ` under `hr_small_medium_plus_can_paper` policy with `pre_nms` consensus.
+   - Achieved **`0.261603`** 9-Specific AP (breaking previous D-090 benchmark `0.260674`) and **`0.437255`** BANTAI 5-Category AP (breaking previous D-090 benchmark `0.435166`).
+5. **Visual Review Integration (`scripts/taco_stage5_visual_review.py`)**:
+   - Added automatic discovery for completed D-093 runs (`discover_d093_run`).
+   - Wired `D-093 Champion (soup 50/50)` and `D-093 Champion + D-079 consensus` into Fourth-Panel State selector with dynamic consensus toggle.
+   - On Image 1 (`000008.jpg`), paper prediction increased to `0.35` (solidly above `plastic_film:0.33`).
+   - On Image 777 (`000084.JPG`), false-positive bottle eliminated and cigarette confidence increased.
+   - Passed `tests/windows_stage5_image777_check.py` (50 GUI state combinations).
+   - Passed `scripts/verify_stage4_guarded.py` (359 tests checked, 343 passed, 0 failures, 0 errors, 0 GPU calls).
+
+Full report: [D-093 report](TACO_STAGE_5_D093_MULTIEPOCH_HN_TRAINING.md).
+
 ## D-092: Visual Review D-091 Single-Model Champion Integration & Remote Branch Push - 2026-11-02
 
 Owner authorization D-092 executed locally on `feat/stage5-paper-category` as a strictly CPU-only integration, verification, and remote push task. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads, or held-out photo opens occurred.
