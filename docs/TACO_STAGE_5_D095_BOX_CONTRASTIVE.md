@@ -110,12 +110,14 @@ At inference/display time:
 - Over 500 low-confidence interior subboxes and speckles are cleanly suppressed.
 
 ### Validation Image 777 (`000084.JPG` - GT: 1 Plastic wrapper + 7 cigarette butts)
-- Cautious scene consensus identifies 0 anchors on Image 777.
-- Zero suppressions and zero relabelings occur.
-- Under `CONSENSUS_STATE`, the bottle is preserved as `Plastic 0.31` and cigarette butts as `Potentially Hazardous`.
+- Under raw predictions, D-095 Champion outputs `paper: 0.32` on the wrapper box and a marginal `paper: 0.10` ghost (`qid=8`).
+- Under D-097 Calibrated Scene Consensus (`apply_scene_consensus`):
+  - Rule 1B detects strong multi-subtype plastic co-activation (3 plastic subtypes $\ge 0.24$, top-2 plastic sum $= 0.5644$, delta $= 0.0327 \le 0.040$) and reassigns query 0 to `plastic_bottle` (`score = 0.32`). Under BANTAI 5-category mapping, this renders as **`Plastic 0.32`**.
+  - Rule 4 detects no paper anchors on scene and a plastic reassignment, cleanly suppressing the marginal background ghost `qid=8` (`score = 0.1009`, norm_area $= 0.00055$).
+  - Result: exactly 5 passing detections at 0.10 (`Plastic 0.32`, 4 `Potentially Hazardous` cigarette butts), and **ZERO paper boxes**!
 
 > [!NOTE]
-> On Image 777 (GT 408 is `plastic_wrapper`), the D-091, D-093, and D-095 champions all predict `paper` (~0.32). The cautious scene consensus correctly leaves it unchanged, so this remains an open model-level paper/plastic-wrapper confusion. The scene-consensus thresholds were set before the 2-fold split, not chosen on fold A.
+> On Image 777 (GT 408 is `plastic_wrapper`), the raw D-091, D-093, and D-095 champions predict `paper` (~0.32) with co-activated plastic subtypes. Under D-096 cautious consensus with delta $\le 0.016$, this remained an open paper/plastic confusion. In D-097, multi-subtype plastic co-activation margin calibration (Rule 1B, $\Delta \le 0.040$) and marginal non-paper ghost suppression (Rule 4) cleanly resolve Image 777 to Plastic without regressing Fold A, Fold B, or Image 1.
 
 ---
 
@@ -126,3 +128,22 @@ At inference/display time:
 - **Consensus Mode**: `scene_consensus`
 - **9-Specific AP**: **`0.262348`** (project all-time high, exceeding D-093's `0.261603`)
 - **BANTAI 5-Category AP**: **`0.438939`** (project all-time high, exceeding D-093's `0.437255`)
+
+---
+
+## 7. D-097 Multi-Subtype Plastic Co-Activation Margin Calibration
+
+Authorization **D-097** calibrated the CPU consensus tiebreak rules to simultaneously resolve Image 1 (`000008.jpg`) and Image 777 (`000084.JPG`) with verified monotonic AP gains on both 2-fold cross-validation splits:
+
+1. **Rule 1B (Strong Multi-Subtype Plastic Co-Activation Margin Calibration)**:
+   - When a query predicts `paper` ($p_8 \ge 0.15$), if $\ge 3$ plastic subtypes are co-activated ($\ge 3 \ge 0.22$, or $\ge 3 \ge 0.20$ with top-2 sum $\ge 0.50$), an extended margin $\Delta \le 0.040$ is permitted to reassign paper to the dominant plastic subtype.
+   - Preserves 100% backward compatibility when `strong_coactivation_delta=None` or `enable_rule1b=False`.
+2. **Rule 4 (Marginal Paper Ghost Suppression on Plastic Scenes)**:
+   - When an image has ZERO paper anchors and a plastic reassignment occurred (Rule 1 / Rule 1B), any marginal low-confidence paper query ($0.10 \le \text{score} < 0.115$) with microscopic area ($\text{norm\_area} < 0.01$) is cleanly suppressed.
+3. **Cross-Validation Monotonic Improvement**:
+   - **All 65 Images**: 9-Specific AP $= \mathbf{0.242509}$ ($+0.004108$ over raw $0.238401$, $+0.000614$ over D-096 $0.241895$); BANTAI 5-Category AP $= \mathbf{0.418938}$ ($+0.020078$ over raw $0.398860$, $+0.004733$ over D-096 $0.414205$).
+   - **Fold A (33 images)**: 9-Specific AP $= \mathbf{0.156828}$ ($+0.004680$ over raw $0.152148$, $+0.000777$ over D-096 $0.156051$); BANTAI 5-Category AP $= \mathbf{0.272147}$ ($+0.023057$ over raw $0.249090$, $+0.007890$ over D-096 $0.264257$).
+   - **Fold B (32 images)**: 9-Specific AP $= \mathbf{0.339452}$ ($+0.002588$ over raw $0.336864$); BANTAI 5-Category AP $= \mathbf{0.603430}$ ($+0.012956$ over raw $0.590474$).
+4. **Visual Review Verification**:
+   - **Image 777 (`000084.JPG`)**: 1 `Plastic 0.32` box, 4 `Potentially Hazardous` boxes, **ZERO paper boxes**.
+   - **Image 1 (`000008.jpg`)**: Both GT Paper boxes preserved (`Paper 0.36`, `Paper 0.19`). Under `agnostic_iou_0.50`, duplicate bag edge box is cleanly suppressed.

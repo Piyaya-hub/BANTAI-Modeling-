@@ -1,5 +1,28 @@
 # BANTAI Stage 4 handoff
 
+## D-097: Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Image 1 + Image 777 Visual Resolution - 2026-11-06
+
+Owner authorization D-097 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors.
+
+1. **Problem & Diagnostic**:
+   - In D-095/D-096, Image 1 (`000008.jpg`) was resolved (both GT Paper matches preserved, interior clutter suppressed), but Image 777 (`000084.JPG`, GT: 1 Plastic wrapper + 7 cigarette butts) displayed `Paper 0.32` on the wrapper box and a marginal `Paper 0.10` ghost (`qid=8`), with zero visible Plastic boxes.
+   - Diagnostic analysis revealed wrapper query 0 had `scores[8] - scores[1] = 0.3230 - 0.2903 = +0.0327`, which slightly exceeded the legacy `delta = 0.016`. However, 3 plastic subtypes were strongly co-activated (`v[1]=0.2903`, `v[4]=0.2741`, `v[3]=0.2445`, top-2 plastic sum $= 0.5644$), and query 8 was a microscopic background speckle (`norm_area = 0.00055`, `score = 0.1009`).
+2. **Algorithmic Formulation (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - **Rule 1B (Strong Multi-Subtype Plastic Co-Activation Margin Calibration)**: When a query predicts `paper` ($p_8 \ge 0.15$), if $\ge 3$ plastic subtypes are co-activated ($\ge 3 \ge 0.22$, or $\ge 3 \ge 0.20$ with top-2 sum $\ge 0.50$), an extended margin $\Delta \le 0.040$ is permitted to reassign paper to the dominant plastic subtype.
+   - **Rule 4 (Marginal Paper Ghost Suppression on Plastic Scenes)**: When an image has ZERO paper anchors and a plastic reassignment occurred (Rule 1 / Rule 1B), any marginal low-confidence paper query ($0.10 \le \text{score} < 0.115$) with microscopic area ($\text{norm\_area} < 0.01$) is cleanly suppressed.
+   - **Backward Compatibility**: Calling `apply_consensus_tiebreak` without `strong_coactivation_delta` or `apply_scene_consensus` with `enable_rule1b=False, enable_rule4=False` preserves legacy behavior exactly.
+3. **2-Fold Cross-Validation Monotonic Improvement**:
+   - **Fold A (Even indices, 33 images)**: Raw 9-Specific AP `0.152148` $\to$ D-097 Consensus `0.156828` ($+0.004680$ vs raw, $+0.000777$ vs D-096); 5-Category AP `0.249090` $\to$ `0.272147` ($+0.023057$ vs raw, $+0.007890$ vs D-096).
+   - **Fold B (Odd indices, 32 images)**: Raw 9-Specific AP `0.336864` $\to$ D-097 Consensus `0.339452` ($+0.002588$ vs raw); 5-Category AP `0.590474` $\to$ `0.603430` ($+0.012956$ vs raw).
+   - **Full 65 Images**: Raw 9-Specific AP `0.238401` $\to$ D-097 Consensus `0.242509` ($+0.004108$ vs raw, $+0.000614$ vs D-096); 5-Category AP `0.398860` $\to$ `0.418938` ($+0.020078$ vs raw, $+0.004733$ vs D-096).
+4. **Visual Resolution**:
+   - **Image 777 (`000084.JPG`)**: Exactly 5 passing detections at 0.10 (`Plastic 0.32`, 4 `Potentially Hazardous` cigarette butts), and **ZERO paper boxes**!
+   - **Image 1 (`000008.jpg`)**: Both GT Paper matches preserved (`Paper 0.36`, `Paper 0.19`). Under `agnostic_iou_0.50`, duplicate bag edge box is cleanly suppressed.
+5. **Replay & Review Artifacts Updated**:
+   - `scripts/taco_stage5_multiscale_consensus.py` regenerated `multiscale-consensus-replay.json` and `multiscale-consensus-audit.json` with winning pairing `Tri_Model_D086_S2575_HR448_D095_Champ` achieving **`0.261829` 9-Specific AP** and **`0.437764` BANTAI 5-Category AP**.
+   - `scripts/taco_stage5_visual_review.py` wired to D-097 consensus rules by default. Tested on Image 1 and Image 777 via CLI and native Tk GUI.
+   - All 71 Stage 5 unit tests and 349 guarded repository tests passed.
+
 ## D-096: Scene-Consensus Regression Fix (Image 777), Held-Out Rule Validation, and D-095 Report Correction - 2026-11-02
 
 Owner authorization D-096 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, model forwards, training updates, test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

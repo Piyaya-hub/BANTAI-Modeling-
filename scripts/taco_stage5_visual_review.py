@@ -1021,6 +1021,7 @@ class Stage5ViewerGUI:
                     enable_rule1=rule1_active,
                     enable_rule2=scene_active,
                     enable_rule3=scene_active,
+                    enable_rule4=scene_active,
                 )
             elif is_multiscale:
                 s_vec = self.multiscale_vectors["scores_by_image"][img_id]
@@ -1033,6 +1034,7 @@ class Stage5ViewerGUI:
                         enable_rule1=rule1_active,
                         enable_rule2=True,
                         enable_rule3=True,
+                        enable_rule4=True,
                     )
                 else:
                     adj_rows = []
@@ -1058,6 +1060,7 @@ class Stage5ViewerGUI:
                         enable_rule1=rule1_active,
                         enable_rule2=True,
                         enable_rule3=True,
+                        enable_rule4=True,
                     )
                 else:
                     highres_preds, _ = apply_to_query_rows(
@@ -1075,6 +1078,7 @@ class Stage5ViewerGUI:
                         enable_rule1=rule1_active,
                         enable_rule2=True,
                         enable_rule3=True,
+                        enable_rule4=True,
                     )
                 else:
                     highres_preds, _ = apply_to_query_rows(
@@ -1092,6 +1096,7 @@ class Stage5ViewerGUI:
                         enable_rule1=rule1_active,
                         enable_rule2=True,
                         enable_rule3=True,
+                        enable_rule4=True,
                     )
                 else:
                     highres_preds, _ = apply_to_query_rows(

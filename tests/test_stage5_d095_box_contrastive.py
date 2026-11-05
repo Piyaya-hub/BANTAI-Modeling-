@@ -95,6 +95,7 @@ class TestStage5D095BoxContrastive(unittest.TestCase):
         w, h = img777_meta["width"], img777_meta["height"]
         vecs = d095_vecs["scores"][img_map[777]]
 
+        # 1. Under D-097 Calibrated Scene Consensus (Rule 1B + Rule 4 active)
         adj, changed, suppressed, diag = apply_scene_consensus(
             img777_rows, vecs, image_width=w, image_height=h,
             coactivation="3 plastic subtypes >= 0.20",
@@ -105,43 +106,108 @@ class TestStage5D095BoxContrastive(unittest.TestCase):
         self.assertEqual(diag["anchors_found"], 0)
         self.assertEqual(diag["rule2_count"], 0)
         self.assertEqual(diag["rule3_count"], 0)
-        self.assertEqual(len(suppressed), 0)
+        # Rule 1B triggers on wrapper query 0 (coactivated plastic subtypes)
+        self.assertEqual(diag["rule1b_count"], 1)
+        # Rule 4 suppresses marginal 0.1009 paper ghost query 8
+        self.assertEqual(diag["rule4_count"], 1)
+        self.assertEqual(len(suppressed), 1)
 
-        # Under CONSENSUS_STATE (Tier 2 consensus), test bottle is preserved as Plastic
-        from scripts.taco_stage5_visual_review import discover_tier2_run, load_review_data, CONSENSUS_STATE, load_consensus_score_vectors
-        from scripts.taco_stage5_consensus_tiebreak import apply_to_query_rows, PLASTIC_SUBTYPE_IDS
-        from scripts.taco_stage5_material_hierarchy import MAPS, NAMES
+        from scripts.taco_stage5_consensus_tiebreak import PLASTIC_SUBTYPE_IDS
+        from scripts.taco_stage5_material_hierarchy import MAPS, NAMES, iou
 
-        tier2_dir = discover_tier2_run(None)
-        self.assertIsNotNone(tier2_dir)
-        review_data = load_review_data(
-            ROOT / "runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4",
-            ROOT / "exports/taco/strict-clean-stage5-v1",
-            tier2_run_dir=tier2_dir,
-        )
-        c_vecs = load_consensus_score_vectors(tier2_dir, review_data["images"], ROOT)
-        p777_tier2 = [p for p in review_data["predictions"][CONSENSUS_STATE].get(777, []) if p["score"] >= 0.10]
-        adj777, _ = apply_to_query_rows(p777_tier2, c_vecs["scores_by_image"][777])
+        # D-097 Champion + Consensus: exactly 5 passing detections at 0.10
+        passing_10 = [r for r in adj if r["score"] >= 0.10]
+        self.assertEqual(len(passing_10), 5)
 
-        # Find detection matching GT 408 (bottle/wrapper)
-        from scripts.taco_stage5_material_hierarchy import iou
-        bottle_matches = [p for p in adj777 if iou(p["bbox"], gt408["bbox"]) >= 0.50]
+        # ZERO paper boxes at >= 0.10 on Image 777
+        paper_boxes = [r for r in passing_10 if r["category_id"] == 8]
+        self.assertEqual(len(paper_boxes), 0)
+
+        # Bottle/wrapper detected as Plastic
+        bottle_matches = [r for r in passing_10 if iou(r["bbox"], gt408["bbox"]) >= 0.50]
         self.assertEqual(len(bottle_matches), 1)
         b_match = bottle_matches[0]
         self.assertIn(b_match["category_id"], PLASTIC_SUBTYPE_IDS)
         cat_5 = NAMES["bantai-5-category"][MAPS["bantai-5-category"][b_match["category_id"]]]
         self.assertEqual(cat_5, "Plastic")
+        self.assertAlmostEqual(b_match["score"], 0.3230, places=2)
 
-        # Zero paper boxes on the bottle under CONSENSUS_STATE
-        paper_on_bottle = [p for p in adj777 if p["category_id"] == 8 and iou(p["bbox"], gt408["bbox"]) >= 0.50]
-        self.assertEqual(len(paper_on_bottle), 0)
-
-        # Cigarette butts retained as Potentially Hazardous
-        cigs = [p for p in adj777 if p["category_id"] == 0]
-        self.assertGreaterEqual(len(cigs), 4)
+        # 4 Cigarette butts retained as Potentially Hazardous
+        cigs = [r for r in passing_10 if r["category_id"] == 0]
+        self.assertEqual(len(cigs), 4)
         for c in cigs:
             c5 = NAMES["bantai-5-category"][MAPS["bantai-5-category"][c["category_id"]]]
             self.assertEqual(c5, "Potentially Hazardous")
+
+        # 2. Backward-compatible check: when Rule 1B and Rule 4 are disabled
+        adj_legacy, _, supp_legacy, diag_legacy = apply_scene_consensus(
+            img777_rows, vecs, image_width=w, image_height=h,
+            coactivation="3 plastic subtypes >= 0.20",
+            enable_rule1b=False,
+            enable_rule4=False,
+            return_diagnostics=True,
+        )
+        self.assertEqual(diag_legacy["anchors_found"], 0)
+        self.assertEqual(diag_legacy["rule1b_count"], 0)
+        self.assertEqual(diag_legacy["rule4_count"], 0)
+        self.assertEqual(len(supp_legacy), 0)
+
+    def test_d097_fold_a_and_fold_b_monotonic_improvement(self):
+        val_data = strict_load(VAL_JSON)
+        d095_champ = strict_load(D095_RUN / "soup_d095best_d093champ_5050.json")
+        d095_vecs = np.load(D095_RUN / "best-score-vectors.npz")
+        img_map = {img_id: idx for idx, img_id in enumerate(d095_vecs["image_ids"])}
+        img_dims = {img["id"]: (img["width"], img["height"]) for img in val_data["images"]}
+
+        raw_rows_by_img = {}
+        for r in d095_champ["raw_queries"]:
+            raw_rows_by_img.setdefault(r["image_id"], []).append(r)
+
+        sorted_img_ids = sorted(raw_rows_by_img.keys())
+        fold_A_ids = [img_id for idx, img_id in enumerate(sorted_img_ids) if idx % 2 == 0]
+        fold_B_ids = [img_id for idx, img_id in enumerate(sorted_img_ids) if idx % 2 == 1]
+
+        adj_rows_by_img = {}
+        for img_id in sorted_img_ids:
+            w, h = img_dims[img_id]
+            adj, _, _ = apply_scene_consensus(
+                raw_rows_by_img[img_id], d095_vecs["scores"][img_map[img_id]],
+                image_width=w, image_height=h,
+            )
+            adj_rows_by_img[img_id] = adj
+
+        data_A = {
+            "images": [img for img in val_data["images"] if img["id"] in fold_A_ids],
+            "annotations": [a for a in val_data["annotations"] if a["image_id"] in fold_A_ids],
+            "categories": val_data.get("categories", []),
+        }
+        data_B = {
+            "images": [img for img in val_data["images"] if img["id"] in fold_B_ids],
+            "annotations": [a for a in val_data["annotations"] if a["image_id"] in fold_B_ids],
+            "categories": val_data.get("categories", []),
+        }
+
+        # Fold A APs
+        raw_A = [r for img_id in fold_A_ids for r in raw_rows_by_img[img_id]]
+        adj_A = [r for img_id in fold_A_ids for r in adj_rows_by_img[img_id]]
+        ap9_raw_A = evaluate_case(data_A, raw_A, "9-specific", "raw")["metrics"]["AP"]
+        ap9_adj_A = evaluate_case(data_A, adj_A, "9-specific", "raw")["metrics"]["AP"]
+        ap5_raw_A = evaluate_case(data_A, raw_A, "bantai-5-category", "raw")["metrics"]["AP"]
+        ap5_adj_A = evaluate_case(data_A, adj_A, "bantai-5-category", "raw")["metrics"]["AP"]
+
+        self.assertGreater(ap9_adj_A, ap9_raw_A)
+        self.assertGreater(ap5_adj_A, ap5_raw_A)
+
+        # Fold B APs
+        raw_B = [r for img_id in fold_B_ids for r in raw_rows_by_img[img_id]]
+        adj_B = [r for img_id in fold_B_ids for r in adj_rows_by_img[img_id]]
+        ap9_raw_B = evaluate_case(data_B, raw_B, "9-specific", "raw")["metrics"]["AP"]
+        ap9_adj_B = evaluate_case(data_B, adj_B, "9-specific", "raw")["metrics"]["AP"]
+        ap5_raw_B = evaluate_case(data_B, raw_B, "bantai-5-category", "raw")["metrics"]["AP"]
+        ap5_adj_B = evaluate_case(data_B, adj_B, "bantai-5-category", "raw")["metrics"]["AP"]
+
+        self.assertGreater(ap9_adj_B, ap9_raw_B)
+        self.assertGreater(ap5_adj_B, ap5_raw_B)
 
     def test_d095_run_discovery_and_artifacts(self):
         discovered = discover_d095_run()
