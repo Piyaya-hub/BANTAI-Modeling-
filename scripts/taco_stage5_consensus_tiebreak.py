@@ -141,9 +141,10 @@ def apply_scene_consensus(
       - Requires v[8] >= 0.50 * v[cat].
     Rule 3: Interior wrong-class sub-box suppression:
       - NEVER suppresses rigid classes (1, 5, 6).
-      - NEVER suppresses any row with score >= 0.20.
-      - Requires anchor present, cand_score < anchor_score, iomin >= 0.80, and cand_area < 0.50 * anchor_area.
-      - Only suppresses cat in (0, 2, 3, 4, 7) when cand_score < 0.20.
+      - Requires anchor present, cand_score < anchor_score, and cat in (0, 2, 3, 4, 7).
+      - Suppresses when cand_score < 0.20, iomin >= 0.80, and cand_area < 0.50 * anchor_area;
+        OR under deep-interior containment: anchor covers >= 25% of image (norm_p_area >= 0.25),
+        cand is >= 90% contained in anchor (iomin >= 0.90), and cand_area < 0.25 * anchor_area.
     Rule 4: Marginal paper ghost suppression on non-paper scenes:
       - Requires NO paper anchors on scene.
       - Requires a plastic reassignment on the scene (Rule 1 / Rule 1B).
@@ -288,15 +289,24 @@ def apply_scene_consensus(
         # Rule 3: Interior wrong-class sub-box suppression
         suppress = False
         if enable_rule3 and paper_anchors and cat != PAPER_ID:
-            if cat in (0, 2, 3, 4, 7) and sc < 0.20:
+            if cat in (0, 2, 3, 4, 7):
                 for p in paper_anchors:
                     if sc < p["score"]:
                         inter, a_q, a_p = _compute_inter_and_areas(r_copy["bbox"], p["bbox"])
                         iomin = inter / a_q
-                        if iomin >= 0.80 and a_q < 0.50 * a_p:
+                        p_area = p["bbox"][2] * p["bbox"][3]
+                        norm_p_area = p_area / total_img_area
+                        cond_a = (sc < 0.20 and iomin >= 0.80 and a_q < 0.50 * a_p)
+                        cond_b = (norm_p_area >= 0.25 and iomin >= 0.90 and a_q < 0.25 * a_p)
+                        if cond_a or cond_b:
                             suppress = True
                             rule3_suppressed_qids.add(qid)
                             diag["rule3_count"] += 1
+                            reason = (
+                                f"deep-interior anchor containment iomin={iomin:.2f}>=0.90 area_ratio={a_q/a_p:.4f}<0.25 in anchor norm_area={norm_p_area:.3f}>=0.25"
+                                if cond_b else
+                                f"nested iomin={iomin:.2f}>=0.80 area_ratio={a_q/a_p:.2f}<0.50 inside anchor"
+                            )
                             diag["logs"].append({
                                 "image_id": image_id,
                                 "qid": qid,
@@ -304,7 +314,7 @@ def apply_scene_consensus(
                                 "old_cat": cat,
                                 "new_cat": None,
                                 "old_score": sc,
-                                "reason": f"nested iomin={iomin:.2f}>=0.80 area_ratio={a_q/a_p:.2f}<0.50 inside anchor",
+                                "reason": reason,
                             })
                             break
 

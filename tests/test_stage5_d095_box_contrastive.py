@@ -78,6 +78,12 @@ class TestStage5D095BoxContrastive(unittest.TestCase):
         self.assertEqual(strip[0]["category_id"], 8)
         self.assertTrue(strip[0].get("consensus_reassigned", False))
 
+        # Explicitly assert that on Image 1 at threshold 0.10, passing_10 contains
+        # ONLY category_id == 8 (paper) boxes and ZERO plastic or cigarette boxes.
+        self.assertTrue(all(r["category_id"] == 8 for r in passing_10))
+        self.assertEqual(len([r for r in passing_10 if r["category_id"] != 8]), 0)
+        self.assertEqual(len(passing_10), 3)
+
         # Verify over 500 low-confidence interior subboxes/speckles were suppressed
         self.assertGreater(len(suppressed), 500)
         self.assertEqual(diag["anchors_found"], 1)

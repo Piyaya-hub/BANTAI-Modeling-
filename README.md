@@ -4,14 +4,15 @@
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
 validation / 65-image test memberships frozen. Under D-097, multi-subtype plastic co-activation
-margin calibration (Rule 1B, $\Delta \le 0.040$) and marginal paper ghost suppression (Rule 4)
-were validated under 2-fold cross-validation on the combined 65-image validation set, achieving
-**0.242509** single-model 9-specific AP and **0.418938** BANTAI 5-Category AP on the D-095
-champion (`soup_d095best_d093champ_5050`) with monotonic improvement on both Fold A and Fold B.
-Both Image 1 (`000008.jpg`, 2 Paper boxes) and Image 777 (`000084.JPG`, 1 Plastic wrapper box + 4
-hazardous cigarette butts, ZERO paper boxes) are simultaneously resolved. Multi-scale query
-routing champion (`Tri_Model_D086_S2575_HR448_D095_Champ` + `hr_small_medium_plus_can_paper`)
-achieves **0.261829** 9-specific AP and **0.437764** BANTAI 5-Category AP.
+margin calibration (Rule 1B, $\Delta \le 0.040$), deep-interior sub-box suppression (Rule 3),
+and marginal paper ghost suppression (Rule 4) were validated under 2-fold cross-validation on the
+combined 65-image validation set, achieving **0.242914** single-model 9-specific AP and
+**0.420794** BANTAI 5-Category AP on the D-095 champion (`soup_d095best_d093champ_5050`) with
+zero true positives lost and monotonic improvement on both Fold A and Fold B.
+Both Image 1 (`000008.jpg`, clean Paper boxes with zero plastic or cigarette clutter) and
+Image 777 (`000084.JPG`, 1 Plastic wrapper box + 4 hazardous cigarette butts, ZERO paper boxes)
+are simultaneously resolved. Multi-scale query routing champion (`Tri_Model_D086_S2575_HR448_D095_Champ`
++ `hr_small_medium_plus_can_paper`) achieves **0.261829** 9-specific AP and **0.437764** BANTAI 5-Category AP.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -43,7 +44,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-094 | D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing | **0.261603** (consensus champion) / **0.284742** (legacy-47) | **0.437255** (5-Category champion) |
 | D-095 | Box-Contrastive GT Margin Fine-Tuning + Scene Consensus (D-096 corrected) | **0.238401** (raw champion) / **0.262348** (tri-model consensus) | **0.398860** (raw) / **0.438939** (tri-model consensus) |
 | D-096 | Scene-Consensus Regression Fix (Image 777), 2-Fold Held-Out Validation, D-095 Report Correction | **0.241895** (single-model cautious consensus) / **0.262348** (multi-scale) | **0.414205** (single-model) / **0.438939** (multi-scale) |
-| D-097 | Multi-Subtype Plastic Co-Activation Margin Calibration (Rule 1B + 4, Img 1 & 777 Resolution) | **0.242509** (single-model consensus) / **0.261829** (multi-scale) | **0.418938** (single-model) / **0.437764** (multi-scale) |
+| D-097 | Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Visual Resolution | **0.242914** (single-model consensus) / **0.261829** (multi-scale) | **0.420794** (single-model) / **0.437764** (multi-scale) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
