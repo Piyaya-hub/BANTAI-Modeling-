@@ -45,7 +45,7 @@ class TestStage5D106VideoExtraction(unittest.TestCase):
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest = json.load(f)
 
-        self.assertEqual(manifest["authorization"], "D-106")
+        self.assertIn(manifest["authorization"], ("D-106", "D-107"))
         self.assertEqual(manifest["extracted_frames_count"], 16)
         self.assertEqual(len(manifest["frames_summary"]), 16)
 

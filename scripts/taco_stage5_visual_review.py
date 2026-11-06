@@ -283,7 +283,7 @@ def load_video_showcase(root=ROOT):
         return None
 
     manifest = strict_load(manifest_path)
-    if manifest.get("authorization") != "D-106":
+    if manifest.get("authorization") not in ("D-106", "D-107"):
         return None
 
     showcase_sha = hashlib.sha256(showcase_path.read_bytes()).hexdigest()
@@ -727,6 +727,22 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
     ax.set_ylim(h, 0)
     ax.axis("off")
 
+    # If spatial_regions is provided, identify sub-dominant members of dense Garbage Piles (item_count >= 3)
+    skip_badge_qids = set()
+    if spatial_regions and not is_gt:
+        for reg in spatial_regions:
+            if reg.get("category") == "garbage_pile" and reg.get("item_count", 0) >= 3:
+                m_indices = reg.get("member_indices", [])
+                m_objs = [objects[i] for i in m_indices if i < len(objects)]
+                sorted_m = sorted(m_objs, key=lambda x: -x.get("score", 0.0))
+                for sub_obj in sorted_m[2:]:
+                    qid = sub_obj.get("fused_query_id", sub_obj.get("query_id"))
+                    if qid is not None:
+                        skip_badge_qids.add(qid)
+                    else:
+                        skip_badge_qids.add(id(sub_obj))
+
+    placed_badge_boxes = []
     rendered = 0
     for obj in objects:
         if not is_gt:
@@ -752,15 +768,26 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
         )
         ax.add_patch(rect)
 
-        # Label badge
-        score_str = f" {obj['score']:.2f}" if not is_gt else ""
-        text = f"{label_name}{score_str}"
-        ax.text(
-            bx, max(0, by - 4), text,
-            fontsize=7, weight="bold", color="white",
-            bbox=dict(boxstyle="square,pad=0.2", facecolor=color, edgecolor="none", alpha=0.85),
-            zorder=4,
-        )
+        # Determine whether to draw label badge
+        qid = obj.get("fused_query_id", obj.get("query_id"))
+        obj_key = qid if qid is not None else id(obj)
+        should_skip_badge = (not is_gt) and (obj_key in skip_badge_qids)
+
+        if not should_skip_badge:
+            score_str = f" {obj['score']:.2f}" if not is_gt else ""
+            text = f"{label_name}{score_str}"
+            badge_y = max(0, by - 4)
+            for px, py in placed_badge_boxes:
+                if abs(bx - px) < 80 and abs(badge_y - py) < 16:
+                    badge_y = min(float(h) - 10, by + bh + 14)
+                    break
+            placed_badge_boxes.append((bx, badge_y))
+            ax.text(
+                bx, badge_y, text,
+                fontsize=7, weight="bold", color="white",
+                bbox=dict(boxstyle="square,pad=0.2", facecolor=color, edgecolor="none", alpha=0.85),
+                zorder=4,
+            )
         rendered += 1
 
     # Draw enclosing multi-item spatial regions if provided
@@ -790,7 +817,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
                     px, max(0.0, py - 6.0), banner_text,
                     fontsize=8, weight="bold", color="white",
                     bbox=dict(boxstyle="square,pad=0.25", facecolor=reg_color, edgecolor="black", linewidth=0.8, alpha=0.9),
-                    zorder=6,
+                    zorder=7,
                 )
 
 
@@ -965,7 +992,7 @@ class Stage5ViewerGUI:
             "Stage 5 (256/384)": self.fig.add_subplot(2, 2, 3),
             "Stage 5 High-Res (384/576)": self.fig.add_subplot(2, 2, 4),
         }
-        self.fig.tight_layout(pad=1.5)
+        self.fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.02, wspace=0.06, hspace=0.16)
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
         self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
@@ -1104,6 +1131,8 @@ class Stage5ViewerGUI:
                 self.video_frames_btn.config(text="Back to Validation Images (65)")
             if D095_CHAMPION_STATE in self.preds:
                 self.review_state_var.set(D095_CHAMPION_STATE)
+            if hasattr(self, "details_notebook") and self.details_notebook is not None:
+                self.details_notebook.select(3)
         self.on_filter_change()
 
     def on_filter_change(self, event=None):
@@ -1112,6 +1141,8 @@ class Stage5ViewerGUI:
                 self.video_frames_btn.config(text="Back to Validation Images (65)")
                 if D095_CHAMPION_STATE in self.preds:
                     self.review_state_var.set(D095_CHAMPION_STATE)
+                if hasattr(self, "details_notebook") and self.details_notebook is not None:
+                    self.details_notebook.select(3)
             else:
                 self.video_frames_btn.config(text="Check Video Frames (data/input)")
         if self.filter_var.get() == ORGANIC_SHOWCASE_FILTER and ORGANIC_10_STATE in self.preds:
@@ -1451,6 +1482,7 @@ class Stage5ViewerGUI:
                 self.review_state_var.get(), fontsize=11, color="#005500", weight="bold"
             )
 
+        self.fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.02, wspace=0.06, hspace=0.16)
         self.canvas.draw_idle()
 
         # Update Details Tables

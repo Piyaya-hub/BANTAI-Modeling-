@@ -1,5 +1,18 @@
 # Development phases
 
+## Current Stage 5 state through D-107
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-107, Two-Tier Hierarchical
+DBSCAN spatial grouping, sachet/wrapper hazard tie-break, and visual review GUI
+label de-cluttering were implemented:
+- **Official 9-Specific AP**: **0.301350** (new benchmark high, +0.002387 gain).
+- **BANTAI 5-Category AP**: **0.492729** (frozen validation benchmark preserved).
+- **Two-Tier Hierarchical Grouping**: Tier 1 dense core extraction separates roadside heaps into `Garbage Pile`, while Tier 2 anti-chaining cluster diagonal ceiling (<= 0.42 * L) clusters foreground litter without daisy-chaining.
+- **Sachet/Wrapper Tie-Break**: Reassigns large compact rectangular objects with non-hazard support from cigarette to plastic wrapper / paper, eliminating false hazards on video frames (Frame 10008 qid=1 -> Plastic 0.33) and increasing validation AP9 to 0.301350.
+- **GUI De-Cluttering & Margins**: Sub-dominant pile members beyond top-2 suppress badge text while keeping bounding boxes visible; auto-selects fourth table tab on video frames mode; adjusted figure margins for portrait 1080x1920 layout.
+- **All 14 Validation Showcase Invariants Preserved**: Image 1 (1 Garbage Pile), Image 777 (1 Group of Individual Litter), Image 802 (1 Individual Litter), Image 998 (2 Individual Litter), Image 1243 (1 Individual Litter), Image 1465 (1 Group of Individual Litter).
+
 ## Current Stage 5 state through D-106
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

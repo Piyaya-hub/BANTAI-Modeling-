@@ -34,6 +34,7 @@ from scripts.taco_evaluation_v3 import decode_predictions
 from scripts.taco_stage5_d095_box_contrastive import _class_score_vectors
 from scripts.train_taco_stage5 import freeze_backbones, load_warmstart_blend
 from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus
+from scripts.taco_stage5_display_profiles import visible_rows
 from scripts.taco_stage5_spatial_grouping import compute_spatial_grouping
 
 CANONICAL_CATEGORIES = {
@@ -323,8 +324,13 @@ def main() -> int:
         )
         consensus_preds_by_img[img_id] = c_rows
 
-        # Visible items at threshold >= 0.10
-        visible_detections = [r for r in c_rows if r["score"] >= 0.10]
+        # Visible items at threshold >= 0.10 with containment NMS
+        visible_detections = visible_rows(
+            c_rows,
+            scheme="9-specific",
+            nms_mode="agnostic_iou_0.50_containment_0.80",
+            threshold=0.10,
+        )[:15]
         grp_result = compute_spatial_grouping(
             visible_detections,
             image_width=entry["width"],
@@ -344,8 +350,9 @@ def main() -> int:
                     "bantai_category": CANONICAL_CATEGORIES.get(r["category_id"], "Other"),
                     "score": round(float(r["score"]), 4),
                     "bbox": [round(c, 2) for c in r["bbox"]],
-                    "spatial_region_id": r.get("spatial_region_id"),
-                    "spatial_region_label": r.get("spatial_region_label"),
+                    "spatial_group_id": r.get("spatial_group_id"),
+                    "spatial_category": r.get("spatial_category"),
+                    "spatial_label": r.get("spatial_label"),
                 }
                 for r in grp_result["annotated_rows"]
             ],
@@ -373,7 +380,7 @@ def main() -> int:
     # Save video-showcase.json
     showcase_data = {
         "schema_version": "bantai.stage5-video-showcase.v1",
-        "authorization": "D-106",
+        "authorization": "D-107",
         "video_source": video_meta,
         "dataset_root": str(frames_dir.relative_to(ROOT)).replace("\\", "/"),
         "image_ids": [e["id"] for e in frame_entries],
@@ -403,7 +410,7 @@ def main() -> int:
     # Save manifest.json
     manifest_data = {
         "schema_version": "bantai.stage5-video-manifest.v1",
-        "authorization": "D-106",
+        "authorization": "D-107",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
         "video_source": video_meta,
         "extracted_frames_count": len(frame_entries),

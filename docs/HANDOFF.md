@@ -1,5 +1,27 @@
 # BANTAI Stage 4 handoff
 
+## D-107: Two-Tier Hierarchical Spatial Grouping, Sachet Hazard Tie-Break & Video GUI De-Cluttering - 2026-11-06
+
+Owner authorization D-107 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Two-Tier Hierarchical Spatial Grouping Architecture (`scripts/taco_stage5_spatial_grouping.py`)**:
+   - Tier 1: Dense core extraction via tight heap adjacency ($g_{ij} == 0.0 \lor \text{IoU}_{ij} > 0.01 \lor (g_{ij} \le 0.35 \cdot \min(s_i, s_j) \land \text{neighborhood support})$). Clusters qualify as `Garbage Pile` if $(k \ge 3 \land (\text{touching} \ge 1 \lor \rho \ge 0.40)) \lor (k = 2 \land \rho \ge 0.45 \land \text{IoU} \ge 0.15)$.
+   - Tier 2: Non-pile items grouped with proximity parameters ($\alpha = 2.0, \beta = 0.225$), bounded by an anti-chaining cluster diagonal ceiling ($\le 0.42 \cdot L$) to prevent foreground outliers from daisy-chaining into dense heaps.
+   - Preserves all 14 validation showcase image invariants: Image 1 (1 Garbage Pile, $n=2$), Image 777 (1 Group of Individual Litter, $n=5$), Image 802 (1 Individual Litter), Image 998 (2 Individual Litter), Image 1243 (1 Individual Litter), Image 1465 (1 Group of Individual Litter).
+   - Separates continuous video frames into distinct dense heaps and foreground items: Frame 10006 yields 1 Garbage Pile ($\rho = 0.526$) + 1 Group of Individual Litter; Frame 10008 yields 2 Garbage Piles ($\rho = 0.633, 0.653$) + 1 Group of Individual Litter + 1 Individual Litter.
+2. **Sachet/Wrapper Hazard Tie-Break Rule (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - Resolved the candy wrapper misclassification on Frame 10008 by reassigning compact rectangular objects ($\text{norm\_area} \ge 0.0018$, $\min(w, h) \ge 35\text{px}$, aspect ratio $\le 2.5$) with non-hazard support ($\ge 0.035$) from `0: cigarette` (`Potentially Hazardous`) to `3: plastic_wrapper` (`Plastic`) or `8: paper` (`Paper`).
+   - Frame 10008 red candy wrapper (`qid=1`) correctly displays as `Plastic 0.33` (`plastic_wrapper`).
+   - Full 65 validation sweep: exactly 0 lost True Positives (`lost_tps == []`), AP9 increases monotonically from $0.298963 \to \mathbf{0.301350}$, AP5 stable at $0.492729$.
+3. **Visual Review GUI Label De-Cluttering & Auto Tab Selection (`scripts/taco_stage5_visual_review.py`)**:
+   - In dense Garbage Piles ($k \ge 3$), text badges are drawn only for the top-2 scoring members, suppressing badge clutter while keeping all bounding boxes visible.
+   - Region bounding boxes and category banners render at `zorder=7`.
+   - Automatically activates fourth table tab (`D-095 Champion`) upon switching into Video Frames mode (`VIDEO_FRAMES_FILTER`), ensuring the details table is populated.
+   - Adjusted figure margins (`left=0.02, right=0.98, top=0.92, bottom=0.02, wspace=0.06, hspace=0.16`), optimizing display for portrait $1080 \times 1920$ video frames.
+4. **Verified Evidence**:
+   - Unit tests: 6 passed in `tests/test_stage5_d107_hierarchical_video_grouping.py`; 88 passed in `tests/test_stage5_d*.py`.
+   - See [TACO Stage 5 D-107 Hierarchical Video Grouping Report](TACO_STAGE_5_D107_HIERARCHICAL_VIDEO_GROUPING.md).
+
 ## D-106: Video Frame Extraction & Three-Model Stage 5 Detection on Motion_Extract_Testing.mp4 - 2026-11-06
 
 Owner authorization D-106 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

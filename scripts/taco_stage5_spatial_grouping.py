@@ -1,4 +1,4 @@
-"""Scale-normalized spatial grouping module for BANTAI trash detection.
+"""Scale-normalized hierarchical spatial grouping module for BANTAI trash detection.
 
 Layers the three BANTAI spatial region categories from docs/SCOPE.md:
   - `individual_litter` -> "Individual Litter": An isolated discarded object not assigned to a group.
@@ -7,14 +7,18 @@ Layers the three BANTAI spatial region categories from docs/SCOPE.md:
   - `garbage_pile` -> "Garbage Pile": Concentrated accumulation of discarded waste, typically
     overlapping, stacked, or densely collected.
 
-Uses scale-normalized pairwise proximity:
-  g_ij <= max(alpha * max(s_i, s_j), beta * L)
-where:
-  - g_ij is the edge-to-edge gap between detection bounding boxes i and j.
-  - s_i = sqrt(w_i * h_i) is the characteristic scale of detection i.
-  - L = sqrt(W^2 + H^2) is the image diagonal.
-  - alpha is scale_factor (default 2.4).
-  - beta is diag_fraction (default 0.25).
+Implements a Two-Tier Hierarchical DBSCAN Spatial Grouping Architecture:
+  - Tier 1: Dense Garbage Pile Core Extraction
+    Identifies compact, high-density overlapping piles using tight heap adjacency:
+      g_ij == 0.0 or IoU_ij > 0.01 or (g_ij <= 0.35 * min(s_i, s_j) and bilateral neighborhood support)
+    Clusters qualify as Garbage Pile if:
+      (k >= 3 and (touching_pairs >= 1 or density >= 0.40)) or
+      (k == 2 and density >= density_threshold and max_iou >= iou_pile_threshold)
+  - Tier 2: Local Proximity Grouping with Anti-Chaining Constraint
+    Clusters remaining non-pile items using scale-normalized proximity:
+      g_ij <= max(scale_factor * max(s_i, s_j), diag_fraction * L)
+    bounded by an anti-chaining cluster diagonal threshold:
+      cluster_diag <= max_cluster_diag_fraction * L (default 0.42 * L)
 
 Invariants:
   - Preserves underlying supervised object predictions (category_id, score, bbox).
@@ -37,6 +41,7 @@ DEFAULT_SCALE_FACTOR = 2.0
 DEFAULT_DIAG_FRACTION = 0.225
 DEFAULT_DENSITY_THRESHOLD = 0.45
 DEFAULT_IOU_PILE_THRESHOLD = 0.15
+DEFAULT_MAX_CLUSTER_DIAG_FRACTION = 0.42
 
 
 def compute_edge_gap(box_a: List[float], box_b: List[float]) -> float:
@@ -68,18 +73,20 @@ def compute_spatial_grouping(
     diag_fraction: float = DEFAULT_DIAG_FRACTION,
     density_threshold: float = DEFAULT_DENSITY_THRESHOLD,
     iou_pile_threshold: float = DEFAULT_IOU_PILE_THRESHOLD,
+    max_cluster_diag_fraction: float = DEFAULT_MAX_CLUSTER_DIAG_FRACTION,
 ) -> Dict[str, Any]:
-    """Cluster visible detections into spatial regions and classify each region.
+    """Cluster visible detections into spatial regions using Two-Tier Hierarchical DBSCAN.
 
     Parameters:
         rows: List of visible detection dictionaries, each containing 'bbox' [x, y, w, h]
               and 'score'.
         image_width: Image pixel width (optional, used for diagonal calculation).
         image_height: Image pixel height (optional, used for diagonal calculation).
-        scale_factor: Proximity scale factor multiplier alpha (default 2.4).
-        diag_fraction: Fraction of image diagonal beta (default 0.25).
-        density_threshold: Packing density threshold for garbage pile (default 0.35).
+        scale_factor: Proximity scale factor multiplier alpha (default 2.0).
+        diag_fraction: Fraction of image diagonal beta (default 0.225).
+        density_threshold: Packing density threshold for garbage pile (default 0.45).
         iou_pile_threshold: Pairwise IoU threshold indicating overlapping pile (default 0.15).
+        max_cluster_diag_fraction: Bounding box diagonal ceiling for Tier 2 clusters (default 0.42).
 
     Returns:
         A dictionary with:
@@ -114,11 +121,9 @@ def compute_spatial_grouping(
     boxes = [r["bbox"] for r in rows]
     scales = [math.sqrt(max(1.0, b[2] * b[3])) for b in boxes]
 
-    # Build adjacency graph
-    adj = {i: [] for i in range(n_items)}
-    pairwise_gaps = {}
-    pairwise_ious = {}
-
+    # Precalculate pairwise gaps and IoUs
+    pairwise_gaps: Dict[Tuple[int, int], float] = {}
+    pairwise_ious: Dict[Tuple[int, int], float] = {}
     for i in range(n_items):
         for j in range(i + 1, n_items):
             gap = compute_edge_gap(boxes[i], boxes[j])
@@ -129,110 +134,192 @@ def compute_spatial_grouping(
             pairwise_ious[(i, j)] = iou_val
             pairwise_ious[(j, i)] = iou_val
 
-            thresh = max(scale_factor * max(scales[i], scales[j]), diag_fraction * diag_l)
-            if gap <= thresh:
-                adj[i].append(j)
-                adj[j].append(i)
-
-    # Find connected components (BFS)
-    visited = set()
-    components = []
+    # =========================================================================
+    # Tier 1: Dense Garbage Pile Core Extraction
+    # =========================================================================
+    tight_adj: Dict[int, List[int]] = {i: [] for i in range(n_items)}
     for i in range(n_items):
-        if i not in visited:
+        for j in range(i + 1, n_items):
+            g = pairwise_gaps[(i, j)]
+            u = pairwise_ious[(i, j)]
+            s_min = min(scales[i], scales[j])
+            is_tight = (g == 0.0 or u > 0.01)
+            if not is_tight and g <= 0.35 * s_min:
+                i_nbr = any(
+                    k != j and pairwise_gaps[(i, k)] <= 0.80 * max(scales[i], scales[k])
+                    for k in range(n_items) if k != i
+                )
+                j_nbr = any(
+                    k != i and pairwise_gaps[(j, k)] <= 0.80 * max(scales[j], scales[k])
+                    for k in range(n_items) if k != j
+                )
+                if i_nbr and j_nbr:
+                    is_tight = True
+            if is_tight:
+                tight_adj[i].append(j)
+                tight_adj[j].append(i)
+
+    visited_t1 = set()
+    tight_comps = []
+    for i in range(n_items):
+        if i not in visited_t1:
             comp = []
             queue = [i]
-            visited.add(i)
+            visited_t1.add(i)
             while queue:
                 curr = queue.pop(0)
                 comp.append(curr)
-                for neighbor in adj[curr]:
-                    if neighbor not in visited:
-                        visited.add(neighbor)
+                for neighbor in tight_adj[curr]:
+                    if neighbor not in visited_t1:
+                        visited_t1.add(neighbor)
                         queue.append(neighbor)
-            components.append(sorted(comp))
+            tight_comps.append(sorted(comp))
 
-    # Sort components by minimum member index for determinism
-    components.sort(key=lambda c: c[0])
+    tight_comps.sort(key=lambda c: c[0])
 
-    regions = []
-    annotated_rows = [deepcopy(r) for r in rows]
-
-    indiv_count = 0
-    group_count = 0
-    pile_count = 0
-
-    for group_id, member_indices in enumerate(components):
-        n_m = len(member_indices)
-        m_boxes = [boxes[idx] for idx in member_indices]
-
-        # Enclosing bounding box
+    pile_comps = []
+    assigned_indices = set()
+    for comp in tight_comps:
+        k = len(comp)
+        if k < 2:
+            continue
+        m_boxes = [boxes[idx] for idx in comp]
         enc_x = min(b[0] for b in m_boxes)
         enc_y = min(b[1] for b in m_boxes)
-        enc_max_x = max(b[0] + b[2] for b in m_boxes)
-        enc_max_y = max(b[1] + b[3] for b in m_boxes)
-        enc_w = enc_max_x - enc_x
-        enc_h = enc_max_y - enc_y
-        enc_area = enc_w * enc_h
-
-        # Member area sum and packing density
+        enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
+        enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
         area_sum = sum(b[2] * b[3] for b in m_boxes)
-        density = area_sum / max(1e-6, enc_area)
+        density = area_sum / max(1e-6, enc_w * enc_h)
+        touch_count = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(comp[ii], comp[jj])] == 0.0)
+        max_u = max((pairwise_ious[(comp[ii], comp[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
 
-        # Touching pairs and max IoU within component
-        touch_count = 0
-        comp_max_iou = 0.0
-        for ii_idx, i in enumerate(member_indices):
-            for j in member_indices[ii_idx + 1:]:
-                if pairwise_gaps.get((i, j), 1.0) == 0.0:
-                    touch_count += 1
-                iou_val = pairwise_ious.get((i, j), 0.0)
-                if iou_val > comp_max_iou:
-                    comp_max_iou = iou_val
+        is_pile = (
+            (k >= 3 and (touch_count >= 1 or density >= 0.40))
+            or (k == 2 and density >= density_threshold and max_u >= iou_pile_threshold)
+        )
+        if is_pile:
+            pile_comps.append({
+                "members": comp,
+                "category": "garbage_pile",
+                "label": SPATIAL_CATEGORIES["garbage_pile"],
+                "bbox": [enc_x, enc_y, enc_w, enc_h],
+                "packing_density": density,
+                "touching_pairs": touch_count,
+                "max_iou": max_u,
+            })
+            assigned_indices.update(comp)
 
-        # Classification
-        if n_m == 1:
+    # =========================================================================
+    # Tier 2: Remaining Non-Pile Items (Local Proximity & Anti-Chaining)
+    # =========================================================================
+    rem_indices = [i for i in range(n_items) if i not in assigned_indices]
+    t2_adj: Dict[int, List[int]] = {i: [] for i in rem_indices}
+    for i_idx, i in enumerate(rem_indices):
+        for j in rem_indices[i_idx + 1:]:
+            g = pairwise_gaps[(i, j)]
+            thresh = max(scale_factor * max(scales[i], scales[j]), diag_fraction * diag_l)
+            if g <= thresh:
+                t2_adj[i].append(j)
+                t2_adj[j].append(i)
+
+    visited_t2 = set()
+    t2_comps = []
+    for i in rem_indices:
+        if i not in visited_t2:
+            comp = []
+            queue = [i]
+            visited_t2.add(i)
+            while queue:
+                curr = queue.pop(0)
+                comp.append(curr)
+                for neighbor in t2_adj[curr]:
+                    if neighbor not in visited_t2:
+                        test_boxes = [boxes[idx] for idx in comp + [neighbor]]
+                        min_x = min(b[0] for b in test_boxes)
+                        min_y = min(b[1] for b in test_boxes)
+                        mw = max(b[0] + b[2] for b in test_boxes) - min_x
+                        mh = max(b[1] + b[3] for b in test_boxes) - min_y
+                        if math.hypot(mw, mh) <= max_cluster_diag_fraction * diag_l:
+                            visited_t2.add(neighbor)
+                            queue.append(neighbor)
+            t2_comps.append(sorted(comp))
+
+    t2_comps.sort(key=lambda c: c[0])
+
+    # =========================================================================
+    # Build Unified Regions & Annotated Rows
+    # =========================================================================
+    regions = []
+    annotated_rows = [deepcopy(r) for r in rows]
+    reg_id = 0
+    pile_count = len(pile_comps)
+    group_count = 0
+    indiv_count = 0
+
+    for p in pile_comps:
+        comp = p["members"]
+        p["group_id"] = reg_id
+        p["item_count"] = len(comp)
+        p["model_score"] = None
+        p["member_indices"] = comp
+        regions.append(p)
+        for idx in comp:
+            annotated_rows[idx]["spatial_group_id"] = reg_id
+            annotated_rows[idx]["spatial_category"] = "garbage_pile"
+            annotated_rows[idx]["spatial_label"] = SPATIAL_CATEGORIES["garbage_pile"]
+        reg_id += 1
+
+    for comp in t2_comps:
+        k = len(comp)
+        m_boxes = [boxes[idx] for idx in comp]
+        enc_x = min(b[0] for b in m_boxes)
+        enc_y = min(b[1] for b in m_boxes)
+        enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
+        enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
+        area_sum = sum(b[2] * b[3] for b in m_boxes)
+        density = area_sum / max(1e-6, enc_w * enc_h)
+        touch_count = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(comp[ii], comp[jj])] == 0.0)
+        max_u = max((pairwise_ious[(comp[ii], comp[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+
+        if k == 1:
             cat = "individual_litter"
             label = SPATIAL_CATEGORIES[cat]
-            # Single item retains exact model score of underlying detection
-            region_score = float(rows[member_indices[0]]["score"])
+            sc_val = float(rows[comp[0]]["score"])
             indiv_count += 1
         else:
-            # Derived multi-object region: check Garbage Pile criteria
-            # Must meet density >= 0.45 AND (overlap >= 0.15 OR touching pairs >= 1),
-            # OR (item count >= 3 AND density >= 0.55).
-            # Dispersed clusters (density < 0.45) classify as Group of Individual Litter, never Garbage Pile.
             is_pile = (
-                (density >= density_threshold and (comp_max_iou >= iou_pile_threshold or touch_count >= 1))
-                or (n_m >= 3 and density >= 0.55)
+                (density >= density_threshold and (max_u >= iou_pile_threshold or touch_count >= 1))
+                or (k >= 3 and density >= 0.55)
             )
             if is_pile:
                 cat = "garbage_pile"
                 label = SPATIAL_CATEGORIES[cat]
+                sc_val = None
                 pile_count += 1
             else:
                 cat = "group_of_individual_litter"
                 label = SPATIAL_CATEGORIES[cat]
+                sc_val = None
                 group_count += 1
-            # Never invent model confidence scores for multi-object derived groups
-            region_score = None
 
         regions.append({
-            "group_id": group_id,
+            "group_id": reg_id,
             "category": cat,
             "label": label,
             "bbox": [enc_x, enc_y, enc_w, enc_h],
-            "item_count": n_m,
-            "model_score": region_score,
-            "member_indices": member_indices,
+            "item_count": k,
+            "model_score": sc_val,
+            "member_indices": comp,
+            "members": comp,
             "packing_density": density,
             "touching_pairs": touch_count,
-            "max_iou": comp_max_iou,
+            "max_iou": max_u,
         })
-
-        for idx in member_indices:
-            annotated_rows[idx]["spatial_group_id"] = group_id
+        for idx in comp:
+            annotated_rows[idx]["spatial_group_id"] = reg_id
             annotated_rows[idx]["spatial_category"] = cat
             annotated_rows[idx]["spatial_label"] = label
+        reg_id += 1
 
     summary = {
         "total_physical_items": n_items,

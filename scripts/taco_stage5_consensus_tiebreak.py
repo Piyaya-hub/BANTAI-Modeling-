@@ -780,6 +780,38 @@ def apply_scene_consensus(
                                     "reason": f"high wrapper/film coactivation v[3]+v[4]={v[3]+v[4]:.3f}>=0.54, baseline corroboration cat={b_cat} sc={top_b.get('score'):.3f}>=0.28, r1_paper={r1_paper:.3f}<0.20",
                                 })
 
+            # Case D: Sachet/wrapper hazard tie-break (large compact objects with non-hazard support)
+            if cat == 0 and norm_area >= 0.0018 and min(bw, bh) >= 35.0 and v is not None:
+                aspect = max(bw, bh) / max(1e-6, min(bw, bh))
+                if aspect <= 2.5:
+                    non_haz_cands = [(v[c], c) for c in (1, 2, 3, 4, 6, 7, 8)]
+                    best_sc, best_c = max(non_haz_cands)
+                    if best_sc >= 0.035:
+                        if best_c == 8 and v[8] >= max(v[c] for c in (1, 2, 3, 4, 6, 7)) + 0.01:
+                            target_c = 8
+                        elif best_c in (1, 2, 3, 4, 6, 7):
+                            target_c = 3 if v[3] >= 0.035 else best_c
+                        else:
+                            target_c = 3
+                        r_mod["raw_category_id"] = cat
+                        r_mod["category_id"] = target_c
+                        r_mod["specific_category_id"] = target_c
+                        r_mod["consensus_reassigned"] = True
+                        r_mod["sachet_wrapper_reassigned"] = True
+                        r_mod["consensus_rule7a"] = True
+                        rule7_changed_qids.add(qid)
+                        diag["rule7_count"] += 1
+                        diag["rule7a_count"] += 1
+                        diag["logs"].append({
+                            "image_id": image_id,
+                            "qid": qid,
+                            "rule": f"Rule 7A (sachet/wrapper hazard to {target_c} reassignment)",
+                            "old_cat": cat,
+                            "new_cat": target_c,
+                            "old_score": sc,
+                            "reason": f"compact large object norm_area={norm_area:.6f}>=0.0018 min_dim={min(bw, bh):.1f}>=35 aspect={aspect:.2f}<=2.5 with non-hazard support best_c={best_c} sc={best_sc:.3f}>=0.035",
+                        })
+
             pass7a_rows.append(r_mod)
 
         # Inspect post-7A scene characteristics
