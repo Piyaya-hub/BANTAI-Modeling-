@@ -14,10 +14,16 @@ from scripts.taco_stage5_consensus_tiebreak import (
     apply_consensus_tiebreak,
     PLASTIC_SUBTYPE_IDS,
 )
-from scripts.taco_stage5_visual_review import discover_d098_run, D098_CHAMPION_STATE
+from scripts.taco_stage5_visual_review import (
+    discover_d095_run,
+    discover_d098_run,
+    D095_CHAMPION_STATE,
+    D098_CHAMPION_STATE,
+)
 from scripts.taco_stage5_material_hierarchy import evaluate_case, MAPS, NAMES, iou
 
 VAL_JSON = ROOT / "exports/taco/strict-clean-stage5-d083-core-v1/validation.json"
+D095_RUN = ROOT / "runs/training/stage5-d095-box-contrastive-20261102-a"
 D098_RUN = ROOT / "runs/training/stage5-d098-bg-suppression-20261106-a"
 
 
@@ -49,7 +55,7 @@ class TestStage5D098BgSuppression(unittest.TestCase):
         expected = (0.35 - 0.20) ** 2
         self.assertAlmostEqual(float(loss_floor_pos), expected, places=6)
 
-    def test_image165_beach_false_positive_clutter_elimination(self):
+    def test_image165_beach_false_positive_clutter_elimination_d098(self):
         val_data = strict_load(VAL_JSON)
         img165_meta = next(img for img in val_data["images"] if img["id"] == 165)
         gt_ann = next(a for a in val_data["annotations"] if a["image_id"] == 165)
@@ -87,6 +93,68 @@ class TestStage5D098BgSuppression(unittest.TestCase):
 
         # Rule 5 must have triggered
         self.assertGreater(diag["rule5_count"], 0)
+
+    def test_d095_champion_with_rule5_image165_and_styrofoam_preservation(self):
+        val_data = strict_load(VAL_JSON)
+        img165_meta = next(img for img in val_data["images"] if img["id"] == 165)
+        gt_ann = next(a for a in val_data["annotations"] if a["image_id"] == 165)
+
+        d095_champ = strict_load(D095_RUN / "soup_d095best_d093champ_5050.json")
+        d095_vecs = np.load(D095_RUN / "best-score-vectors.npz")
+        img_map = {img_id: idx for idx, img_id in enumerate(d095_vecs["image_ids"])}
+        img_dims = {img["id"]: (img["width"], img["height"]) for img in val_data["images"]}
+
+        raw_by_img = {}
+        for r in d095_champ["raw_queries"]:
+            raw_by_img.setdefault(r["image_id"], []).append(r)
+
+        sorted_img_ids = sorted(raw_by_img.keys())
+        adj_by_img = {}
+        for img_id in sorted_img_ids:
+            w, h = img_dims[img_id]
+            adj, _, _ = apply_scene_consensus(
+                raw_by_img[img_id], d095_vecs["scores"][img_map[img_id]],
+                image_width=w, image_height=h,
+            )
+            adj_by_img[img_id] = adj
+
+        # 1. Image 165 on D-095 Champion has EXACTLY 1 clean detection
+        passing_165 = [r for r in adj_by_img[165] if r["score"] >= 0.10]
+        self.assertEqual(len(passing_165), 1)
+        self.assertEqual(passing_165[0]["category_id"], 0)
+        self.assertAlmostEqual(passing_165[0]["score"], 0.2818, places=3)
+        self.assertGreaterEqual(iou(passing_165[0]["bbox"], gt_ann["bbox"]), 0.50)
+
+        # 2. Image 1 on D-095 Champion has ONLY Paper detections
+        passing_1 = [r for r in adj_by_img[1] if r["score"] >= 0.10]
+        self.assertEqual(len(passing_1), 3)
+        self.assertTrue(all(r["category_id"] == 8 for r in passing_1))
+
+        # 3. Image 777 on D-095 Champion has 1 Plastic bottle + 4 Cigarette butts, ZERO Paper
+        passing_777 = [r for r in adj_by_img[777] if r["score"] >= 0.10]
+        self.assertEqual(len(passing_777), 5)
+        self.assertEqual(len([r for r in passing_777 if r["category_id"] == 8]), 0)
+
+        # 4. Zero True Positives Lost across all 65 images
+        lost_tps = []
+        for img_id, rows in raw_by_img.items():
+            gts = [a for a in val_data["annotations"] if a["image_id"] == img_id]
+            raw_passing = [r for r in rows if r["score"] >= 0.10]
+            adj_passing = [r for r in adj_by_img[img_id] if r["score"] >= 0.10]
+            for gt in gts:
+                raw_hit = any(r["category_id"] == gt["category_id"] and iou(r["bbox"], gt["bbox"]) >= 0.50 for r in raw_passing)
+                adj_hit = any(r["category_id"] == gt["category_id"] and iou(r["bbox"], gt["bbox"]) >= 0.50 for r in adj_passing)
+                if raw_hit and not adj_hit:
+                    lost_tps.append({"image_id": img_id, "gt_id": gt["id"], "category_id": gt["category_id"]})
+        self.assertEqual(lost_tps, [])
+
+        # 5. Full 65-image metrics preserve styrofoam_piece at 0.148515 and exceed D-098
+        all_adj = [r for img_id in sorted_img_ids for r in adj_by_img[img_id]]
+        res9 = evaluate_case(val_data, all_adj, "9-specific", "raw")
+        res5 = evaluate_case(val_data, all_adj, "bantai-5-category", "raw")
+        self.assertAlmostEqual(res9["metrics"]["classes"]["styrofoam_piece"]["AP"], 0.148515, places=4)
+        self.assertGreater(res9["metrics"]["AP"], 0.240)
+        self.assertGreater(res5["metrics"]["AP"], 0.415)
 
     def test_image1_paper_preservation_zero_plastic_clutter(self):
         val_data = strict_load(VAL_JSON)

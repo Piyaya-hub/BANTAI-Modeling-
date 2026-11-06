@@ -371,7 +371,7 @@ def apply_scene_consensus(
             norm_q_area = (q_area / total_img_area) if total_img_area else 0.0
 
             # Sub-rule 5A: Sub-dominant isolated hazard speckle on scenes with exactly ONE isolated hazard
-            if is_single_hazard_scene and cat == 0 and sc < 0.20 and norm_q_area < 0.0006:
+            if is_single_hazard_scene and cat == 0 and sc < 0.20 and norm_q_area < 0.0025:
                 ha = hazard_anchors[0]
                 ha_box = ha["bbox"]
                 dist = math.hypot(
@@ -392,11 +392,11 @@ def apply_scene_consensus(
                         "reason": f"subdominant hazard speckle sc={sc:.3f} norm_area={norm_q_area:.6f} dist={dist:.1f}>400 on single-hazard scene",
                     })
 
-            # Sub-rule 5B: Low-confidence multi-family diffuse clutter (sc < 0.16)
-            if not suppress and sc < 0.16:
+            # Sub-rule 5B: Low-confidence multi-family diffuse clutter
+            if not suppress:
                 diff_h_np = abs(p_hazard - max(p_plastic, p_paper))
                 diff_p_pl = abs(p_plastic - p_paper)
-                if diff_h_np <= 0.015:
+                if sc < 0.16 and diff_h_np <= 0.015:
                     suppress = True
                     rule5_suppressed_qids.add(qid)
                     diag["rule5_count"] += 1
@@ -409,7 +409,7 @@ def apply_scene_consensus(
                         "old_score": sc,
                         "reason": f"diffuse hazard-nonhazard margin {diff_h_np:.4f} <= 0.015 at sc={sc:.3f}",
                     })
-                elif not paper_anchors and not plastic_anchors and cat in (2, 3, 4, 8) and diff_p_pl <= 0.015:
+                elif not paper_anchors and not plastic_anchors and cat in (2, 3, 4, 8) and sc < 0.16 and diff_p_pl <= 0.015:
                     suppress = True
                     rule5_suppressed_qids.add(qid)
                     diag["rule5_count"] += 1
@@ -422,7 +422,7 @@ def apply_scene_consensus(
                         "old_score": sc,
                         "reason": f"diffuse plastic-paper margin {diff_p_pl:.4f} <= 0.015 on anchorless scene at sc={sc:.3f}",
                     })
-                elif is_single_hazard_scene and cat in (2, 3, 4) and (p_plastic - p_hazard) <= 0.040:
+                elif is_single_hazard_scene and cat in (2, 3, 4) and sc < 0.17 and (p_plastic - p_hazard) <= 0.040:
                     suppress = True
                     rule5_suppressed_qids.add(qid)
                     diag["rule5_count"] += 1

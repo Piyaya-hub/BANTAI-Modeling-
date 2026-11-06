@@ -122,3 +122,28 @@ Evaluating the 15 historical model combinations across 7 class-calibrated routin
 - **D-098 Dual-Scale Pairing**: `D098_Champion_384_plus_D086_HR448` achieved **`0.244262` 9-Specific AP** and **`0.431929` BANTAI 5-Category AP** under `uniform_both` + `pre_nms`.
 - All outputs serialized to `multiscale-consensus-replay.json` and `multiscale-consensus-audit.json` across run directories.
 
+---
+
+## 7. Follow-Up Audit: Styrofoam Preservation & Active Champion Restoration
+
+### Finding: D-098 Background Suppression Wiped Out Styrofoam AP
+Detailed inspection of `runs/training/stage5-d098-bg-suppression-20261106-a/report.json` line 55 reveals that all 5 evaluation states in D-098 had `"styrofoam_AP": 0.0`. While $\lambda_{\text{bg\_hn}} = 12.0$ achieved record `plastic_film` AP (`0.054753`), pushing unmatched queries down across the board suppressed the rare `styrofoam_piece` class (`0.148515 -> 0.000000`), lowering raw 9-Specific AP from `0.238401` down to `0.224818`.
+
+### Resolution: D-095 Champion + Calibrated Scene Consensus (Rules 1-5)
+Because D-098's new Rule 5 is model-agnostic, applying calibrated Rule 5 to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) achieves the best of both worlds:
+- **`7: styrofoam_piece` AP is fully preserved at `0.148515`** (not `0.000000`!).
+- **Full 65-Image 9-Specific AP**: **`0.241505`** (strictly higher than D-098 Champion's `0.227683`).
+- **Full 65-Image BANTAI 5-Category AP**: **`0.418866`** (strictly higher than D-098 Champion's `0.414315`).
+- **2-Fold Cross-Validation Monotonic Gains**:
+  - Fold A: 9-Specific AP improves `0.152148 -> 0.155527` (+0.003379); 5-Category AP improves `0.249090 -> 0.273442` (+0.024352).
+  - Fold B: 9-Specific AP improves `0.336864 -> 0.338271` (+0.001407); 5-Category AP improves `0.590474 -> 0.601730` (+0.011256).
+- **Simultaneous Visual Resolution**:
+  - **Image 165 (`000064.jpg`)**: Exactly 1 detection at threshold 0.10: `cigarette: 0.28` (`Potentially Hazardous: 0.28`). All 6 coastal beach false-positive clutter boxes (seashells, crab, pebbles, sand shadows) are cleanly eliminated!
+  - **Image 1 (`000008.jpg`)**: Exactly 3 Paper detections: `paper: 0.36, paper: 0.19, paper: 0.13`, zero plastic or cigarette clutter!
+  - **Image 777 (`000084.JPG`)**: Exactly 5 detections: `plastic_bottle: 0.32, cigarette: 0.13, cigarette: 0.13, cigarette: 0.12, cigarette: 0.12`, zero paper clutter!
+  - **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
+
+### Visual Review Default
+In `scripts/taco_stage5_visual_review.py`, `D095_CHAMPION_STATE` is restored as the default fourth-panel single-scale champion, while `D-098` remains loaded and selectable in the combobox for comparative review.
+
+

@@ -26,8 +26,12 @@ Owner authorization D-098 executed on `feat/stage5-paper-category`. Active super
    - **Image 777 (`000084.JPG`)**: Exactly 5 detections (`plastic_bottle: 0.32, cigarette: 0.13, cigarette: 0.12, cigarette: 0.11, cigarette: 0.11`), zero paper clutter!
 6. **Artifacts & Tests**:
    - Run directory: `runs/training/stage5-d098-bg-suppression-20261106-a/`.
-   - Comprehensive unit test suite `tests/test_stage5_d098_bg_suppression.py` added (8 tests passed).
-   - Full guarded test suite `scripts/verify_stage4_guarded.py` verified (357 passed, 0 failures, 0 errors).
+   - Comprehensive unit test suite `tests/test_stage5_d098_bg_suppression.py` added (9 tests passed).
+   - Full guarded test suite `scripts/verify_stage4_guarded.py` verified (358 passed, 0 failures, 0 errors).
+7. **Follow-Up Audit & Default Champion Restoration**:
+   - Because D-098's $\lambda_{\text{bg\_hn}} = 12.0$ training suppressed all unmatched background queries across the board, `7: styrofoam_piece` dropped to `0.000000`, lowering raw AP from `0.238401` to `0.224818`.
+   - Applying calibrated Rule 5 to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) fully preserves `styrofoam_piece` at **`0.148515`**, achieves higher overall accuracy (**`0.241505` 9-Specific AP** and **`0.418866` BANTAI 5-Category AP**), and eliminates all 6 beach false positives on Image 165 (`cigarette: 0.28`), while keeping Image 1 (3 clean Paper boxes) and Image 777 (1 Plastic bottle + 4 Cigarettes, zero Paper) 100% clean with zero true positives lost across all 65 images.
+   - Therefore, `D095_CHAMPION_STATE` is retained as the default single-scale champion in `scripts/taco_stage5_visual_review.py`, with D-098 selectable for comparative review.
 
 ## D-097: Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Image 1 + Image 777 Visual Resolution - 2026-11-06
 

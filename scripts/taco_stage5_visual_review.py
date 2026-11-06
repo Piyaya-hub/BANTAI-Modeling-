@@ -799,10 +799,10 @@ class Stage5ViewerGUI:
         choices=[n for n in self.preds if n not in ("Baseline", "Stage 5 (256/384)")]
         if prediction_source == "multiscale_384_448" and MULTISCALE_STATE in choices:
             initial = MULTISCALE_STATE
-        elif D098_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
-            initial = D098_CHAMPION_STATE
         elif D095_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
             initial = D095_CHAMPION_STATE
+        elif D098_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
+            initial = D098_CHAMPION_STATE
         elif D093_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
             initial = D093_CHAMPION_STATE
         elif D091_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
