@@ -324,13 +324,13 @@ def main() -> int:
         )
         consensus_preds_by_img[img_id] = c_rows
 
-        # Visible items at threshold >= 0.10 with containment NMS
+        # Visible items at threshold >= 0.10 with containment NMS (uncapped to top-40 for dense scenes)
         visible_detections = visible_rows(
             c_rows,
             scheme="9-specific",
             nms_mode="agnostic_iou_0.50_containment_0.80",
             threshold=0.10,
-        )[:15]
+        )[:40]
         grp_result = compute_spatial_grouping(
             visible_detections,
             image_width=entry["width"],
@@ -380,7 +380,7 @@ def main() -> int:
     # Save video-showcase.json
     showcase_data = {
         "schema_version": "bantai.stage5-video-showcase.v1",
-        "authorization": "D-107",
+        "authorization": "D-108",
         "video_source": video_meta,
         "dataset_root": str(frames_dir.relative_to(ROOT)).replace("\\", "/"),
         "image_ids": [e["id"] for e in frame_entries],
@@ -410,7 +410,7 @@ def main() -> int:
     # Save manifest.json
     manifest_data = {
         "schema_version": "bantai.stage5-video-manifest.v1",
-        "authorization": "D-107",
+        "authorization": "D-108",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
         "video_source": video_meta,
         "extracted_frames_count": len(frame_entries),

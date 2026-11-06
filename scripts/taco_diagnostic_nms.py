@@ -5,6 +5,16 @@ NMS_MODES = ('none (raw queries)', 'class-agnostic IoU 0.50', 'class-aware IoU 0
              'agnostic IoU 0.50 + containment 0.80',
              'class-aware IoU 0.50 + containment 0.80')
 
+_MATERIAL_FAMILY = (0, 1, 1, 1, 1, 2, 1, 3, 4)
+
+
+def _same_material_family(cat_a, cat_b):
+    if cat_a == cat_b:
+        return True
+    if 0 <= cat_a < len(_MATERIAL_FAMILY) and 0 <= cat_b < len(_MATERIAL_FAMILY):
+        return _MATERIAL_FAMILY[cat_a] == _MATERIAL_FAMILY[cat_b]
+    return False
+
 
 def intersection_over_minimum_area(a,b):
     """Symmetric IoMin for original-pixel xywh boxes; zero for empty boxes."""
@@ -24,12 +34,23 @@ def nms_with_proof(rows, nms_mode=NMS_MODES[0]):
     if nms_mode not in NMS_MODES:raise ValueError('Unknown diagnostic NMS mode')
     if nms_mode==NMS_MODES[0]:return list(rows),[]
     kept=[];suppressed=[]
+    is_dense_scene = sum(1 for r in rows if r.get('score', 0.0) >= 0.15) >= 14
     for row in sorted(rows,key=lambda r:(-r['score'],r['query_id'])):
         for prior in kept:
             if nms_mode.startswith('class-aware') and prior['category_id']!=row['category_id']:continue
             overlap=iou(row['bbox'],prior['bbox'])
             containment=intersection_over_minimum_area(row['bbox'],prior['bbox']) if 'containment' in nms_mode else None
             if overlap>=.50 or (containment is not None and containment>=.80):
+                if containment is not None and containment >= .80 and overlap < .50:
+                    a_row = row['bbox'][2] * row['bbox'][3]
+                    a_prior = prior['bbox'][2] * prior['bbox'][3]
+                    area_ratio = min(a_row, a_prior) / max(1e-6, max(a_row, a_prior))
+                    is_plastic_paper = (
+                        (row['category_id'] in (1, 2, 3, 4, 6, 7) and prior['category_id'] == 8) or
+                        (row['category_id'] == 8 and prior['category_id'] in (1, 2, 3, 4, 6, 7))
+                    )
+                    if (is_dense_scene and is_plastic_paper and overlap < .25 and area_ratio < .25):
+                        continue
                 proof={'query_id':row['query_id'],'suppressed_by_query_id':prior['query_id'],
                        'iou':overlap,'same_predicted_class':prior['category_id']==row['category_id']}
                 if containment is not None:proof['iomin']=containment

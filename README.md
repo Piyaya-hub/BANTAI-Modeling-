@@ -1,5 +1,19 @@
 # BANTAI Modeling
 
+## Current Stage 5 state through D-108
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-108, dense-group intra-region
+trash recall recovery, distinct-item NMS preservation, and top-k uncapping (15 -> 40)
+were implemented across video extraction and GUI inspection:
+- **Official 9-Specific AP**: **0.301240** (frozen validation benchmark preserved, target >= 0.295136).
+- **BANTAI 5-Category AP**: **0.496946** (new benchmark high, +0.004217 gain over D-107).
+- **Dense-Scene Distinct-Item NMS**: Distinct items (e.g. plastic wrapper on cardboard paper sheet) are preserved in dense scenes (>= 14 candidate queries) without containment NMS swallowing.
+- **Rule 7C Intra-Group Recall**: Recovers sub-threshold queries in [0.075, 0.10) with ancestor model support inside dense scenes, expanding heap coverage on video frames.
+- **Top-K Uncapped to 40**: Frame 10003 displays 37 visible detections (4 Garbage Piles, 1 Group of Individual Litter), recovering items #16-37 previously truncated by top-15 limit.
+- **Large Group Badge De-Cluttering**: In `group_of_individual_litter` regions with >= 6 items, badge text labels are drawn on top-4 items and suppressed for #5+, maintaining bounding box visibility.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs reduced to 58, clean images increased to 40 / 65 (61.5%).
+
 ## Current Stage 5 state through D-107
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

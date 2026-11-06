@@ -1,5 +1,26 @@
 # BANTAI Stage 4 handoff
 
+## D-108: Dense-Group Intra-Region Trash Recall Recovery, Distinct-Item NMS Preservation & Top-K Uncapping - 2026-11-06
+
+Owner authorization D-108 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Top-K Uncapping ($15 \to 40$)**:
+   - Expanded visible detection budget from 15 to 40 items across video extraction (`scripts/taco_stage5_video_extract_and_detect.py`), stored video showcase artifacts, and Visual Review GUI (`scripts/taco_stage5_visual_review.py`).
+   - On dense roadside video frames (e.g. Frame 10003), recovers trash items #16–37 that were previously truncated by the 15-item display limit.
+2. **Distinct-Item NMS Preservation (`scripts/taco_diagnostic_nms.py`)**:
+   - Relaxed containment NMS suppression (`iomin >= 0.80`) selectively in dense litter scenes (>= 14 queries at score >= 0.15) for distinct cross-category objects (Plastic vs. Paper, IoU < 0.25, area_ratio < 0.25).
+   - Prevents small distinct items (e.g. `qid=66` plastic wrapper) from being swallowed by large overlapping background cardboard sheets.
+3. **Dense-Scene Consensus Calibration (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - Dense scenes (>= 14 queries at score >= 0.15) are protected from anchorless diffuse margin suppression (Rule 5B) and outdoor foliage/shadow vetoes (Rule 7B2/7B9).
+   - Rule 7C recovers sub-threshold trash queries in [0.075, 0.10) when corroborated by ancestor models at IoU >= 0.30, boosting their score to >= 0.105.
+4. **GUI Large-Group De-Cluttering (`scripts/taco_stage5_visual_review.py`)**:
+   - In `group_of_individual_litter` regions with >= 6 items, badge text is rendered on the top-4 scoring members and suppressed for #5+, keeping bounding boxes visible while avoiding label overlap.
+5. **Verified Evidence**:
+   - Full 65 validation benchmark: 0 lost True Positives (`lost_tps == []`), AP9 = $0.301240$, AP5 increases to **$0.496946$** (+0.0042 gain), total FPs decrease to 58, clean images increase to 40 / 65 (61.5%).
+   - Frame 10003 visible items increase from 15 to 37 (4 Garbage Piles, 1 Group of Individual Litter).
+   - Unit tests: 6 passed in `tests/test_stage5_d108_dense_group_recall_recovery.py`; 94 passed in `tests/test_stage5_d*.py`.
+   - See [TACO Stage 5 D-108 Dense Group Recall Recovery Report](TACO_STAGE_5_D108_DENSE_GROUP_RECALL_RECOVERY.md).
+
 ## D-107: Two-Tier Hierarchical Spatial Grouping, Sachet Hazard Tie-Break & Video GUI De-Cluttering - 2026-11-06
 
 Owner authorization D-107 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

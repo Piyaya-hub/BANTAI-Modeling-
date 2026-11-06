@@ -283,7 +283,7 @@ def load_video_showcase(root=ROOT):
         return None
 
     manifest = strict_load(manifest_path)
-    if manifest.get("authorization") not in ("D-106", "D-107"):
+    if manifest.get("authorization") not in ("D-106", "D-107", "D-108"):
         return None
 
     showcase_sha = hashlib.sha256(showcase_path.read_bytes()).hexdigest()
@@ -717,7 +717,7 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
     }
 
 
-def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.10, top_k: int = 15, spatial_regions: list = None):
+def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.10, top_k: int = 40, spatial_regions: list = None):
     from matplotlib.patches import Rectangle
 
     w, h = image.size
@@ -736,6 +736,16 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
                 m_objs = [objects[i] for i in m_indices if i < len(objects)]
                 sorted_m = sorted(m_objs, key=lambda x: -x.get("score", 0.0))
                 for sub_obj in sorted_m[2:]:
+                    qid = sub_obj.get("fused_query_id", sub_obj.get("query_id"))
+                    if qid is not None:
+                        skip_badge_qids.add(qid)
+                    else:
+                        skip_badge_qids.add(id(sub_obj))
+            elif reg.get("category") == "group_of_individual_litter" and reg.get("item_count", 0) >= 6:
+                m_indices = reg.get("member_indices", [])
+                m_objs = [objects[i] for i in m_indices if i < len(objects)]
+                sorted_m = sorted(m_objs, key=lambda x: -x.get("score", 0.0))
+                for sub_obj in sorted_m[4:]:
                     qid = sub_obj.get("fused_query_id", sub_obj.get("query_id"))
                     if qid is not None:
                         skip_badge_qids.add(qid)
@@ -822,7 +832,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
 
 class Stage5ViewerGUI:
-    def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 15, prediction_source: str = PREDICTION_SOURCES[0], initial_filter: str | None = None):
+    def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 40, prediction_source: str = PREDICTION_SOURCES[0], initial_filter: str | None = None):
         configure_tcl_tk_environment()
         import tkinter as tk
         from tkinter import ttk
@@ -1133,6 +1143,8 @@ class Stage5ViewerGUI:
                 self.review_state_var.set(D095_CHAMPION_STATE)
             if hasattr(self, "details_notebook") and self.details_notebook is not None:
                 self.details_notebook.select(3)
+            if hasattr(self, "topk_var") and int(self.topk_var.get()) < 40:
+                self.topk_var.set(40)
         self.on_filter_change()
 
     def on_filter_change(self, event=None):
@@ -1608,7 +1620,7 @@ def main() -> int:
     parser.add_argument("--video-frames", action="store_true", help="Launch interactive TkAgg GUI viewer directly in Video Frames mode for Motion_Extract_Testing.mp4")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
-    parser.add_argument("--box-top-k", type=int, default=15, help="Maximum boxes drawn per panel (default: 15)")
+    parser.add_argument("--box-top-k", type=int, default=40, help="Maximum boxes drawn per panel (default: 40)")
     args = parser.parse_args()
 
     if not args.run_dir.is_dir():
