@@ -1,5 +1,35 @@
 # BANTAI Stage 4 handoff
 
+## D-099: Full 65-Image False-Positive Audit, Same-Family Cluster Consolidation & Ghost Suppression - 2026-11-06
+
+Owner authorization D-099 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors.
+
+1. **Problem & Diagnostic**:
+   - Visual inspection of validation Image 772 (`batch_2/000095.JPG`, GT: 1 `plastic_wrapper` `[1482, 711, 581, 536]`) showed 5-6 stacked/overlapping Plastic boxes (`Plastic 0.21, 0.19, 0.18, 0.15, 0.14, 0.12`) drawn on the single object because pairwise IoU between disjoint sub-folds is $< 0.50$.
+   - Visual inspection of validation Image 208 (`batch_11/000007.jpg`, GT: 1 `styrofoam_piece` `[1180, 2191, 505, 806]`) showed the true object detected at `Plastic 0.34`, but a marginal false positive (`q2: styrofoam_piece 0.14`) appeared at the top image boundary ($y = 2.6$, doorframe/wall corner, $sc = 0.1362$, $sc / \text{max\_sc} = 0.396 < 0.45$, $\text{dist} = 2303.1 > 800$px).
+2. **Algorithmic Formulation (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - **Rule 6B (Sub-Dominant Marginal Macro Ghost Filter)**: When a dominant macro object ($s_M \ge 0.28$, category $1..8$) is present on the scene, any marginal plastic candidate with $s_q < 0.15$, $s_q / s_M < 0.45$, touching the image boundary ($x \le 5 \lor y \le 5 \lor x+w \ge W-5 \lor y+h \ge H-5$), with $\text{norm\_area} < 0.05$ and distance $> 800$px from the dominant object is suppressed. Suppresses 3 pure boundary false positives (`img 208: q2`, `img 806: q4`, `img 1076: q23`), all with $\text{IoU} = 0.000$ to GT.
+   - **Rule 6A (Same-Family Object-Cluster Consolidation)**: When a macro plastic query encloses $\ge 2$ other plastic queries with $\text{IoMin} \ge 0.80$ and $\text{area} < 0.60 \cdot \text{area}_{\text{macro}}$, they form an object cluster. Lower-scoring fragments with $s_q < 0.22$ are consolidated into the top-scoring query in the cluster ($q^*$). Suppresses 18 duplicate fragment queries across 4 images (including 7 on Image 772).
+3. **Full 65-Image Validation Results**:
+   - **9-Specific AP**: Increases `0.241505 -> 0.242458` (`+0.000953`).
+   - **BANTAI 5-Category AP**: Increases `0.418866 -> 0.419057` (`+0.000191`).
+   - **Fold A**: 9-spec increases `0.155527 -> 0.157449` (`+0.001922`); 5-cat increases `0.273442 -> 0.273622` (`+0.000180`).
+   - **Fold B**: 9-spec preserved at `0.338271`; 5-cat increases `0.601730 -> 0.601927` (`+0.000197`).
+   - **Zero True Positives Lost**: Exactly 0 true positives lost in 9-specific (`lost_tps == []`).
+   - **`styrofoam_piece` AP**: Strictly preserved at `0.148515`.
+   - **Zero Per-Class Regressions**: Every single class across 0..8 either improved or held.
+4. **GUI Default NMS Update**:
+   - `scripts/taco_stage5_visual_review.py` line 777 updated from `'agnostic_iou_0.50'` to `'agnostic_iou_0.50_containment_0.80'`.
+5. **Showcase Visual Verification**:
+   - Image 1: Exactly 2 Paper boxes (`Paper 0.355`, `Paper 0.194`), 0 clutter.
+   - Image 165: Exactly 1 Potentially Hazardous box (`0.282`), 0 beach clutter.
+   - Image 208: Exactly 1 Plastic box (`0.344`), 0 boundary ghost.
+   - Image 772: Exactly 1 Plastic box (`0.211`), 0 stacked fragments.
+   - Image 777: Exactly 1 Plastic box (`0.323`) + 4 Potentially Hazardous cigarette butts, 0 paper confusion.
+6. **Tests & Verification**:
+   - `tests/test_stage5_d099_cluster_and_ghost_suppression.py`: 4 tests passed.
+   - `scripts/verify_stage4_guarded.py`: 378 tests (362 passed, 0 failures, 0 errors, 16 skipped training fixtures).
+
 ## D-098: Unmatched-Query Background Hard-Negative Suppression & False-Positive Clutter Elimination - 2026-11-06
 
 Owner authorization D-098 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred; file-system audithook enforced.

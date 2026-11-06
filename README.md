@@ -1,23 +1,23 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-098
+## Current Stage 5 state through D-099
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-098, unmatched-query background
-hard-negative suppression ($\mathcal{L}_{\text{bg\_hn}}$ on top-25 background queries and top-10 per-class
-background queries) and inference-time Rule 5 cross-family diffuse clutter filtering were implemented.
-While D-098's $\lambda_{\text{bg\_hn}} = 12.0$ training set a repo-best single-model `plastic_film` AP of
-**0.054753**, it wiped out `styrofoam_piece` (`AP = 0.000000`, lowering raw AP to `0.224818`).
-However, D-098's Rule 5 is model-agnostic; applying calibrated Rule 5 to **`D-095 Champion`**
-(`soup_d095best_d093champ_5050`) fully preserves `styrofoam_piece` at **0.148515**, achieving
-**0.241505** 9-Specific AP and **0.418866** BANTAI 5-Category AP with zero true positives lost across all
-65 validation images (`lost_tps == []`) and monotonic improvement across 2-fold cross-validation.
-Image 165 (`000064.jpg`, 1 GT cigarette butt with all 6 coastal beach false-positive clutter boxes eliminated),
-Image 1 (`000008.jpg`, 3 clean Paper boxes, zero plastic or cigarette clutter), and
-Image 777 (`000084.JPG`, 1 Plastic bottle + 4 hazardous cigarette butts, zero paper clutter)
-are all simultaneously resolved. `D-095 Champion + D-098 Scene Consensus (Rules 1-5)` is therefore
-retained as the default single-scale champion in `scripts/taco_stage5_visual_review.py`, with D-098
-selectable for comparative review.
+validation / 65-image test memberships frozen. Under D-099, same-family object-cluster
+consolidation (Rule 6A) and sub-dominant marginal macro ghost filtering (Rule 6B) were
+implemented in `scripts/taco_stage5_consensus_tiebreak.py` and GUI default NMS was updated
+to `agnostic_iou_0.50_containment_0.80` in `scripts/taco_stage5_visual_review.py`.
+Applying Rules 1-6 to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) strictly improves
+9-Specific AP to **0.242458** (`+0.000953` over baseline 0.241505) and BANTAI 5-Category AP to
+**0.419057** (`+0.000191` over baseline 0.418866), with `styrofoam_piece` AP strictly preserved
+at **0.148515**, zero true positives lost across all 65 images (`lost_tps == []`), and monotonic
+improvement across both Fold A and Fold B.
+All 5 showcase validation images are simultaneously clean and verified:
+- Image 1 (`000008.jpg`): exactly 2 Paper boxes (`Paper 0.355`, `Paper 0.194`), zero clutter.
+- Image 165 (`000064.jpg`): exactly 1 Potentially Hazardous box (`0.282`), zero beach clutter.
+- Image 208 (`000007.jpg`): exactly 1 Plastic box (`0.344`), top-border ghost (`0.136`) eliminated.
+- Image 772 (`000095.JPG`): exactly 1 Plastic box (`0.211`), 5 stacked sub-boxes consolidated.
+- Image 777 (`000084.JPG`): exactly 1 Plastic box (`0.323`) + 4 Potentially Hazardous cigarette butts, zero paper confusion.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -51,6 +51,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-096 | Scene-Consensus Regression Fix (Image 777), 2-Fold Held-Out Validation, D-095 Report Correction | **0.241895** (single-model cautious consensus) / **0.262348** (multi-scale) | **0.414205** (single-model) / **0.438939** (multi-scale) |
 | D-097 | Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Visual Resolution | **0.242914** (single-model consensus) / **0.261829** (multi-scale) | **0.420794** (single-model) / **0.437764** (multi-scale) |
 | D-098 | Unmatched Background Suppression (D098: 0.224818 raw, styrofoam 0.0) & Rule 5 Consensus | **0.241505** (D095 champ + Rule 5) / **0.261829** (multi-scale) | **0.418866** (D095 champ + Rule 5) / **0.437764** (multi-scale) |
+| D-099 | Same-Family Cluster Consolidation (Rule 6A, Image 772) & Ghost Suppression (Rule 6B, Image 208) | **0.242458** (single-model consensus) | **0.419057** (5-Category consensus) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original

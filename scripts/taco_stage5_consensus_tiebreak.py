@@ -119,10 +119,12 @@ def apply_scene_consensus(
     enable_rule3=True,
     enable_rule4=True,
     enable_rule5=True,
+    enable_rule6=True,
     enable_scene_paper_coherence=None,
     enable_interior_subbox_suppression=None,
     enable_marginal_ghost_suppression=None,
     enable_diffuse_clutter_filter=None,
+    enable_cluster_and_ghost_suppression=None,
     return_diagnostics=False,
 ):
     """Apply cautious bidirectional scene-level consensus and interior wrong-class sub-box suppression.
@@ -155,6 +157,9 @@ def apply_scene_consensus(
       - 5A: Sub-dominant isolated hazard speckle on scenes with exactly one isolated hazard anchor (dist > 400px, sc < 0.20, norm_area < 0.0006).
       - 5B: Low-confidence multi-family diffuse clutter (sc < 0.16) with margin <= 0.015 between hazard/non-hazard or plastic/paper.
       - 5C: Natural mineral / shell texture on hazard-dominated scenes without plastic/paper anchors (p_paper >= 0.20 and p_paper/p_plastic >= 0.70, norm_area < 0.01).
+    Rule 6: Same-family cluster consolidation (6A) and sub-dominant marginal macro ghost filter (6B):
+      - 6A: Same-family object-cluster consolidation for plastic objects (enclosing macro query with >= 2 contained fragments iomin >= 0.80, suppresses lower-scoring fragments < 0.22).
+      - 6B: Sub-dominant marginal macro ghost filter (dominant macro detection >= 0.28, candidate sc < 0.15, sc / max_sc < 0.45, touches border, dist > 800px, norm_area < 0.05).
     """
     if enable_scene_paper_coherence is not None:
         enable_rule2 = bool(enable_scene_paper_coherence)
@@ -164,6 +169,8 @@ def apply_scene_consensus(
         enable_rule4 = bool(enable_marginal_ghost_suppression)
     if enable_diffuse_clutter_filter is not None:
         enable_rule5 = bool(enable_diffuse_clutter_filter)
+    if enable_cluster_and_ghost_suppression is not None:
+        enable_rule6 = bool(enable_cluster_and_ghost_suppression)
 
     total_img_area = None
     if image_width is not None and image_height is not None and image_width > 0 and image_height > 0:
@@ -181,6 +188,10 @@ def apply_scene_consensus(
         "rule2_count": 0,
         "rule3_count": 0,
         "rule4_count": 0,
+        "rule5_count": 0,
+        "rule6_count": 0,
+        "rule6a_count": 0,
+        "rule6b_count": 0,
         "anchors_found": 0,
         "logs": [],
     }
@@ -264,7 +275,7 @@ def apply_scene_consensus(
     diag["is_single_hazard_scene"] = is_single_hazard_scene
 
     # Step 3: Rule 2, Rule 3, Rule 4, and Rule 5
-    output = []
+    stage2_rows = []
     rule2_changed_qids = set()
     rule3_suppressed_qids = set()
     rule4_suppressed_qids = set()
@@ -454,10 +465,100 @@ def apply_scene_consensus(
                         })
 
         if not suppress:
-            output.append(r_copy)
+            stage2_rows.append(r_copy)
+
+    # Step 4: Rule 6 (Cluster consolidation and sub-dominant marginal ghost suppression)
+    rule6a_suppressed_qids = set()
+    rule6b_suppressed_qids = set()
+    rule6_suppressed_qids = set()
+
+    if enable_rule6:
+        passing_stage2 = [r for r in stage2_rows if r.get("score", 0.0) >= 0.10]
+
+        # Rule 6B: Sub-dominant marginal macro ghost filter
+        macro_cands = [r for r in passing_stage2 if r.get("score", 0.0) >= 0.28 and r.get("category_id") in range(1, 9)]
+        if macro_cands:
+            macro_top = max(macro_cands, key=lambda x: x.get("score", 0.0))
+            mx = macro_top["bbox"][0] + 0.5 * macro_top["bbox"][2]
+            my = macro_top["bbox"][1] + 0.5 * macro_top["bbox"][3]
+            max_sc = macro_top["score"]
+
+            for r in passing_stage2:
+                qid = r.get("fused_query_id", r.get("query_id"))
+                sc = r.get("score", 0.0)
+                cat = r.get("category_id")
+                if cat in PLASTIC_SUBTYPE_IDS and sc < 0.15 and (sc / max_sc) < 0.45:
+                    bx, by, bw, bh = r["bbox"]
+                    norm_area = (bw * bh) / total_img_area if total_img_area else 0.0
+                    touches_border = (bx <= 5.0 or by <= 5.0 or
+                                      (image_width is not None and (bx + bw) >= image_width - 5.0) or
+                                      (image_height is not None and (by + bh) >= image_height - 5.0))
+                    if touches_border and norm_area < 0.05:
+                        cx = bx + 0.5 * bw
+                        cy = by + 0.5 * bh
+                        dist = math.hypot(cx - mx, cy - my)
+                        if dist > 800.0:
+                            rule6b_suppressed_qids.add(qid)
+                            rule6_suppressed_qids.add(qid)
+                            diag["rule6_count"] += 1
+                            diag["rule6b_count"] += 1
+                            diag["logs"].append({
+                                "image_id": image_id,
+                                "qid": qid,
+                                "rule": "Rule 6B (sub-dominant marginal macro ghost)",
+                                "old_cat": cat,
+                                "new_cat": None,
+                                "old_score": sc,
+                                "reason": f"marginal macro ghost sc={sc:.3f} < 0.15, ratio={sc/max_sc:.3f}<0.45, touches border, dist={dist:.1f}>800px from dominant detection",
+                            })
+
+        # Rule 6A: Same-family object-cluster consolidation
+        plastic_queries = [
+            r for r in passing_stage2
+            if r.get("category_id") in PLASTIC_SUBTYPE_IDS and r.get("fused_query_id", r.get("query_id")) not in rule6b_suppressed_qids
+        ]
+
+        # Find enclosing macro queries (queries enclosing >= 2 other plastic queries with iomin >= 0.80)
+        for mq in plastic_queries:
+            m_box = mq["bbox"]
+            m_area = m_box[2] * m_box[3]
+            contained = []
+            for sq in plastic_queries:
+                if sq.get("fused_query_id", sq.get("query_id")) == mq.get("fused_query_id", mq.get("query_id")):
+                    continue
+                inter, a_s, a_m = _compute_inter_and_areas(sq["bbox"], m_box)
+                iomin = inter / a_s if a_s > 0 else 0.0
+                if iomin >= 0.80 and a_s < 0.60 * m_area:
+                    contained.append(sq)
+
+            if len(contained) >= 2:
+                cluster = [mq] + contained
+                top_q = max(cluster, key=lambda x: x.get("score", 0.0))
+                top_qid = top_q.get("fused_query_id", top_q.get("query_id"))
+                for q in cluster:
+                    qid = q.get("fused_query_id", q.get("query_id"))
+                    if qid != top_qid and q.get("score", 0.0) < 0.22:
+                        if qid not in rule6_suppressed_qids:
+                            rule6a_suppressed_qids.add(qid)
+                            rule6_suppressed_qids.add(qid)
+                            diag["rule6_count"] += 1
+                            diag["rule6a_count"] += 1
+                            diag["logs"].append({
+                                "image_id": image_id,
+                                "qid": qid,
+                                "rule": "Rule 6A (same-family cluster consolidation)",
+                                "old_cat": q.get("category_id"),
+                                "new_cat": None,
+                                "old_score": q.get("score"),
+                                "reason": f"nested cluster fragment sc={q.get('score'):.3f}<0.22 consolidated into top query q{top_qid} (sc={top_q.get('score'):.3f})",
+                            })
+
+    output = [r for r in stage2_rows if r.get("fused_query_id", r.get("query_id")) not in rule6_suppressed_qids]
 
     all_changed = sorted(rule1_changed_qids | rule1b_changed_qids | rule2_changed_qids)
-    all_suppressed = sorted(rule3_suppressed_qids | rule4_suppressed_qids | rule5_suppressed_qids)
+    all_suppressed = sorted(
+        rule3_suppressed_qids | rule4_suppressed_qids | rule5_suppressed_qids | rule6_suppressed_qids
+    )
 
     if return_diagnostics:
         return output, all_changed, all_suppressed, diag

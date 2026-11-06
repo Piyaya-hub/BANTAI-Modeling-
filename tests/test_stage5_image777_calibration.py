@@ -39,7 +39,7 @@ class Stage5Image777CalibrationTests(unittest.TestCase):
             "agnostic_iou_0.50", "agnostic_iou_0.50_containment_0.80"))
         for marker in ("nms_var", "threshold_mode_var", "visible_rows", "THRESHOLD_CHOICES"):
             self.assertIn(marker, source)
-        self.assertIn("value='agnostic_iou_0.50'", source)
+        self.assertIn("value='agnostic_iou_0.50_containment_0.80'", source)
 
 
 if __name__ == "__main__":

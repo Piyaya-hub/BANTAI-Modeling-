@@ -774,7 +774,7 @@ class Stage5ViewerGUI:
         topk_spin.pack(side="left", padx=2)
         topk_spin.bind("<Return>", lambda e: self.update_plots())
 
-        self.nms_var = tk.StringVar(value='agnostic_iou_0.50')
+        self.nms_var = tk.StringVar(value='agnostic_iou_0.50_containment_0.80')
         nms_cb = ttk.Combobox(ctrl_frame, textvariable=self.nms_var,
             values=NMS_CHOICES, state="readonly", width=34)
         nms_cb.pack(side="left", padx=4)
