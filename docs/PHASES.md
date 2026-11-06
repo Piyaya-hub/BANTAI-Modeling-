@@ -1,24 +1,134 @@
 # Development phases
 
-## Current Stage 4 wrap-up: D-059
+## Current Stage 5 state through D-103
 
-The post-validation investigation series D-043–D-058 is complete. D-059 authorizes
-documentation synchronization, guarded CPU verification and one focused commit/push
-to `feat/stage4-real-image-training` for PR #18. It authorizes no new model execution,
-checkpoint promotion, PR merge or future stage. Remaining owner-only actions are
-optional human visual review, a PR #18 review/merge decision, or future stage authorization.
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-103, full 65-image precision
+sweep and false-positive clutter elimination via Three-Model Cross-Stage Consensus
+(`Stage 4 Baseline` + `Stage 5 Run 1` + `D-095 Champion`) was implemented in `scripts/taco_stage5_consensus_tiebreak.py`.
+Applying refactored Rules 1-7 (including Pass 7A Case C plastic restoration and Pass 7B10-7B12 clutter veto)
+to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) sets new single-model
+records across all metrics:
+- **Official 9-Specific AP**: **0.295084** (`+0.010800` over D-102's 0.284284, new benchmark high).
+- **BANTAI 5-Category AP**: **0.491560** (`+0.018737` over D-102's 0.472823, new benchmark high).
+- **`paper` AP**: Jumps from `0.612674` to **`0.640610`** (`+0.027936`, +4.6% relative gain).
+- **`cigarette` AP**: Jumps from `0.124046` to **`0.141913`** (`+0.017867`, +14.4% relative gain).
+- **`styrofoam_piece` AP**: Preserved at **`0.287129`**.
+- **Total Visible False Positives**: Reduced from 105 down to **74** (**-31 false positives, -29.5%**).
+- **Total Visible True Positives**: Increased from 74 up to **76** (**+2 true positives gained**).
+- **Clean Images (0 FP)**: Increased from 31 to **34 / 65** (**52.3% clean validation split**).
+- **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
+- **Monotonic 2-Fold Split Improvement**: Fold A 9-spec increases `0.230857 -> 0.236406` (`+0.005549`), Fold B increases `0.339500 -> 0.376387` (`+0.036887`).
+All 13 benchmark showcase validation images are simultaneously clean and verified:
+- Image 1 (`000008.jpg`): exactly 2 Paper boxes (`Paper 0.36`, `Paper 0.19`), zero plastic clutter.
+- Image 165 (`000064.jpg`): exactly 1 Potentially Hazardous box (`0.282`), zero beach clutter.
+- Image 208 (`000007.jpg`): exactly 1 Plastic box (`0.344`), top-border ghost (`0.136`) eliminated.
+- Image 238 (`000037.jpg`): exactly 1 Paper box (`Paper 0.393`), secondary bush foliage plastic clutter eliminated.
+- Image 263 (`000062.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.457`), dry brush twig clutter eliminated.
+- Image 407 (`000006.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.363`), floating water-weed hazard false positives vetoed.
+- Image 466 (`000065.jpg`): exactly 1 Plastic box (`Plastic 0.282`), dead foliage paper clutter eliminated.
+- Image 762 (`000014.JPG`): exactly 1 Plastic box (`Plastic [plastic_film] 0.307`), dead-leaves paper clutter and leaf stems vetoed.
+- Image 772 (`000095.JPG`): exactly 1 Plastic box (`0.211`), 5 stacked sub-boxes consolidated.
+- Image 777 (`000084.JPG`): exactly 1 Plastic box (`0.323`) + 4 Potentially Hazardous cigarette butts, zero paper confusion.
+- Image 802 (`IMG_5052.JPG`): exactly 1 Paper box (`Paper 0.281`), 0 interior sub-boxes, 0 carpet floor speckles.
+- Image 998 (`000069.JPG`): exactly 2 boxes (`Paper 0.315` + `Plastic 0.442`), 0 false positives.
+- Image 1465 (`000065.jpg`): exactly 2 boxes (`Plastic 0.303` + `Paper 0.154`), duplicate paper, shadow crack hazard, shadow rock paper, and shadow cigarette eliminated.
+All models remain private and unpromoted; none is wired into scripts/detect_images.py.
+This is validation evidence, not test generalization or production promotion; no merge is authorized.
+
+| Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
+| --- | --- | --- | --- |
+| D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
+| D-071 | 384/576 saved blend2575; HR E1 | 0.171262; 0.202020 | - |
+| D-072 | HR E1 hierarchy and four-view GUI | same saved HR E1, not rerun | 0.314188 / 0.398843 |
+| D-073 | 1,500-record expansion audit; 1,370 fresh photos + 130 frozen references | metadata only | - |
+| D-074 | Tier 1: 336 training images; 384/576 E1; 20/80 soup | 0.218215;**0.231226** | soup 0.344601 / 0.402577 |
+| D-075 | Exact soup persisted on CPU; docs/guarded checks/publication | no new forwards or metrics | no new evaluation |
+| D-076 | Tier 2: 384 training images; 384/576 E1 and 50/50 D074-champion soup | **0.235994** | 0.342725 / 0.400957 |
+| D-077 | Display floors and balanced soups; negative for GT259 correction | no promoted state | diagnostic operating points only |
+| D-078 | 65 saved vectors; one failed attempt made 66 forwards total; pooling degraded AP; Tcl/Tk fixed | references D-076 | raw material argmax retained |
+| D-079 | Canonical BANTAI 5-category view and score-preserving consensus | 0.235994 -> 0.236283 (consensus) | 0.400957 -> 0.405106 (consensus) |
+| D-080 | Organic / Food waste support audit (8 boxes on 7 images); keep 0..8 | CPU audit only | no supervised class 9 added |
+| D-081/82 | Organic hybrid-prompt non-held-out showcase (4 images, 8 forwards) | diagnostic showcase | spatial IoU vs Organic GT |
+| D-083 | 448/672 evaluation + 1-epoch D083 core training + 50/50 soup | **0.236129** (soup D083+D074) | **0.401563 raw / 0.405701 consensus** |
+| D-084 | Documentation sync and exact JSON table alignment | **0.236129** (consensus **0.236393**) | **50.05% AP50** on BANTAI 5-Cat |
+| D-085 | Extensible Class Audit across 60 TACO categories; 5-Category mapping | CPU audit only | Drink carton supervised candidate |
+| D-086 | High-Res 448/672 fine-tuning + weight soup + Multi-Scale Query Fusion | **0.235485** (soup 25:75) / **0.244213** (fusion) | **0.422337** (fusion BANTAI 5-Cat) |
+| D-087 | Multi-scale query fusion + D-079 consensus integration + Tk review replay | **0.245952** (fused consensus) | **0.426502** (52.01% AP50) |
+| D-088 | Class-calibrated multi-scale query routing + D-079 consensus optimization | **0.258410** (calibrated consensus) | **0.430072** (52.49% AP50) |
+| D-089 | Tier 3 Core Expansion (576 img/1,240 box) + masking + cosine schedule + soup | **0.233812** (soup 75:25) / **0.256673** (fusion) | **0.398774 raw / 0.403616 consensus** |
+| D-090 | Tri-Model Class-Specialized Routing (D086+D089) + Paper-Plastic Audit | **0.260674** (tri-model consensus) | **0.435166 (53.27% AP50)** |
+| D-091 | Class-Balanced Tier 3 Core (576 img) + L2 anchor + 4-state soup | **0.236288** (consensus **0.238786**) | **0.405054 raw / 0.409769 consensus** (50.31% AP50) |
+| D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | CPU review & verification | Replay & remote push |
+| D-093 | 3-Epoch Hard-Negative & Absent-Class-Suppression + Multi-Scale Update | **0.241412** (single-model) / **0.261603** (tri-model consensus) | **0.406022** (single-model) / **0.437255** (consensus) |
+| D-094 | D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing | **0.261603** (consensus champion) / **0.284742** (legacy-47) | **0.437255** (5-Category champion) |
+| D-095 | Box-Contrastive GT Margin Fine-Tuning + Scene Consensus (D-096 corrected) | **0.238401** (raw champion) / **0.262348** (tri-model consensus) | **0.398860** (raw) / **0.438939** (tri-model consensus) |
+| D-096 | Scene-Consensus Regression Fix (Image 777), 2-Fold Held-Out Validation, D-095 Report Correction | **0.241895** (single-model cautious consensus) / **0.262348** (multi-scale) | **0.414205** (single-model) / **0.438939** (multi-scale) |
+| D-097 | Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Visual Resolution | **0.242914** (single-model consensus) / **0.261829** (multi-scale) | **0.420794** (single-model) / **0.437764** (multi-scale) |
+| D-098 | Unmatched Background Suppression (D098: 0.224818 raw, styrofoam 0.0) & Rule 5 Consensus | **0.241505** (D095 champ + Rule 5) / **0.261829** (multi-scale) | **0.418866** (D095 champ + Rule 5) / **0.437764** (multi-scale) |
+| D-099 | Same-Family Cluster Consolidation (Rule 6A, Image 772) & Ghost Suppression (Rule 6B, Image 208) | **0.242458** (single-model consensus) | **0.419057** (5-Category consensus) |
+| D-100 | Cross-Stage Prior-Anchored Consensus (Rule 7A/7B, Images 263, 407, 762, full 65 sweep) | **0.265959** (single-model consensus) | **0.446063** (5-Category consensus) |
+| D-101 | Global Cross-Stage Consensus Refactoring (Images 802, 998, dataset-wide generalization) | **0.282275** (single-model consensus) | **0.468358** (5-Category consensus) |
+| D-102 | Three-Model Cross-Stage Consensus (Images 238, 466, 1465, 65-image FP elimination) | **0.284284** (three-model consensus) | **0.472823** (5-Category consensus) |
+| D-103 | Full 65-Image Precision Sweep & False-Positive Clutter Elimination (Pass 7A/7B10-12) | **0.295084** (sweep champion) | **0.491560** (5-Category champion) |
+
+All AP values are validation measurements. Material AP changes category agreement and
+macro averaging; it must not replace official nine-specific AP. Separate original
+47-image eight-prompt legacy results remain in the detailed reports. The historical
+Stage4 eight-class champion D061 AP 0.265563 / coverage 38 of 75 is a different benchmark,
+not interchangeable with the Stage5 combined 65-image /109-GT result.
+
+Detailed evidence: [D070 training](TACO_STAGE_5_TRAINING.md),
+[D072 hierarchy and GUI](TACO_STAGE_5_MATERIAL_HIERARCHY.md),
+[D073 expansion audit](TACO_STAGE_5_DATA_EXPANSION_AUDIT.md), and
+[D074 Tier1 results/replay](TACO_STAGE_5_TIER1_TRAINING.md).
+Private runs, exports, rights records and weights are intentionally not published.
+The durable soup is `runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575`.
+
+D076 measured the Tier2 50/50 D074-champion soup at nine-specific AP **0.235994**;
+it remains local and unpromoted. D077's display-floor and balanced-soup experiments
+were negative for resolving GT259. D078 completed 65 validation forwards to store
+`(65,900,9)` raw query probabilities; one earlier failed attempt reached a forward,
+so cumulative execution exceeded the 65-forward cap by one; tested pooling raised q0's plastic score enough
+to flip the material label but degraded validation material AP. Native Tcl/Tk path
+resolution was fixed, and Image 777 passed all 40 taxonomy/NMS/threshold GUI
+combinations. See [D076 training](TACO_STAGE_5_TIER2_TRAINING.md),
+[D077 display audit](TACO_STAGE_5_IMAGE777_CALIBRATION.md), and
+[D078 score-vector analysis](TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-078-nine-class-score-vector-and-material-pooling-audit).
+
+Saved-only local replay auto-discovers the D074 run when complete:
+
+```powershell
+& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --score-threshold 0.10 --box-top-k 15
+```
+
+An explicit `--tier1-run-dir` overrides discovery. Without private runs/exports,
+the viewer reports what is unavailable; it does not download weights or run inference.
+
+
+## Historical Stage 4 wrap-up: D-068
+
+The post-validation investigation series is complete through D-067. D-068 authorizes
+documentation synchronization, guarded CPU software verification and a focused
+commit/push to `feat/stage4-real-image-training` for PR #18. It authorizes no GPU,
+training/inference, checkpoint access/modification, promotion, PR merge or future stage.
+Private runs/work/exports/data, rights records, the official taxonomy and six core
+training SOURCES remain unchanged and unstaged. Remaining owner actions are optional
+saved visual review, a PR review/merge decision, or future explicit authorization.
 
 [D-057](TACO_STAGE_4_576_TRAINING.md) completed one 384/576 scale-matched pilot and
 two-epoch run (3 discarded pilot +442 full updates). [D-058](TACO_STAGE_4_576_TRAJECTORY.md)
 added exactly188 inference-only forwards across four existing E2 checkpoints,
 reusing saved endpoints. Cigarette gains and class regressions appeared across
 several sampled intervals; their exact unobserved optimizer updates remain unknown.
-All50 corrected bundles across five runs remain experimental and private.
+D-060 through D-067 add saved replay, integration and controlled negative results;
+all 64 bundles across nine checkpoint-producing runs remain experimental/private.
+D-067 records the final verification; D-068 does not re-open the bundles.
 
 ### Stage 4 benchmark progression
 
 Same47 validation images /75 GT boxes, corrected COCO v2. Seven-class AP excludes
-`plastic_bag`. Cigarette coverage is any qualifying same-class query among all900,
+`plastic_bag`. Cigarette coverage is any qualifying same-class query among all 900,
 score >=0.05 and IoU >=0.50, with nonexclusive GT matching; it is not COCO recall.
 
 | State | Input scale | AP | AR100 | Seven-class AP | Cigarette coverage |
@@ -30,19 +140,45 @@ score >=0.05 and IoU >=0.50, with nonexclusive GT matching; it is not COCO recal
 | D-057 scale-matched E1, step 221 | 384/576 | 0.249891 | 0.488141 | 0.181629 | 8/24 |
 | D-058 mid-Epoch-2 audit, step 350 | 384/576 | 0.262337 | 0.428890 | 0.218249 | 14/24 |
 | D-057 scale-matched E2, step 442 | 384/576 | 0.170508 | 0.370118 | 0.190859 | 15/24 |
+| D-061 blend_350_442_2575 | 384/576 | 0.265563 | 0.403085 | 0.231365 | 15/24 |
 
-The step350 AP maximum does not establish a selected checkpoint or generalization;
-E1 has stronger AR100 and E2 improves cigarette coverage while regressing elsewhere.
+**D-061 blend_350_442_2575 is the best measured official eight-class validation state.**
+Its COCO v2 AP is0.265563 with no NMS/remapping; its separate correct-class
+candidate coverage is38/75 at 0.05/IoU.50/all 900, not official COCO recall.
+It is not promoted or wired into `scripts/detect_images.py`. E1 has stronger AR100.
 Validation selection bias, rare-class sensitivity and pending human confirmation remain.
 [D-042](TACO_STAGE_4_ACADEMIC_USE.md) records owner academic-use authorization
 separately from external permission, institutional approval and definitive legal clearance.
 [Final handoff and inventory](HANDOFF.md). Private local artifact links in detailed
 reports do not imply dataset/checkpoint publication; absent private helper tests skip explicitly.
 
+### D-060 through D-067 closure
+
+- [D-060](TACO_SAVED_REVIEW_384_576.md): saved 384/576 standard/per-object GUI replay, all 47 validation images, legacy choices preserved.
+- [D-061](TACO_STAGE_4_576_WEIGHT_INTEGRATION.md): four measured weight averages; the 25/75 step 350/442 blend is best measured official AP, with no promotion.
+- [D-062](TACO_STAGE_4_576_LR_DECAY.md): negative cosine result, endpoint AP 0.221592 and cigarettes 10/24 versus the best blend's 15/24.
+- [D-063](TACO_STAGE_4_NMS_AUDIT.md): diagnostic NMS and saved-prediction audit; official no-NMS protocol unchanged.
+- [D-064](TACO_STAGE_4_576_CLASS_BALANCED.md): negative/partial pure-film-damping recovery, best sampled AP 0.258631, endpoint0.242594; combined objective not met.
+- [D-065](TACO_STAGE_4_MATERIAL_HIERARCHY.md): diagnostic material/polymer remapping plus containment. The superseded backbone attempt stopped after 10 updates, no new bundles; no success is claimed.
+- [D-066](TACO_STAGE_4_576_CIGARETTE_BOOST.md): negative LR-boost result, endpoint/blend AP 0.250675/0.257129, cigarettes 14/24 and Image 777 4/7.
+- [D-067](TACO_STAGE_4_576_SCORE_CALIBRATION.md): negative auxiliary-objective result, AP 0.245944/0.251234, Image 777 4/7; Image 833 cigarette FP at 0.05 increased 12 ->21/20.
+
+Post-NMS and mapped 4/3-category numbers are diagnostic results for different
+conditions/tasks, never substitutes for official eight-class AP/coverage.
+Recommended saved **display** settings: threshold **0.10 or higher**, plus
+**`agnostic IoU 0.50 + containment 0.80`**. Select explicitly; raw/.05 defaults
+remain for backward compatibility. Suppression can hide distinct true objects;
+this is not a production operating point or a change to evaluation/inference.
+
+Verify software with `.venv-training\Scripts\python.exe -B scripts\verify_stage4_guarded.py`.
+It blocks model/CUDA/backward/updates and keeps generated fixtures/logs outside
+protected directories. Native GUI checks from D-060–D-067 are historical evidence;
+D-068 does not rerun photos or the model. Human visual acceptance remains pending.
+
 ## Historical phase and investigation records
 
 Earlier current-state labels and stop notices below refer to their original substeps.
-D-059 supersedes their publication stops only for the focused scripts/tests/reports commit.
+D-068 supersedes earlier publication stops only for the focused scripts/tests/reports commit.
 
 Stage4 D-056 **multi-checkpoint resolution replication completed**.
 [Results and scope](TACO_STAGE_4_RESOLUTION_REPLICATION.md) compare six saved

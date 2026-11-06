@@ -85,7 +85,7 @@ def prepare_review(evaluation_record,baseline_record,historical_run,dataset,righ
     return ds,models,record,folder
 
 
-def show_review(dataset,models,record,folder,image_id=None):
+def show_review(dataset,models,record,folder,image_id=None,box_top_k=None):
     """Run the existing viewer and persist its separate display outcome."""
     from .taco_comparison_gui import ComparisonWindow
     if record.get('per_object_diagnostic'):
@@ -98,6 +98,10 @@ def show_review(dataset,models,record,folder,image_id=None):
         if image_id is not None and image_id not in {r['id'] for r in dataset.images}:
             raise ValueError(f'Image ID {image_id} is not in the validation split')
         window=ComparisonWindow(dataset,models,record['representative_sample'],folder)
+        if box_top_k is not None:
+            if type(box_top_k) is not int or not 1<=box_top_k<=100:raise ValueError('Box top K must be 1..100')
+            window.top_k.set(str(box_top_k))
+            record['initial_box_top_k']=box_top_k
         if 'saved_run_choice' in record:
             window.set_saved_configuration(record['saved_run_choice'],record['saved_configuration'])
         if image_id is not None:
@@ -134,6 +138,7 @@ def main(argv=None):
     p.add_argument('--saved-review',type=Path,help='Explicit cross-seed saved-review manifest; leaves historical defaults unchanged')
     p.add_argument('--run-choice',help='Run key from --saved-review (seed and learning rate)')
     p.add_argument('--per-object',action='store_true',help='Explicit saved-review GUI: inspect each GT using all eligible saved queries')
+    p.add_argument('--box-top-k',type=int,help='Initial GUI box cap, 1..100; diagnostic drawing only')
     args=p.parse_args(argv)
     if args.per_object and not (args.gui and args.saved_review):
         p.error('--per-object requires --gui and --saved-review')
@@ -141,6 +146,8 @@ def main(argv=None):
         p.error('--saved-review and --run-choice must be used together')
     if args.image_id is not None and not args.gui:
         p.error('--image-id requires --gui')
+    if args.box_top_k is not None and (not args.gui or not 1<=args.box_top_k<=100):
+        p.error('--box-top-k requires --gui and a value in 1..100')
     if args.saved_review:
         from .taco_saved_review import load_saved_review
         dataset,models,record=load_saved_review(args.saved_review,args.run_choice,args.dataset,args.rights)
@@ -149,12 +156,16 @@ def main(argv=None):
         atomic_json(folder/'analysis.json',record)
         print(folder,flush=True)
         print('Verified saved run: '+args.run_choice+'; no new inference or training.',flush=True)
-        if args.gui:show_review(dataset,models,record,folder,args.image_id)
+        if args.gui:
+            if args.box_top_k is None:show_review(dataset,models,record,folder,args.image_id)
+            else:show_review(dataset,models,record,folder,args.image_id,box_top_k=args.box_top_k)
     elif args.analyze_only or args.gui:
         dataset,models,record,folder=prepare_review(args.evaluation_record,args.baseline_record,args.historical_run,
             args.dataset,args.rights,args.sample_size)
         print(folder,flush=True)
-        if args.gui:show_review(dataset,models,record,folder,args.image_id)
+        if args.gui:
+            if args.box_top_k is None:show_review(dataset,models,record,folder,args.image_id)
+            else:show_review(dataset,models,record,folder,args.image_id,box_top_k=args.box_top_k)
     else:
         load_review(args.evaluation_record,args.baseline_record,args.historical_run,args.dataset,args.rights)
         print(epoch_score_text(strict_load(args.evaluation_record)),flush=True)
