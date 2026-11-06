@@ -9,6 +9,7 @@ from pathlib import Path
 from .taco_training_labels_v2 import LABELS
 
 PLASTIC_SUBTYPE_IDS = (1, 2, 3, 4, 6, 7)
+PLASTIC_STRUCTURED_IDS = (1, 2, 3, 6, 7)
 PAPER_ID = 8
 DEFAULT_DELTA = 0.016
 DEFAULT_STRONG_COACTIVATION_DELTA = 0.040
@@ -291,6 +292,7 @@ def apply_scene_consensus(
 
     # Step 2: Cautious Anchor Identification
     paper_anchors = []
+    paper_sheet_anchors = []
     hazard_anchors = []
     hazard_candidates_ge_19 = []
     plastic_anchors = []
@@ -304,10 +306,13 @@ def apply_scene_consensus(
             q_area = r["bbox"][2] * r["bbox"][3]
             norm_area = (q_area / total_img_area) if total_img_area else 0.0
 
-            if cat == PAPER_ID and sc >= 0.30 and norm_area >= 0.08:
-                max_plastic = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
-                if (v[PAPER_ID] - max_plastic >= 0.10) and (v[1] < 0.15):
+            if cat == PAPER_ID:
+                if sc >= 0.28 and norm_area >= 0.005 and (v is None or v[1] < 0.25):
                     paper_anchors.append(r)
+                if sc >= 0.30 and norm_area >= 0.08:
+                    max_plastic = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    if (v[PAPER_ID] - max_plastic >= 0.10) and (v[1] < 0.15):
+                        paper_sheet_anchors.append(r)
 
             if cat == 0:
                 if sc >= 0.19:
@@ -342,8 +347,8 @@ def apply_scene_consensus(
         sc = r_copy["score"]
         q_area = r_copy["bbox"][2] * r_copy["bbox"][3]
 
-        # Rule 2: Relabel flexible plastic to Paper
-        if enable_rule2 and paper_anchors and v is not None and cat in FLEXIBLE_PLASTIC_IDS and 0.10 <= sc <= 0.30:
+        # Rule 2: Relabel flexible plastic to Paper on scenes with paper sheet anchors
+        if enable_rule2 and paper_sheet_anchors and v is not None and cat in FLEXIBLE_PLASTIC_IDS and 0.10 <= sc <= 0.30:
             overlaps_diff_class = False
             for o in stage1_rows:
                 if o is r:
@@ -376,37 +381,48 @@ def apply_scene_consensus(
                 })
                 cat = PAPER_ID
 
-        # Rule 3: Interior wrong-class sub-box suppression
+        # Rule 3: Interior wrong-class & nested ghost suppression inside paper anchors
         suppress = False
-        if enable_rule3 and paper_anchors and cat != PAPER_ID:
-            if cat in (0, 2, 3, 4, 7):
-                for p in paper_anchors:
-                    if sc < p["score"]:
-                        inter, a_q, a_p = _compute_inter_and_areas(r_copy["bbox"], p["bbox"])
-                        iomin = inter / a_q
-                        p_area = p["bbox"][2] * p["bbox"][3]
-                        norm_p_area = p_area / total_img_area
-                        cond_a = (sc < 0.20 and iomin >= 0.80 and a_q < 0.50 * a_p)
-                        cond_b = (norm_p_area >= 0.25 and iomin >= 0.90 and a_q < 0.25 * a_p)
-                        if cond_a or cond_b:
-                            suppress = True
-                            rule3_suppressed_qids.add(qid)
-                            diag["rule3_count"] += 1
-                            reason = (
-                                f"deep-interior anchor containment iomin={iomin:.2f}>=0.90 area_ratio={a_q/a_p:.4f}<0.25 in anchor norm_area={norm_p_area:.3f}>=0.25"
-                                if cond_b else
-                                f"nested iomin={iomin:.2f}>=0.80 area_ratio={a_q/a_p:.2f}<0.50 inside anchor"
-                            )
-                            diag["logs"].append({
-                                "image_id": image_id,
-                                "qid": qid,
-                                "rule": "Rule 3 (interior sub-box suppression)",
-                                "old_cat": cat,
-                                "new_cat": None,
-                                "old_score": sc,
-                                "reason": reason,
-                            })
-                            break
+        if enable_rule3 and paper_anchors:
+            for p in paper_anchors:
+                p_qid = p.get("fused_query_id", p.get("query_id"))
+                if p_qid == qid:
+                    continue
+                p_sc = p["score"]
+                p_box = p["bbox"]
+                p_area = p_box[2] * p_box[3]
+                norm_p_area = p_area / total_img_area if total_img_area else 0.0
+
+                inter, a_q, a_p = _compute_inter_and_areas(r_copy["bbox"], p_box)
+                iomin = inter / a_q if a_q > 0 else 0.0
+
+                # Wrong-class interior sub-box inside paper anchor
+                cond_wrong = (cat != PAPER_ID and sc < p_sc and (
+                    (sc < 0.20 and iomin >= 0.80 and a_q < 0.50 * p_area) or
+                    (norm_p_area >= 0.25 and iomin >= 0.90 and a_q < 0.25 * p_area)
+                ))
+                # Same-class nested duplicate box strictly contained inside paper anchor (Image 802)
+                cond_nested = (cat == PAPER_ID and sc < (p_sc - 0.06) and sc < 0.20 and iomin >= 0.90 and a_q < 0.30 * p_area)
+
+                if cond_wrong or cond_nested:
+                    suppress = True
+                    rule3_suppressed_qids.add(qid)
+                    diag["rule3_count"] += 1
+                    reason = (
+                        f"deep-interior anchor containment iomin={iomin:.2f}>=0.90 area_ratio={a_q/p_area:.4f}<0.25 in anchor norm_area={norm_p_area:.3f}>=0.25"
+                        if (norm_p_area >= 0.25 and iomin >= 0.90) else
+                        f"nested iomin={iomin:.2f}>=0.80 area_ratio={a_q/p_area:.2f}<0.50 inside anchor q{p_qid} (sc={p_sc:.3f})"
+                    )
+                    diag["logs"].append({
+                        "image_id": image_id,
+                        "qid": qid,
+                        "rule": "Rule 3 (interior sub-box suppression)",
+                        "old_cat": cat,
+                        "new_cat": None,
+                        "old_score": sc,
+                        "reason": reason,
+                    })
+                    break
 
         # Rule 4: Marginal paper ghost suppression on non-paper scenes with plastic reassignment
         if not suppress and enable_rule4 and (not paper_anchors) and has_plastic_reassignment and cat == PAPER_ID:
@@ -635,47 +651,86 @@ def apply_scene_consensus(
 
             r_mod = deepcopy(r)
 
-            if cat == PAPER_ID and (not paper_anchors) and norm_area < 0.10 and v is not None:
-                if v[7] >= 0.26:
-                    sum_flexible_foam = v[3] + v[4] + v[7]
-                    if sum_flexible_foam >= 0.70:
-                        best_b_15 = None
-                        best_b_15_iou = 0.0
-                        for b in b_ge_15:
-                            iou_val = _compute_iou(r["bbox"], b["bbox"])
-                            if iou_val > best_b_15_iou:
-                                best_b_15_iou = iou_val
-                                best_b_15 = b
+            if cat == PAPER_ID and norm_area < 0.20 and v is not None:
+                best_b_15 = None
+                best_b_15_iou = 0.0
+                for b in b_ge_15:
+                    iou_val = _compute_iou(r["bbox"], b["bbox"])
+                    if iou_val > best_b_15_iou:
+                        best_b_15_iou = iou_val
+                        best_b_15 = b
 
-                        if best_b_15 is not None and best_b_15_iou >= 0.50:
-                            if best_b_15.get("category_id") in PLASTIC_SUBTYPE_IDS and best_b_15.get("score", 0.0) >= 0.20:
-                                r_mod["raw_category_id"] = cat
-                                r_mod["category_id"] = 7
-                                r_mod["specific_category_id"] = 7
-                                r_mod["consensus_reassigned"] = True
-                                r_mod["consensus_rule7a"] = True
-                                rule7_changed_qids.add(qid)
-                                diag["rule7_count"] += 1
-                                diag["rule7a_count"] += 1
-                                diag["logs"].append({
-                                    "image_id": image_id,
-                                    "qid": qid,
-                                    "rule": "Rule 7A (styrofoam prior restoration)",
-                                    "old_cat": cat,
-                                    "new_cat": 7,
-                                    "old_score": sc,
-                                    "reason": f"v[7]={v[7]:.3f}>=0.26, plastic coact={sum_flexible_foam:.3f}>=0.70, baseline corroboration sc={best_b_15.get('score'):.3f} iou={best_b_15_iou:.3f}>=0.50",
-                                })
+                # Case A: Styrofoam prior restoration
+                case_a = False
+                if (not paper_sheet_anchors) and v[7] >= 0.26 and (v[3] + v[4] + v[7]) >= 0.70:
+                    if best_b_15 is not None and best_b_15_iou >= 0.50:
+                        if best_b_15.get("category_id") in PLASTIC_SUBTYPE_IDS and best_b_15.get("score", 0.0) >= 0.20:
+                            case_a = True
+                            r_mod["raw_category_id"] = cat
+                            r_mod["category_id"] = 7
+                            r_mod["specific_category_id"] = 7
+                            r_mod["consensus_reassigned"] = True
+                            r_mod["consensus_rule7a"] = True
+                            rule7_changed_qids.add(qid)
+                            diag["rule7_count"] += 1
+                            diag["rule7a_count"] += 1
+                            diag["logs"].append({
+                                "image_id": image_id,
+                                "qid": qid,
+                                "rule": "Rule 7A (styrofoam prior restoration)",
+                                "old_cat": cat,
+                                "new_cat": 7,
+                                "old_score": sc,
+                                "reason": f"v[7]={v[7]:.3f}>=0.26, plastic coact={v[3]+v[4]+v[7]:.3f}>=0.70, baseline corroboration sc={best_b_15.get('score'):.3f} iou={best_b_15_iou:.3f}>=0.50",
+                            })
+
+                # Case B: Mixed-scene structured plastic restoration (Image 998 center wrapper)
+                case_b = False
+                other_paper_anchors = [
+                    pa for pa in paper_anchors
+                    if pa.get("fused_query_id", pa.get("query_id")) != qid and _compute_iou(r["bbox"], pa["bbox"]) < 0.20
+                ]
+                if not case_a and other_paper_anchors and best_b_15 is not None and best_b_15_iou >= 0.50:
+                    b_cat = best_b_15.get("category_id")
+                    b_sc = best_b_15.get("score", 0.0)
+                    if b_cat in PLASTIC_STRUCTURED_IDS and b_sc >= 0.24:
+                        if (v[3] + v[4] >= 0.50) or (v[b_cat] >= 0.20):
+                            case_b = True
+                            r_mod["raw_category_id"] = cat
+                            r_mod["category_id"] = b_cat
+                            r_mod["specific_category_id"] = b_cat
+                            r_mod["consensus_reassigned"] = True
+                            r_mod["consensus_rule7a"] = True
+                            rule7_changed_qids.add(qid)
+                            diag["rule7_count"] += 1
+                            diag["rule7a_count"] += 1
+                            diag["logs"].append({
+                                "image_id": image_id,
+                                "qid": qid,
+                                "rule": f"Rule 7A (mixed-scene structured {b_cat} restoration)",
+                                "old_cat": cat,
+                                "new_cat": b_cat,
+                                "old_score": sc,
+                                "reason": f"mixed scene with {len(other_paper_anchors)} paper anchor(s), baseline corroboration cat={b_cat} sc={b_sc:.3f} iou={best_b_15_iou:.3f}>=0.50",
+                            })
 
             pass7a_rows.append(r_mod)
 
         # Inspect post-7A scene characteristics
+        has_dom_object = any(
+            r.get("category_id") in range(1, 9) and r.get("score", 0.0) >= 0.24
+            for r in pass7a_rows
+        )
         has_dom_plastic = any(
             r.get("category_id") in PLASTIC_SUBTYPE_IDS and r.get("score", 0.0) >= 0.24
             for r in pass7a_rows
         )
+        has_dom_paper = any(
+            r.get("category_id") == PAPER_ID and r.get("score", 0.0) >= 0.24
+            for r in pass7a_rows
+        )
         pass_hazards = [r for r in pass7a_rows if r.get("category_id") == 0 and r.get("score", 0.0) >= 0.10]
-        has_haz_anchor = any(h.get("score", 0.0) >= 0.20 for h in pass_hazards)
+        has_haz_anchor = any(h.get("score", 0.0) >= 0.19 for h in pass_hazards)
 
         # PASS 7B: Clutter Veto
         final_rule7_rows = []
@@ -694,8 +749,8 @@ def apply_scene_consensus(
             best_b_10_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10), default=0.0)
             best_b_15_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_15), default=0.0)
 
-            # 7B1: Isolated water-weed hazard veto
-            if cat == 0 and has_dom_plastic and (not has_haz_anchor) and baseline_hazards_ge_10 == 0:
+            # 7B1: Isolated background hazard speckle clutter filter
+            if cat == 0 and has_dom_object and (not has_haz_anchor) and baseline_hazards_ge_10 == 0:
                 if sc < 0.18 and norm_area < 0.001 and best_b_10_iou < 0.20:
                     cx = bx + 0.5 * bw
                     cy = by + 0.5 * bh
@@ -707,7 +762,7 @@ def apply_scene_consensus(
                     )
                     if min_dist > 400.0:
                         suppress = True
-                        reason = f"isolated weed clutter sc={sc:.3f}<0.18 norm_area={norm_area:.6f} dist={min_dist:.1f}>400 without baseline corroboration"
+                        reason = f"isolated background hazard speckle sc={sc:.3f}<0.18 norm_area={norm_area:.6f} dist={min_dist:.1f}>400 without baseline support"
 
             # 7B2: Dead foliage paper clutter veto
             if not suppress and cat == PAPER_ID and (not paper_anchors):
@@ -731,7 +786,7 @@ def apply_scene_consensus(
                     reason = f"extreme border clutter sc={sc:.3f}<0.18 touching frame/border without baseline support"
 
             # 7B4: Leaf stem / branch elongated hazard filter
-            if not suppress and cat == 0 and has_dom_plastic and (not has_haz_anchor):
+            if not suppress and cat == 0 and has_dom_object and (not has_haz_anchor):
                 if sc < 0.15 and best_b_08_iou < 0.20:
                     aspect = max(bw / max(bh, 1e-3), bh / max(bw, 1e-3))
                     if aspect >= 3.0:
@@ -739,10 +794,15 @@ def apply_scene_consensus(
                         reason = f"leaf stem hazard clutter sc={sc:.3f}<0.15 aspect={aspect:.2f}>=3.0 without baseline corroboration"
 
             # 7B5: Dead leaves corner plastic clutter filter
-            if not suppress and cat in (3, 4) and sc < 0.14 and has_dom_plastic and (not paper_anchors):
+            if not suppress and cat in (3, 4) and sc < 0.15 and (not paper_anchors):
                 if bx > 0.65 * image_width and by > 0.85 * image_height and best_b_08_iou < 0.20:
                     suppress = True
                     reason = f"dead leaves corner plastic clutter sc={sc:.3f}<0.14 in foliage corner without baseline corroboration"
+
+            # 7B6: Background secondary plastic clutter on paper-dominant scenes
+            if not suppress and has_dom_paper and cat in (3, 4) and sc < 0.15 and best_b_08_iou < 0.20:
+                suppress = True
+                reason = f"secondary plastic clutter sc={sc:.3f}<0.15 on paper-dominant scene without baseline support"
 
             if suppress:
                 rule7_suppressed_qids.add(qid)

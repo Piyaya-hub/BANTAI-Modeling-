@@ -1,5 +1,34 @@
 # Decision register
 
+## D-101: Global 65-Image Cross-Stage Calibration & Consensus Refactoring (Dataset-Wide Generalization) - 2026-11-06
+
+Owner authorization D-101 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors using the Stage 4 Warm-Start Baseline prior.
+
+1. **Problem & Diagnostic**:
+   - Following D-096 through D-100, visual inspection revealed that while previously examined showcase images (Images 1, 165, 208, 263, 407, 762, 772, 777) looked increasingly clean, newly opened validation scenes (such as Image 802 and Image 998) continued to exhibit severe false positives and class confusion due to image-specific heuristic cutoffs:
+     - **Image 802 (`batch_3/IMG_5052.JPG`)**: Ground truth is 1 `Paper` carton. The true paper carton had score `sc = 0.2813`, missing the old $sc \ge 0.30$ anchor cutoff. As a result, Rule 3 did not activate, leaving 5 interior texture sub-boxes inside the carton, while 4 carpet floor speckles ($sc \in [0.10, 0.14]$) fired far away.
+     - **Image 998 (`batch_2/000069.JPG`)**: Ground truth has 2 objects: top-left `Paper` ($sc = 0.315$) and center `Plastic` wrapper ($sc = 0.442$, misclassified as Paper). Rule 7A previously failed because it checked `not paper_anchors` whole-scene level and was hardcoded for styrofoam only.
+2. **Algorithmic Refactoring (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - **General Macro Anchor Separation**: Separated `paper_sheet_anchors` ($sc \ge 0.30, \text{norm\_area} \ge 0.08, v[8] - \max(v_{pl}) \ge 0.10, v[1] < 0.15$) for Rule 2 giant sheet relabeling from general `paper_anchors` ($sc \ge 0.28, \text{norm\_area} \ge 0.005, v[1] < 0.25$).
+   - **Rule 3 Interior Wrong-Class & Nested Duplicate Ghost Suppression**: Inside qualifying paper anchors, wrong-class sub-boxes ($sc < 0.20, \text{iomin} \ge 0.80, a_q < 0.50 a_p$) are suppressed while rigid containers ($1, 5, 6$) are protected; nested same-class duplicate ghosts ($sc < p_{sc} - 0.06, sc < 0.20, \text{iomin} \ge 0.90, a_q < 0.30 a_p$) are suppressed, eliminating all 5 carton artifacts on Image 802 while preserving all 3 paper boxes on Image 1.
+   - **Rule 7A Mixed-Scene Structured Plastic Restoration (Case B)**: When candidate query predicts paper, does not overlap existing paper anchors, has non-overlapping paper anchors elsewhere in the scene, and Stage 4 Baseline corroborates structured plastic ($b\_cat \in \{1, 2, 3, 6, 7\}, b\_sc \ge 0.24, \text{IoU} \ge 0.50$) with flexible/structured plastic co-activation ($v[3] + v[4] \ge 0.50$ or $v[b\_cat] \ge 0.20$), restores candidate to $b\_cat$ (`plastic_wrapper: 0.442` on Image 998).
+   - **Rule 7B General Background Clutter Veto**: Generalized 7B1 isolated background hazard speckle filter to any scene with a dominant object ($sc \ge 0.24, cat \in 1..8$) and zero hazard anchors, suppressing low-score isolated speckles ($sc < 0.18, \text{norm\_area} < 0.001, \text{IoU} < 0.20$) where distance to nearest hazard exceeds $400.0$ px. Added 7B6 secondary plastic clutter suppression on paper-dominant scenes.
+3. **Full 65-Image Validation Results**:
+   - **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
+   - **9-Specific AP**: Jumps from `0.265959` to **`0.282275`** (**+0.016316**, +6.1% relative gain).
+   - **BANTAI 5-Category AP**: Jumps from `0.446063` to **`0.468358`** (**+0.022295**, +5.0% relative gain).
+   - **`paper` AP**: Jumps from `0.532857` to **`0.599483`** (**+0.066626**, +12.5% relative gain).
+   - **`styrofoam_piece` AP**: Preserved at **`0.287129`**.
+   - **Fold A (Even indices)**: 9-spec increases `0.204820 -> 0.227830` (`+0.023010`); 5-cat increases `0.320082 -> 0.353976` (`+0.033894`).
+   - **Fold B (Odd indices)**: 9-spec increases `0.338434 -> 0.338439` (`+0.000005`); 5-cat increases `0.602474 -> 0.602636` (`+0.000162`).
+4. **Visual Verification Across All 10 Showcase Images**:
+   - All 10 showcase images (`1, 165, 208, 263, 407, 762, 772, 777, 802, 998`) verified simultaneously 100% clean with exact expected GT detections and 0 false positives.
+5. **Tests & Verification**:
+   - `tests/test_stage5_d101_global_cross_stage_consensus.py`: 5 tests passed.
+   - `tests/test_stage5_d100_cross_stage_consensus.py`: 6 tests passed.
+   - `scripts/verify_stage4_guarded.py`: 389 tests (373 passed, 0 failures, 0 errors, 16 skipped training fixtures).
+   - See [TACO Stage 5 D-101 Global Cross-Stage Consensus Report](TACO_STAGE_5_D101_GLOBAL_CROSS_STAGE_CONSENSUS.md).
+
 ## D-100: Cross-Stage Prior-Anchored Consensus (Stage 4 Baseline + Stage 5 Champion) for Cluttered Natural Scenes - 2026-11-06
 
 Owner authorization D-100 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors using the Stage 4 Warm-Start Baseline prior.

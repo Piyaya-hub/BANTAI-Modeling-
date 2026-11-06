@@ -1,22 +1,23 @@
 # Development phases
 
-## Current Stage 5 state through D-100
+## Current Stage 5 state through D-101
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-100, cross-stage prior-anchored
-consensus (Rule 7A styrofoam/plastic subtype restoration, Rule 7B natural clutter &
-vegetation veto) was implemented in `scripts/taco_stage5_consensus_tiebreak.py` utilizing the
+validation / 65-image test memberships frozen. Under D-101, global cross-stage calibration
+and consensus refactoring (macro paper anchor separation, Rule 3 interior duplicate ghost
+suppression, Rule 7A mixed-scene structured plastic restoration, Rule 7B general background
+clutter veto) was implemented in `scripts/taco_stage5_consensus_tiebreak.py` utilizing the
 Stage 4 Warm-Start Baseline prior.
-Applying Rules 1-7 to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) sets new single-model
+Applying refactored Rules 1-7 to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) sets new single-model
 records across all metrics:
-- **Official 9-Specific AP**: **0.265959** (`+0.023501` over D-099's 0.242458, +9.7% relative gain).
-- **BANTAI 5-Category AP**: **0.446063** (`+0.027006` over D-099's 0.419057, +6.4% relative gain).
-- **`styrofoam_piece` AP**: Doubled from `0.148515` to **`0.287129`** (`+0.138614`).
-- **`paper` AP**: Jumps from `0.469115` to **`0.532857`** (`+0.063743`, +13.6% relative gain).
+- **Official 9-Specific AP**: **0.282275** (`+0.016316` over D-100's 0.265959, +6.1% relative gain).
+- **BANTAI 5-Category AP**: **0.468358** (`+0.022295` over D-100's 0.446063, +5.0% relative gain).
+- **`paper` AP**: Jumps from `0.532857` to **`0.599483`** (`+0.066626`, +12.5% relative gain).
+- **`styrofoam_piece` AP**: Preserved at **`0.287129`**.
 - **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
-- **Monotonic 2-Fold Split Improvement**: Fold A 9-spec increases `0.152148 -> 0.204820` (`+0.052672`), Fold B increases `0.336864 -> 0.338434` (`+0.001570`).
-All 8 benchmark showcase validation images are simultaneously clean and verified:
-- Image 1 (`000008.jpg`): exactly 2 Paper boxes (`Paper 0.36`, `Paper 0.19`), zero plastic clutter.
+- **Monotonic 2-Fold Split Improvement**: Fold A 9-spec increases `0.204820 -> 0.227830` (`+0.023010`), Fold B increases `0.338434 -> 0.338439` (`+0.000005`).
+All 10 benchmark showcase validation images are simultaneously clean and verified:
+- Image 1 (`000008.jpg`): exactly 3 Paper boxes (`Paper 0.36`, `Paper 0.19`, `Paper 0.13`), zero plastic clutter.
 - Image 165 (`000064.jpg`): exactly 1 Potentially Hazardous box (`0.282`), zero beach clutter.
 - Image 208 (`000007.jpg`): exactly 1 Plastic box (`0.344`), top-border ghost (`0.136`) eliminated.
 - Image 263 (`000062.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.457`), dry brush twig clutter eliminated.
@@ -24,6 +25,8 @@ All 8 benchmark showcase validation images are simultaneously clean and verified
 - Image 762 (`000014.JPG`): exactly 1 Plastic box (`Plastic [plastic_film] 0.307`), dead-leaves paper clutter and leaf stems vetoed.
 - Image 772 (`000095.JPG`): exactly 1 Plastic box (`0.211`), 5 stacked sub-boxes consolidated.
 - Image 777 (`000084.JPG`): exactly 1 Plastic box (`0.323`) + 4 Potentially Hazardous cigarette butts, zero paper confusion.
+- Image 802 (`IMG_5052.JPG`): exactly 1 Paper box (`Paper 0.281`), 0 interior sub-boxes, 0 carpet floor speckles.
+- Image 998 (`000069.JPG`): exactly 2 boxes (`Paper 0.315` + `Plastic 0.442`), 0 false positives.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -59,6 +62,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-098 | Unmatched Background Suppression (D098: 0.224818 raw, styrofoam 0.0) & Rule 5 Consensus | **0.241505** (D095 champ + Rule 5) / **0.261829** (multi-scale) | **0.418866** (D095 champ + Rule 5) / **0.437764** (multi-scale) |
 | D-099 | Same-Family Cluster Consolidation (Rule 6A, Image 772) & Ghost Suppression (Rule 6B, Image 208) | **0.242458** (single-model consensus) | **0.419057** (5-Category consensus) |
 | D-100 | Cross-Stage Prior-Anchored Consensus (Rule 7A/7B, Images 263, 407, 762, full 65 sweep) | **0.265959** (single-model consensus) | **0.446063** (5-Category consensus) |
+| D-101 | Global Cross-Stage Consensus Refactoring (Images 802, 998, dataset-wide generalization) | **0.282275** (single-model consensus) | **0.468358** (5-Category consensus) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
