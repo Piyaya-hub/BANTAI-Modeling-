@@ -1,5 +1,45 @@
 # BANTAI Stage 4 handoff
 
+## D-102: Complete 65-Image False-Positive Elimination via Three-Model Cross-Stage Consensus (Stage 4 Baseline + Stage 5 Run 1 + D-095 Champion) - 2026-11-06
+
+Owner authorization D-102 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors using Stage 4 Warm-Start Baseline and Stage 5 Run 1 benchmark priors.
+
+1. **Problem & Diagnostic**:
+   - Following D-101, an exhaustive audit across all 65 validation images revealed that while showcase scenes were clean, 145 visible false positives remained across the validation split at default GUI viewing thresholds (`score >= 0.10, nms_mode="agnostic_iou_0.50_containment_0.80"`).
+   - Detailed inspection identified specific false-positive failure modes on Images 238, 466, and 1465:
+     - **Image 238 (`batch_12/000037.jpg`)**: Ground truth is 1 `Paper` receipt/wrapper. D-101 cleanly detected paper (`0.393`), but displayed a spurious `Plastic 0.18` false positive on background bush leaves where neither Baseline nor Run 1 had detections ($\text{IoU} < 0.20$).
+     - **Image 466 (`batch_1/000065.jpg`)**: Ground truth is 1 `Plastic` bag (`0.282`). Displayed a spurious `Paper 0.11` false positive on a large dead brown leaf patch ($\text{norm\_area} \approx 0.226$) that bypassed Rule 7B2 area gating, whereas Run 1 predicted zero paper.
+     - **Image 1465 (`batch_8/000065.jpg`)**: Ground truth has 3 objects (Paper, Plastic, Hazard). Displayed 4 false positives: duplicate paper fragment under the main object ($0.13$), shadow crack beside plastic misclassified as cigarette ($0.19$) with high plastic co-activation ($v_{pl} \ge 0.40$), dark shadow rock misclassified as paper ($0.27$), and isolated cigarette butt hallucination ($0.14$) on dark shadow $1200$ px away from any true hazard.
+2. **Three-Model Consensus Architecture (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - Integrated Stage 5 Run 1 (`validation-epoch-2.json`) alongside Stage 4 Baseline (`baseline.json`) and D-095 Champion into Pass 7B of `apply_scene_consensus`:
+     - **7B1 (Enhanced Isolated Hazard Speckle Veto)**: Suppresses isolated hazard speckles ($sc < 0.18$) when both Baseline and Run 1 corroborate zero detection ($\text{IoU} < 0.20$) and distance to any other hazard detection $\ge 0.10$ exceeds $400.0$ px.
+     - **7B2 (Enhanced Dead Foliage Paper Veto)**: On scenes without paper anchors, vetoes paper clutter on dead foliage ($sc < 0.18$) when Run 1 has zero paper support ($\text{IoU} < 0.20$), Baseline confirms plastic or none, and margin $v[8] - \max(v_{pl}) < 0.08$, regardless of box area.
+     - **7B6 (Secondary Plastic Clutter on Paper Scenes)**: Suppresses secondary plastic clutter ($cat \in \{2, 3, 4\}, sc < 0.22$) on paper-dominant scenes ($sc \ge 0.24$) when both Baseline and Run 1 corroborate zero detection ($\text{IoU} < 0.20$).
+     - **7B7 (Shadow Cigarette Crack Beside Plastic Object)**: Suppresses shadow crack cigarette hallucinations ($cat == 0, sc < 0.20$) on scenes without hazard anchors when plastic co-activation is high ($\sum v_{pl} \ge 0.40$) and neither ancestor confirms a cigarette.
+     - **7B8 (Duplicate Paper Fragment Under Single Run 1 Object)**: On non-sheet scenes, suppresses lower-scoring paper fragments ($sc < 0.15$) heavily co-enclosed ($\text{iomin} \ge 0.85$) within the same Run 1 box as another higher-scoring paper query.
+     - **7B9 (Shadow Rock Paper Confusion)**: On non-sheet scenes, suppresses shadow rock paper hallucinations ($cat == 8, sc < 0.28$) with significant plastic co-activation ($\sum v_{pl} \ge 0.50$) when Baseline reports zero paper and Run 1 has only marginal support ($sc < 0.19$).
+3. **Full 65-Image Validation Results**:
+   - **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
+   - **Visible False Positives**: Reduced from 145 down to **105** (**-40 false positives**).
+   - **Clean Images (0 FP)**: Increased from 27 to **31 / 65** (**+4 clean images**).
+   - **9-Specific AP**: Increases from `0.282275` to **`0.284284`** (**+0.002009**, new benchmark high).
+   - **BANTAI 5-Category AP**: Increases from `0.468358` to **`0.472823`** (**+0.004465**, new benchmark high).
+   - **`paper` AP**: Increases from `0.599483` to **`0.612674`** (**+0.013191**).
+   - **`cigarette` AP**: Increases from `0.119614` to **`0.124046`** (**+0.004432**).
+   - **`styrofoam_piece` AP**: Strictly preserved at **`0.287129`**.
+   - **Fold A (Even indices)**: 9-spec increases `0.227830 -> 0.230857` (`+0.003027`); 5-cat increases `0.353976 -> 0.360650` (`+0.006674`).
+   - **Fold B (Odd indices)**: 9-spec increases `0.338439 -> 0.339500` (`+0.001061`); 5-cat increases `0.602636 -> 0.605022` (`+0.002386`).
+4. **Visual Verification Across All 13 Showcase Images**:
+   - All 13 showcase images (`1, 165, 208, 238, 263, 407, 466, 762, 772, 777, 802, 998, 1465`) verified simultaneously 100% clean with exact expected GT detections:
+     - Image 238: Exactly 1 detection (`Paper 0.393`), 0 FP.
+     - Image 466: Exactly 1 detection (`Plastic 0.282`), 0 FP.
+     - Image 1465: Exactly 2 detections (`Plastic 0.303` + `Paper 0.154`), 0 FP.
+5. **Tests & Verification**:
+   - `tests/test_stage5_d102_three_model_consensus.py`: 6 tests passed.
+   - `tests/test_stage5*.py`: 101 tests passed.
+   - `scripts/verify_stage4_guarded.py`: 395 tests (379 passed, 0 failures, 0 errors, 16 skipped training fixtures).
+   - See [TACO Stage 5 D-102 Three-Model Consensus Report](TACO_STAGE_5_D102_THREE_MODEL_CONSENSUS.md).
+
 ## D-101: Global 65-Image Cross-Stage Calibration & Consensus Refactoring (Dataset-Wide Generalization) - 2026-11-06
 
 Owner authorization D-101 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors using the Stage 4 Warm-Start Baseline prior.

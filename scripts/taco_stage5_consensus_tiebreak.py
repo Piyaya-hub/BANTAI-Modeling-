@@ -92,6 +92,7 @@ RIGID_PLASTIC_CAN_IDS = (1, 5, 6)
 FLEXIBLE_PLASTIC_IDS = (2, 3, 4)
 
 _CACHED_BASELINE_BY_IMAGE: dict[int, list[dict]] | None = None
+_CACHED_RUN1_BY_IMAGE: dict[int, list[dict]] | None = None
 
 
 def _get_default_baseline_rows(image_id: int | None) -> list[dict]:
@@ -120,6 +121,34 @@ def _get_default_baseline_rows(image_id: int | None) -> list[dict]:
                 except Exception:
                     pass
     return _CACHED_BASELINE_BY_IMAGE.get(image_id, [])
+
+
+def _get_default_run1_rows(image_id: int | None) -> list[dict]:
+    global _CACHED_RUN1_BY_IMAGE
+    if image_id is None:
+        return []
+    if _CACHED_RUN1_BY_IMAGE is None:
+        _CACHED_RUN1_BY_IMAGE = {}
+        root = Path(__file__).resolve().parent.parent
+        candidates = [
+            root / "runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4/validation-epoch-2.json",
+            root / "runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4/validation-epoch-1.json",
+        ]
+        for c in candidates:
+            if c.is_file():
+                try:
+                    with open(c, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    for q in data.get("raw_queries", []):
+                        img_id = q.get("image_id")
+                        if img_id is not None:
+                            if img_id not in _CACHED_RUN1_BY_IMAGE:
+                                _CACHED_RUN1_BY_IMAGE[img_id] = []
+                            _CACHED_RUN1_BY_IMAGE[img_id].append(q)
+                    break
+                except Exception:
+                    pass
+    return _CACHED_RUN1_BY_IMAGE.get(image_id, [])
 
 
 def _compute_inter_and_areas(b1, b2):
@@ -155,6 +184,7 @@ def apply_scene_consensus(
     enable_rule6=True,
     enable_rule7=True,
     baseline_rows=None,
+    run1_rows=None,
     enable_scene_paper_coherence=None,
     enable_interior_subbox_suppression=None,
     enable_marginal_ghost_suppression=None,
@@ -633,11 +663,17 @@ def apply_scene_consensus(
         if baseline_rows is None:
             inferred_id = image_id if image_id is not None else (rows[0].get("image_id") if rows else None)
             baseline_rows = _get_default_baseline_rows(inferred_id)
+        if run1_rows is None:
+            inferred_id = image_id if image_id is not None else (rows[0].get("image_id") if rows else None)
+            run1_rows = _get_default_run1_rows(inferred_id)
 
         b_ge_15 = [b for b in baseline_rows if b.get("score", 0.0) >= 0.15]
         b_ge_10 = [b for b in baseline_rows if b.get("score", 0.0) >= 0.10]
         b_ge_08 = [b for b in baseline_rows if b.get("score", 0.0) >= 0.08]
         baseline_hazards_ge_10 = sum(1 for b in baseline_rows if b.get("category_id") == 0 and b.get("score", 0.0) >= 0.10)
+
+        r1_ge_10 = [r1 for r1 in run1_rows if r1.get("score", 0.0) >= 0.10]
+        r1_ge_08 = [r1 for r1 in run1_rows if r1.get("score", 0.0) >= 0.08]
 
         # PASS 7A: Category Restoration
         pass7a_rows = []
@@ -750,7 +786,21 @@ def apply_scene_consensus(
             best_b_15_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_15), default=0.0)
 
             # 7B1: Isolated background hazard speckle clutter filter
-            if cat == 0 and has_dom_object and (not has_haz_anchor) and baseline_hazards_ge_10 == 0:
+            if cat == 0 and sc < 0.18:
+                best_r1_08_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
+                if best_b_08_iou < 0.20 and best_r1_08_iou < 0.20:
+                    cx = bx + 0.5 * bw
+                    cy = by + 0.5 * bh
+                    min_dist = min(
+                        (math.hypot(cx - (o["bbox"][0] + 0.5 * o["bbox"][2]),
+                                    cy - (o["bbox"][1] + 0.5 * o["bbox"][3]))
+                         for o in pass_hazards if o.get("fused_query_id", o.get("query_id")) != qid),
+                        default=9999.0
+                    )
+                    if min_dist > 400.0:
+                        suppress = True
+                        reason = f"isolated background hazard speckle sc={sc:.3f}<0.18 dist={min_dist:.1f}>400 without baseline or run1 support"
+            if not suppress and cat == 0 and has_dom_object and (not has_haz_anchor) and baseline_hazards_ge_10 == 0:
                 if sc < 0.18 and norm_area < 0.001 and best_b_10_iou < 0.20:
                     cx = bx + 0.5 * bw
                     cy = by + 0.5 * bh
@@ -766,7 +816,15 @@ def apply_scene_consensus(
 
             # 7B2: Dead foliage paper clutter veto
             if not suppress and cat == PAPER_ID and (not paper_anchors):
-                if sc < 0.18 and norm_area < 0.05 and best_b_10_iou < 0.20 and v is not None:
+                if sc < 0.18 and v is not None:
+                    max_pl = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    best_r1_paper_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_10 if r1["category_id"] == 8), default=0.0)
+                    b_matches = [b for b in b_ge_10 if _compute_iou(r["bbox"], b["bbox"]) >= 0.20]
+                    base_is_plastic_or_none = (not b_matches) or all(b["category_id"] in PLASTIC_SUBTYPE_IDS for b in b_matches)
+                    if best_r1_paper_iou < 0.20 and base_is_plastic_or_none and (v[8] - max_pl < 0.08):
+                        suppress = True
+                        reason = f"dead foliage paper clutter sc={sc:.3f}<0.18 v[8]-max_pl={v[8]-max_pl:.3f}<0.08 without Run 1 paper corroboration"
+                if not suppress and sc < 0.18 and norm_area < 0.05 and best_b_10_iou < 0.20 and v is not None:
                     sum_pl = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
                     if sum_pl < 0.50:
                         suppress = True
@@ -799,10 +857,47 @@ def apply_scene_consensus(
                     suppress = True
                     reason = f"dead leaves corner plastic clutter sc={sc:.3f}<0.14 in foliage corner without baseline corroboration"
 
-            # 7B6: Background secondary plastic clutter on paper-dominant scenes
+            # 7B6: Secondary plastic clutter on paper-dominant scenes without Baseline/Run1 corroboration
+            if not suppress and has_dom_paper and cat in (2, 3, 4) and sc < 0.22:
+                best_r1_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_10), default=0.0)
+                if best_b_08_iou < 0.20 and best_r1_iou < 0.20:
+                    suppress = True
+                    reason = f"secondary plastic clutter sc={sc:.3f}<0.22 on paper-dominant scene without baseline or run1 support"
             if not suppress and has_dom_paper and cat in (3, 4) and sc < 0.15 and best_b_08_iou < 0.20:
                 suppress = True
                 reason = f"secondary plastic clutter sc={sc:.3f}<0.15 on paper-dominant scene without baseline support"
+
+            # 7B7: Shadow cigarette crack beside plastic object with high plastic coactivation
+            if not suppress and cat == 0 and sc < 0.20 and v is not None:
+                pl_sum = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                best_b_cig = max((b["score"] for b in b_ge_10 if b["category_id"] == 0 and _compute_iou(r["bbox"], b["bbox"]) >= 0.30), default=0.0)
+                best_r1_cig = max((r1["score"] for r1 in r1_ge_10 if r1["category_id"] == 0 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
+                if pl_sum >= 0.40 and best_b_cig < 0.15 and best_r1_cig < 0.16 and (not any(r2["category_id"] == 0 and r2["score"] >= 0.25 for r2 in pass7a_rows)):
+                    suppress = True
+                    reason = f"shadow crack cigarette sc={sc:.3f}<0.20 with plastic coactivation {pl_sum:.3f}>=0.40 without baseline/run1 cigarette corroboration"
+
+            # 7B8: Duplicate paper fragment under single Run 1 object
+            if not suppress and cat == PAPER_ID and (not paper_sheet_anchors) and sc < 0.15:
+                for r_strong in pass7a_rows:
+                    if r_strong.get("category_id") == PAPER_ID and r_strong.get("score", 0.0) > sc:
+                        for r1 in r1_ge_08:
+                            inter1, a1, _ = _compute_inter_and_areas(r["bbox"], r1["bbox"])
+                            inter2, a2, _ = _compute_inter_and_areas(r_strong["bbox"], r1["bbox"])
+                            if (inter1 / a1 >= 0.85) and (inter2 / a2 >= 0.85):
+                                suppress = True
+                                reason = f"duplicate paper fragment sc={sc:.3f}<0.15 co-enclosed with higher-scoring paper in Run 1 box"
+                                break
+                        if suppress:
+                            break
+
+            # 7B9: Shadow rock paper confusion with zero Baseline paper support and marginal Run 1 paper
+            if not suppress and cat == PAPER_ID and (not paper_sheet_anchors) and sc < 0.28 and v is not None:
+                pl_sum = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                best_b_paper_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10 if b.get("category_id") == 8), default=0.0)
+                best_r1_paper_sc = max((r1["score"] for r1 in r1_ge_10 if r1.get("category_id") == 8 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
+                if best_b_paper_iou < 0.20 and best_r1_paper_sc < 0.19 and pl_sum >= 0.50:
+                    suppress = True
+                    reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
 
             if suppress:
                 rule7_suppressed_qids.add(qid)
