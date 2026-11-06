@@ -33,9 +33,9 @@ SPATIAL_CATEGORIES = {
     "garbage_pile": "Garbage Pile",
 }
 
-DEFAULT_SCALE_FACTOR = 2.4
-DEFAULT_DIAG_FRACTION = 0.25
-DEFAULT_DENSITY_THRESHOLD = 0.35
+DEFAULT_SCALE_FACTOR = 2.0
+DEFAULT_DIAG_FRACTION = 0.225
+DEFAULT_DENSITY_THRESHOLD = 0.45
 DEFAULT_IOU_PILE_THRESHOLD = 0.15
 
 
@@ -198,10 +198,12 @@ def compute_spatial_grouping(
             indiv_count += 1
         else:
             # Derived multi-object region: check Garbage Pile criteria
+            # Must meet density >= 0.45 AND (overlap >= 0.15 OR touching pairs >= 1),
+            # OR (item count >= 3 AND density >= 0.55).
+            # Dispersed clusters (density < 0.45) classify as Group of Individual Litter, never Garbage Pile.
             is_pile = (
-                density >= density_threshold
-                or comp_max_iou >= iou_pile_threshold
-                or touch_count >= 1
+                (density >= density_threshold and (comp_max_iou >= iou_pile_threshold or touch_count >= 1))
+                or (n_m >= 3 and density >= 0.55)
             )
             if is_pile:
                 cat = "garbage_pile"

@@ -964,12 +964,48 @@ def apply_scene_consensus(
                     reason = f"uncorroborated tiny plastic clutter sc={sc:.3f}<0.16 norm_area={norm_area:.6f} with zero baseline/run1 support"
 
             # 7B12: Uncorroborated low-score drink can clutter
-            if not suppress and cat == 5 and sc < 0.12:
-                best_b_any = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
-                best_r1_any = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
-                if best_b_any < 0.20 and best_r1_any < 0.20:
+            if not suppress and cat == 5 and sc < 0.15:
+                best_b_can = max((b["score"] for b in b_ge_08 if b.get("category_id") == 5 and _compute_iou(r["bbox"], b["bbox"]) >= 0.20), default=0.0)
+                best_r1_can = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 5 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.20), default=0.0)
+                if best_b_can < 0.10 and best_r1_can < 0.10:
                     suppress = True
-                    reason = f"uncorroborated low-score drink can sc={sc:.3f}<0.12 with zero baseline/run1 support"
+                    reason = f"uncorroborated low-score drink can sc={sc:.3f}<0.15 with zero baseline/run1 can support"
+
+            # 7B13A: Uncorroborated styrofoam clutter
+            if not suppress and cat == 7 and sc < 0.18:
+                best_b_styro = max((b["score"] for b in b_ge_08 if b.get("category_id") == 7 and _compute_iou(r["bbox"], b["bbox"]) >= 0.20), default=0.0)
+                best_r1_styro = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 7 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.20), default=0.0)
+                if best_b_styro < 0.10 and best_r1_styro < 0.10:
+                    suppress = True
+                    reason = f"uncorroborated styrofoam sc={sc:.3f}<0.18 without baseline/run1 styrofoam support"
+
+            # 7B13B: Bamboo stump / hollow cylinder cup hallucination on natural ground
+            if not suppress and cat == 6 and sc < 0.30:
+                b_matches = [b for b in b_ge_08 if _compute_iou(r["bbox"], b["bbox"]) >= 0.30]
+                r1_matches = [r1 for r1 in r1_ge_08 if _compute_iou(r["bbox"], r1["bbox"]) >= 0.30]
+                b_top = max(b_matches, key=lambda x: x["score"]) if b_matches else None
+                r1_top = max(r1_matches, key=lambda x: x["score"]) if r1_matches else None
+                if b_top and r1_top:
+                    if b_top.get("category_id") == 6 and b_top.get("score", 0.0) < 0.15 and r1_top.get("category_id") == 4 and r1_top.get("score", 0.0) < 0.20:
+                        suppress = True
+                        reason = f"bamboo stump cup/film contradiction sc={sc:.3f} b_sc={b_top.get('score'):.3f}<0.15 r1_sc={r1_top.get('score'):.3f}<0.20"
+
+            # 7B13C: Macro ground clutter plastic bottle without bottle support
+            if not suppress and cat == 1 and ((sc < 0.25 and norm_area >= 0.035) or sc < 0.12):
+                b_bottle = max((b["score"] for b in b_ge_08 if b.get("category_id") == 1 and _compute_iou(r["bbox"], b["bbox"]) >= 0.30), default=0.0)
+                r1_bottle = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 1 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
+                if b_bottle < 0.10 and r1_bottle < 0.10:
+                    suppress = True
+                    reason = f"uncorroborated plastic bottle sc={sc:.3f} norm_area={norm_area:.4f} without baseline/run1 bottle support"
+
+            # 7B13D: Marginal plastic film contradicted by baseline cup
+            if not suppress and cat == 4 and sc < 0.15:
+                b_matches = [b for b in baseline_rows if _compute_iou(r["bbox"], b["bbox"]) >= 0.30]
+                b_cup_sc = max((b["score"] for b in b_matches if b.get("category_id") == 6), default=0.0)
+                has_b_cup = (b_cup_sc >= 0.08) or (b_cup_sc >= 0.05 and v is not None and v[6] >= 0.10)
+                if has_b_cup:
+                    suppress = True
+                    reason = f"marginal film sc={sc:.3f}<0.15 contradicted by baseline cup c=6 (b_cup={b_cup_sc:.3f})"
 
             if suppress:
                 rule7_suppressed_qids.add(qid)

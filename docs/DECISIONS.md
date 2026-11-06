@@ -1,5 +1,33 @@
 # Decision register
 
+## D-105: Elimination of False Spatial Groupings, Repetitive Background Clutter Suppression & Bounded-Density Calibration - 2026-11-06
+
+Owner authorization D-105 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were introduced. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Problem & Full 65-Image Audit**:
+   - In D-104, loose single-linkage chaining ($\beta = 0.25$) and premature pile triggers (`touch_count >= 1`) caused sparse, sprawling arrangements with low packing density ($\rho < 0.35$) to be misclassified as `Garbage Pile` (Images 768, 777, 928, 1076, 1182), and chained widely separated objects ($1280\text{px}$) on Image 998 into a single group.
+   - On Image 1243 (`000082.JPG`, cut bamboo forest floor), Grounding DINO detected 8 repetitive circular cut bamboo stumps as `plastic_cup` or `plastic_bottle`, forming an 8-FP frame-wide spurious `Garbage Pile`.
+2. **Bounded-Density Calibration (`scripts/taco_stage5_spatial_grouping.py`)**:
+   - Tightened proximity parameters: $\alpha$ (`scale_factor`) $2.4 \to 2.0$, $\beta$ (`diag_fraction`) $0.25 \to 0.225$.
+   - Bounded-density pile gate: a multi-item cluster ($n \ge 2$) classifies as `Garbage Pile` if and only if $(\rho \ge 0.45 \land (\text{max\_iou} \ge 0.15 \lor \text{touch\_count} \ge 1)) \lor (n \ge 3 \land \rho \ge 0.55)$.
+   - Invariant enforced: sparse clusters ($\rho < 0.45$) classify strictly as `Group of Individual Litter`, never `Garbage Pile`.
+   - Result: False garbage piles on Images 768, 777, 928, 1076, 1182 eliminated into `Group of Individual Litter`. Image 998 cleanly separated into 2 independent `Individual Litter` regions. Image 1 genuine dense pile ($\rho = 1.10$) preserved.
+3. **Repetitive Background Clutter Suppression (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - Refined Pass 7B clutter vetoes with general, image-ID-independent cross-stage corroboration:
+     - `7B12`: Refined drink can noise veto requiring ancestor drink can support.
+     - `7B13A`: Uncorroborated styrofoam clutter veto ($\text{cat}=7, \text{score} < 0.18, b_{\text{styro}} < 0.10, r1_{\text{styro}} < 0.10$).
+     - `7B13B`: Natural ground hollow cylinder / bamboo stump cup hallucination veto ($\text{cat}=6, \text{score} < 0.30$, Baseline is cup $< 0.15$, Run 1 is film $< 0.20$). Prunes all cut stump FPs on Image 1243.
+     - `7B13C`: Macro ground clutter plastic bottle without ancestor bottle support ($\text{cat}=1, (\text{score} < 0.25 \land \text{norm\_area} \ge 0.035) \lor \text{score} < 0.12, b_{\text{bottle}} < 0.10, r1_{\text{bottle}} < 0.10$).
+     - `7B13D`: Marginal plastic film contradicted by baseline cup ($\text{cat}=4, \text{score} < 0.15, (b_{\text{cup}} \ge 0.08) \lor (b_{\text{cup}} \ge 0.05 \land v[6] \ge 0.10)$).
+4. **Verified Evidence Across Full 65 Benchmark**:
+   - Zero lost True Positives: `lost_tps == []` (100% of 76 visible TPs preserved).
+   - Total visible False Positives: reduced from $74 \to \mathbf{63}$ ($-11$ visible FPs).
+   - Clean Images ($0$ FP): increased from $34/65 \to \mathbf{36/65}$ (**55.4% clean validation split**).
+   - Monotonic AP gain: Official 9-Specific AP increased from $0.295136 \to \mathbf{0.298963}$; BANTAI 5-Category AP increased from $0.491688 \to \mathbf{0.492729}$.
+   - Image 1243: 0 FPs (all 8 stump clutter boxes pruned), 1 TP plastic bottle preserved, grouping is exactly 1 `Individual Litter`.
+   - Unit tests: 5 passed in `tests/test_stage5_d105_false_group_elimination.py`; 113 passed in `tests/test_stage5*.py`; 396 passed (0 failures, 0 errors) in `scripts/verify_stage4_guarded.py`.
+   - See [TACO Stage 5 D-105 False Group Elimination Report](TACO_STAGE_5_D105_FALSE_GROUP_ELIMINATION.md).
+
 ## D-104: Scale-Normalized Spatial Grouping & Visual Review GUI Integration - 2026-11-06
 
 Owner authorization D-104 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

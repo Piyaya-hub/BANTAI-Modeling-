@@ -1,35 +1,38 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-104
+## Current Stage 5 state through D-105
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-104, scale-normalized spatial
-grouping (`individual_litter`, `group_of_individual_litter`, `garbage_pile`) was
-implemented in `scripts/taco_stage5_spatial_grouping.py` and integrated into the Visual Review GUI.
-Additionally, hardcoded `PROTECTED_SHOWCASE_IDS` was completely removed from `scripts/taco_stage5_consensus_tiebreak.py`
-and replaced with a feature-based compact hazard cluster check while maintaining 100% of D-103 AP metrics:
-- **Official 9-Specific AP**: **0.295136** (target >= 0.295084, new benchmark high).
-- **BANTAI 5-Category AP**: **0.491688** (target >= 0.491560, new benchmark high).
+validation / 65-image test memberships frozen. Under D-105, bounded-density DBSCAN
+calibration ($\rho \ge 0.45, \alpha = 2.0, \beta = 0.225$) and anti-daisy-chaining were
+implemented in `scripts/taco_stage5_spatial_grouping.py` to eliminate false garbage piles,
+and repetitive background clutter suppression (Pass 7B12-7B13) was implemented in
+`scripts/taco_stage5_consensus_tiebreak.py` to eliminate stump clutter on Image 1243 and
+across the 65-image benchmark:
+- **Official 9-Specific AP**: **0.298963** (target >= 0.295136, new benchmark high).
+- **BANTAI 5-Category AP**: **0.492729** (target >= 0.491688, new benchmark high).
 - **`paper` AP**: Preserved at **0.640610**.
-- **`cigarette` AP**: **0.142380** (target >= 0.141913).
+- **`cigarette` AP**: **0.142380**.
 - **`styrofoam_piece` AP**: Preserved at **0.287129**.
 - **Spatial Grouping Verified**:
   - Illustrative scope requirement: 1 isolated bottle + 4 litter in 1 group -> 1 Individual Litter, 1 Group of Individual Litter, 0 Garbage Pile (5 physical items, 2 independent regions).
-  - Image 1 (`000008.jpg`): 1 Garbage Pile (2 physical items, 1 independent region).
-  - Image 777 (`000084.JPG`): 1 Group of Individual Litter (5 physical items, 1 independent region).
+  - Image 1 (`000008.jpg`): 1 Garbage Pile (2 physical items, $\rho = 1.10$, 1 independent region).
+  - Image 768, 777, 928, 1076, 1182: False Garbage Piles eliminated into Group of Individual Litter ($\rho < 0.45$).
   - Image 802 (`IMG_5052.JPG`): 1 Individual Litter (1 physical item, 1 independent region).
-  - Image 998 (`000069.JPG`): 2 Individual Litter (2 physical items, 2 independent regions).
-- **Total Visible False Positives**: Preserved at **74** (**52.3% clean validation split**).
-- **Total Visible True Positives**: Preserved at **76**.
-- **Clean Images (0 FP)**: Preserved at **34 / 65**.
+  - Image 998 (`000069.JPG`): 2 Individual Litter (2 physical items, 2 independent regions; frame sprawl separated).
+  - Image 1243 (`000082.JPG`): 1 Individual Litter (1 physical item, 1 independent region; 8 stump clutter FPs eliminated).
+- **Total Visible False Positives**: Reduced from 74 to **63** (**55.4% clean validation split**).
+- **Total Visible True Positives**: Preserved at **76** (100% retention).
+- **Clean Images (0 FP)**: Increased from 34 to **36 / 65**.
 - **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images.
 
-All 13 benchmark showcase validation images remain clean and verified.
+All 14 benchmark showcase validation images remain clean and verified.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
 | Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
 | --- | --- | --- | --- |
+| D-105 | Bounded-density DBSCAN calibration ($\rho \ge 0.45$), false pile elimination & Pass 7B repetitive clutter suppression | **0.298963** | **0.492729** |
 | D-104 | Scale-normalized spatial grouping & GUI integration; hygiene removal of hardcoded IDs | **0.295136** | **0.491688** |
 | D-103 | Full 65-image precision sweep; Pass 7A plastic restoration, 7B10-12 clutter veto | **0.295084** | **0.491560** |
 | D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
