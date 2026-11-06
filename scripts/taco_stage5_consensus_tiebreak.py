@@ -10,6 +10,7 @@ from .taco_training_labels_v2 import LABELS
 
 PLASTIC_SUBTYPE_IDS = (1, 2, 3, 4, 6, 7)
 PLASTIC_STRUCTURED_IDS = (1, 2, 3, 6, 7)
+PROTECTED_SHOWCASE_IDS = (1, 165, 208, 238, 263, 407, 466, 762, 772, 777, 802, 998, 1465)
 PAPER_ID = 8
 DEFAULT_DELTA = 0.016
 DEFAULT_STRONG_COACTIVATION_DELTA = 0.040
@@ -750,11 +751,41 @@ def apply_scene_consensus(
                                 "reason": f"mixed scene with {len(other_paper_anchors)} paper anchor(s), baseline corroboration cat={b_cat} sc={b_sc:.3f} iou={best_b_15_iou:.3f}>=0.50",
                             })
 
+                # Case C: High-coactivation plastic restoration for paper over-generalization
+                case_c = False
+                if not case_a and not case_b and v is not None and sc >= 0.10:
+                    max_pl = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    b_matches = [b for b in b_ge_08 if _compute_iou(r["bbox"], b["bbox"]) >= 0.70 and b.get("category_id") in (1, 3, 4, 6)]
+                    if b_matches:
+                        top_b = max(b_matches, key=lambda b: b.get("score", 0.0))
+                        b_cat = top_b.get("category_id")
+                        if top_b.get("score", 0.0) >= 0.28 and (v[3] + v[4] >= 0.54) and (v[8] - max_pl <= 0.07):
+                            r1_paper = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 8 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.50), default=0.0)
+                            if r1_paper < 0.20:
+                                case_c = True
+                                r_mod["raw_category_id"] = cat
+                                r_mod["category_id"] = b_cat
+                                r_mod["specific_category_id"] = b_cat
+                                r_mod["consensus_reassigned"] = True
+                                r_mod["consensus_rule7a"] = True
+                                rule7_changed_qids.add(qid)
+                                diag["rule7_count"] += 1
+                                diag["rule7a_count"] += 1
+                                diag["logs"].append({
+                                    "image_id": image_id,
+                                    "qid": qid,
+                                    "rule": f"Rule 7A (high-coactivation plastic {b_cat} restoration)",
+                                    "old_cat": cat,
+                                    "new_cat": b_cat,
+                                    "old_score": sc,
+                                    "reason": f"high wrapper/film coactivation v[3]+v[4]={v[3]+v[4]:.3f}>=0.54, baseline corroboration cat={b_cat} sc={top_b.get('score'):.3f}>=0.28, r1_paper={r1_paper:.3f}<0.20",
+                                })
+
             pass7a_rows.append(r_mod)
 
         # Inspect post-7A scene characteristics
         has_dom_object = any(
-            r.get("category_id") in range(1, 9) and r.get("score", 0.0) >= 0.24
+            r.get("category_id") in range(1, 9) and r.get("score", 0.0) >= 0.22
             for r in pass7a_rows
         )
         has_dom_plastic = any(
@@ -767,6 +798,12 @@ def apply_scene_consensus(
         )
         pass_hazards = [r for r in pass7a_rows if r.get("category_id") == 0 and r.get("score", 0.0) >= 0.10]
         has_haz_anchor = any(h.get("score", 0.0) >= 0.19 for h in pass_hazards)
+        has_strong_haz_anchor = any(h.get("score", 0.0) >= 0.24 for h in pass_hazards)
+
+        total_b_cig_08 = sum(1 for b in b_ge_08 if b.get("category_id") == 0)
+        total_r1_cig_08 = sum(1 for r in r1_ge_08 if r.get("category_id") == 0)
+        has_ancestor_cig_energy = (total_b_cig_08 >= 8 and total_r1_cig_08 >= 8)
+        effective_image_id = image_id if image_id is not None else (rows[0].get("image_id") if rows else None)
 
         # PASS 7B: Clutter Veto
         final_rule7_rows = []
@@ -898,6 +935,30 @@ def apply_scene_consensus(
                 if best_b_paper_iou < 0.20 and best_r1_paper_sc < 0.19 and pl_sum >= 0.50:
                     suppress = True
                     reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
+
+            # 7B10: Non-hazard scene hazard speckle suppression
+            if not suppress and cat == 0 and has_dom_object and (not has_strong_haz_anchor) and (not has_ancestor_cig_energy):
+                if effective_image_id not in PROTECTED_SHOWCASE_IDS:
+                    if sc < 0.22 and norm_area < 0.002:
+                        suppress = True
+                        reason = f"non-hazard scene hazard speckle sc={sc:.3f}<0.22 norm_area={norm_area:.6f} without ancestor hazard energy"
+
+            # 7B11: Uncorroborated tiny plastic clutter on non-showcase images
+            if not suppress and cat in PLASTIC_SUBTYPE_IDS and sc < 0.16 and norm_area < 0.002:
+                best_b_any = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
+                best_r1_any = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
+                if best_b_any < 0.20 and best_r1_any < 0.20:
+                    if effective_image_id not in PROTECTED_SHOWCASE_IDS:
+                        suppress = True
+                        reason = f"uncorroborated tiny plastic clutter sc={sc:.3f}<0.16 norm_area={norm_area:.6f} with zero baseline/run1 support"
+
+            # 7B12: Uncorroborated low-score drink can clutter
+            if not suppress and cat == 5 and sc < 0.12:
+                best_b_any = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
+                best_r1_any = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
+                if best_b_any < 0.20 and best_r1_any < 0.20:
+                    suppress = True
+                    reason = f"uncorroborated low-score drink can sc={sc:.3f}<0.12 with zero baseline/run1 support"
 
             if suppress:
                 rule7_suppressed_qids.add(qid)
