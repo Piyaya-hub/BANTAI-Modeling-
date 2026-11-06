@@ -115,6 +115,7 @@ class TestStage5D098BgSuppression(unittest.TestCase):
             adj, _, _ = apply_scene_consensus(
                 raw_by_img[img_id], d095_vecs["scores"][img_map[img_id]],
                 image_width=w, image_height=h,
+                enable_rule6=False, enable_rule7=False,
             )
             adj_by_img[img_id] = adj
 

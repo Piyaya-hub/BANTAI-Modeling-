@@ -145,13 +145,15 @@ class TestStage5D095BoxContrastive(unittest.TestCase):
             c5 = NAMES["bantai-5-category"][MAPS["bantai-5-category"][c["category_id"]]]
             self.assertEqual(c5, "Potentially Hazardous")
 
-        # 2. Backward-compatible check: when Rule 1B, Rule 4, and Rule 5 are disabled
+        # 2. Backward-compatible check: when Rule 1B, Rule 4, Rule 5, Rule 6, and Rule 7 are disabled
         adj_legacy, _, supp_legacy, diag_legacy = apply_scene_consensus(
             img777_rows, vecs, image_width=w, image_height=h,
             coactivation="3 plastic subtypes >= 0.20",
             enable_rule1b=False,
             enable_rule4=False,
             enable_rule5=False,
+            enable_rule6=False,
+            enable_rule7=False,
             return_diagnostics=True,
         )
         self.assertEqual(diag_legacy["anchors_found"], 0)

@@ -563,13 +563,16 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
                 if D095_CHAMPION_STATE in preds_by_state:
                     from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus
                     preds_by_state[D095_CONSENSUS_STATE] = defaultdict(list)
+                    base_rows_dict = preds_by_state.get("Baseline", {})
                     for img_id, rows in preds_by_state[D095_CHAMPION_STATE].items():
                         s_vec = d095_vectors["scores_by_image"][img_id]
                         w = images[img_id]["width"]
                         h = images[img_id]["height"]
+                        base_r = base_rows_dict.get(img_id, None)
                         c_rows, _, _ = apply_scene_consensus(
                             rows, s_vec, image_width=w, image_height=h,
                             coactivation="3 plastic subtypes >= 0.20",
+                            baseline_rows=base_r,
                         )
                         preds_by_state[D095_CONSENSUS_STATE][img_id] = c_rows
 
@@ -612,13 +615,16 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
                 if D098_CHAMPION_STATE in preds_by_state:
                     from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus
                     preds_by_state[D098_CONSENSUS_STATE] = defaultdict(list)
+                    base_rows_dict = preds_by_state.get("Baseline", {})
                     for img_id, rows in preds_by_state[D098_CHAMPION_STATE].items():
                         s_vec = d098_vectors["scores_by_image"][img_id]
                         w = images[img_id]["width"]
                         h = images[img_id]["height"]
+                        base_r = base_rows_dict.get(img_id, None)
                         c_rows, _, _ = apply_scene_consensus(
                             rows, s_vec, image_width=w, image_height=h,
                             coactivation="3 plastic subtypes >= 0.20",
+                            baseline_rows=base_r,
                         )
                         preds_by_state[D098_CONSENSUS_STATE][img_id] = c_rows
 
@@ -1091,6 +1097,7 @@ class Stage5ViewerGUI:
         if use_consensus:
             from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus, apply_to_query_rows
             w, h = self.current_pil.size
+            base_r = self.preds.get("Baseline", {}).get(img_id, None)
             if is_d098_champ:
                 highres_preds, _, _ = apply_scene_consensus(
                     highres_preds, self.d098_vectors["scores_by_image"][img_id],
@@ -1102,6 +1109,9 @@ class Stage5ViewerGUI:
                     enable_rule3=scene_active,
                     enable_rule4=scene_active,
                     enable_rule5=scene_active,
+                    enable_rule6=scene_active,
+                    enable_rule7=scene_active,
+                    baseline_rows=base_r,
                 )
             elif is_d095_champ:
                 highres_preds, _, _ = apply_scene_consensus(
@@ -1114,6 +1124,9 @@ class Stage5ViewerGUI:
                     enable_rule3=scene_active,
                     enable_rule4=scene_active,
                     enable_rule5=scene_active,
+                    enable_rule6=scene_active,
+                    enable_rule7=scene_active,
+                    baseline_rows=base_r,
                 )
             elif is_multiscale:
                 s_vec = self.multiscale_vectors["scores_by_image"][img_id]

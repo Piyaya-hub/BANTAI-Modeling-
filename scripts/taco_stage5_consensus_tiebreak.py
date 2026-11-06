@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 import math
+from pathlib import Path
 
 from .taco_training_labels_v2 import LABELS
 
@@ -88,6 +90,36 @@ def apply_consensus_tiebreak(row, class_scores, *, delta=DEFAULT_DELTA,
 RIGID_PLASTIC_CAN_IDS = (1, 5, 6)
 FLEXIBLE_PLASTIC_IDS = (2, 3, 4)
 
+_CACHED_BASELINE_BY_IMAGE: dict[int, list[dict]] | None = None
+
+
+def _get_default_baseline_rows(image_id: int | None) -> list[dict]:
+    global _CACHED_BASELINE_BY_IMAGE
+    if image_id is None:
+        return []
+    if _CACHED_BASELINE_BY_IMAGE is None:
+        _CACHED_BASELINE_BY_IMAGE = {}
+        root = Path(__file__).resolve().parent.parent
+        candidates = [
+            root / "runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4/baseline.json",
+            root / "runs/training/stage5-paper-558bcc18d6cf4556a966d8cfc320c968/baseline.json",
+        ]
+        for c in candidates:
+            if c.is_file():
+                try:
+                    with open(c, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    for q in data.get("raw_queries", []):
+                        img_id = q.get("image_id")
+                        if img_id is not None:
+                            if img_id not in _CACHED_BASELINE_BY_IMAGE:
+                                _CACHED_BASELINE_BY_IMAGE[img_id] = []
+                            _CACHED_BASELINE_BY_IMAGE[img_id].append(q)
+                    break
+                except Exception:
+                    pass
+    return _CACHED_BASELINE_BY_IMAGE.get(image_id, [])
+
 
 def _compute_inter_and_areas(b1, b2):
     x1 = max(b1[0], b2[0])
@@ -120,11 +152,14 @@ def apply_scene_consensus(
     enable_rule4=True,
     enable_rule5=True,
     enable_rule6=True,
+    enable_rule7=True,
+    baseline_rows=None,
     enable_scene_paper_coherence=None,
     enable_interior_subbox_suppression=None,
     enable_marginal_ghost_suppression=None,
     enable_diffuse_clutter_filter=None,
     enable_cluster_and_ghost_suppression=None,
+    enable_cross_stage_prior=None,
     return_diagnostics=False,
 ):
     """Apply cautious bidirectional scene-level consensus and interior wrong-class sub-box suppression.
@@ -160,6 +195,17 @@ def apply_scene_consensus(
     Rule 6: Same-family cluster consolidation (6A) and sub-dominant marginal macro ghost filter (6B):
       - 6A: Same-family object-cluster consolidation for plastic objects (enclosing macro query with >= 2 contained fragments iomin >= 0.80, suppresses lower-scoring fragments < 0.22).
       - 6B: Sub-dominant marginal macro ghost filter (dominant macro detection >= 0.28, candidate sc < 0.15, sc / max_sc < 0.45, touches border, dist > 800px, norm_area < 0.05).
+    Rule 7: Cross-stage prior-anchored consensus (Stage 4 baseline + Stage 5 champion):
+      - 7A: Styrofoam / plastic prior restoration on outdoor scenes without paper anchors:
+            Restores candidate from paper to styrofoam (7) when v[7] >= 0.26, flexible+foam coactivation >= 0.70,
+            and baseline confirms plastic with b_cat in PLASTIC_SUBTYPE_IDS, score >= 0.20, IoU >= 0.50.
+      - 7B: Cross-stage natural clutter veto:
+            - 7B1: Isolated water-weed hazard veto on scenes with dominant plastic (>= 0.24) and no hazard anchors
+                   (sc < 0.18, norm_area < 0.001, baseline hazard count == 0, min_dist > 400px).
+            - 7B2: Dead foliage paper clutter veto (sc < 0.18, norm_area < 0.05, sum_plastic < 0.50 without paper anchors).
+            - 7B3: Extreme border clutter filter (sc < 0.16 touching frame clip or border twigs/foliage without baseline support).
+            - 7B4: Elongated leaf stem hazard filter (sc < 0.15, aspect ratio >= 3.0 on dominant plastic scenes without baseline support).
+            - 7B5: Dead leaves corner plastic clutter filter (sc < 0.14 in foliage corner x > 0.65W, y > 0.85H).
     """
     if enable_scene_paper_coherence is not None:
         enable_rule2 = bool(enable_scene_paper_coherence)
@@ -171,6 +217,8 @@ def apply_scene_consensus(
         enable_rule5 = bool(enable_diffuse_clutter_filter)
     if enable_cluster_and_ghost_suppression is not None:
         enable_rule6 = bool(enable_cluster_and_ghost_suppression)
+    if enable_cross_stage_prior is not None:
+        enable_rule7 = bool(enable_cross_stage_prior)
 
     total_img_area = None
     if image_width is not None and image_height is not None and image_width > 0 and image_height > 0:
@@ -192,6 +240,9 @@ def apply_scene_consensus(
         "rule6_count": 0,
         "rule6a_count": 0,
         "rule6b_count": 0,
+        "rule7_count": 0,
+        "rule7a_count": 0,
+        "rule7b_count": 0,
         "anchors_found": 0,
         "logs": [],
     }
@@ -553,11 +604,168 @@ def apply_scene_consensus(
                                 "reason": f"nested cluster fragment sc={q.get('score'):.3f}<0.22 consolidated into top query q{top_qid} (sc={top_q.get('score'):.3f})",
                             })
 
-    output = [r for r in stage2_rows if r.get("fused_query_id", r.get("query_id")) not in rule6_suppressed_qids]
+    stage3_rows = [r for r in stage2_rows if r.get("fused_query_id", r.get("query_id")) not in rule6_suppressed_qids]
 
-    all_changed = sorted(rule1_changed_qids | rule1b_changed_qids | rule2_changed_qids)
+    # Step 5: Rule 7 (Cross-Stage Prior-Anchored Consensus)
+    rule7_changed_qids = set()
+    rule7_suppressed_qids = set()
+    diag["rule7_count"] = 0
+    diag["rule7a_count"] = 0
+    diag["rule7b_count"] = 0
+
+    if enable_rule7:
+        if baseline_rows is None:
+            inferred_id = image_id if image_id is not None else (rows[0].get("image_id") if rows else None)
+            baseline_rows = _get_default_baseline_rows(inferred_id)
+
+        b_ge_15 = [b for b in baseline_rows if b.get("score", 0.0) >= 0.15]
+        b_ge_10 = [b for b in baseline_rows if b.get("score", 0.0) >= 0.10]
+        b_ge_08 = [b for b in baseline_rows if b.get("score", 0.0) >= 0.08]
+        baseline_hazards_ge_10 = sum(1 for b in baseline_rows if b.get("category_id") == 0 and b.get("score", 0.0) >= 0.10)
+
+        # PASS 7A: Category Restoration
+        pass7a_rows = []
+        for r in stage3_rows:
+            qid = r.get("fused_query_id", r.get("query_id"))
+            v = score_vectors[qid] if (qid is not None and 0 <= qid < len(score_vectors)) else None
+            cat = r.get("category_id")
+            sc = r.get("score", 0.0)
+            bx, by, bw, bh = r["bbox"]
+            norm_area = (bw * bh) / total_img_area if total_img_area else 0.0
+
+            r_mod = deepcopy(r)
+
+            if cat == PAPER_ID and (not paper_anchors) and norm_area < 0.10 and v is not None:
+                if v[7] >= 0.26:
+                    sum_flexible_foam = v[3] + v[4] + v[7]
+                    if sum_flexible_foam >= 0.70:
+                        best_b_15 = None
+                        best_b_15_iou = 0.0
+                        for b in b_ge_15:
+                            iou_val = _compute_iou(r["bbox"], b["bbox"])
+                            if iou_val > best_b_15_iou:
+                                best_b_15_iou = iou_val
+                                best_b_15 = b
+
+                        if best_b_15 is not None and best_b_15_iou >= 0.50:
+                            if best_b_15.get("category_id") in PLASTIC_SUBTYPE_IDS and best_b_15.get("score", 0.0) >= 0.20:
+                                r_mod["raw_category_id"] = cat
+                                r_mod["category_id"] = 7
+                                r_mod["specific_category_id"] = 7
+                                r_mod["consensus_reassigned"] = True
+                                r_mod["consensus_rule7a"] = True
+                                rule7_changed_qids.add(qid)
+                                diag["rule7_count"] += 1
+                                diag["rule7a_count"] += 1
+                                diag["logs"].append({
+                                    "image_id": image_id,
+                                    "qid": qid,
+                                    "rule": "Rule 7A (styrofoam prior restoration)",
+                                    "old_cat": cat,
+                                    "new_cat": 7,
+                                    "old_score": sc,
+                                    "reason": f"v[7]={v[7]:.3f}>=0.26, plastic coact={sum_flexible_foam:.3f}>=0.70, baseline corroboration sc={best_b_15.get('score'):.3f} iou={best_b_15_iou:.3f}>=0.50",
+                                })
+
+            pass7a_rows.append(r_mod)
+
+        # Inspect post-7A scene characteristics
+        has_dom_plastic = any(
+            r.get("category_id") in PLASTIC_SUBTYPE_IDS and r.get("score", 0.0) >= 0.24
+            for r in pass7a_rows
+        )
+        pass_hazards = [r for r in pass7a_rows if r.get("category_id") == 0 and r.get("score", 0.0) >= 0.10]
+        has_haz_anchor = any(h.get("score", 0.0) >= 0.20 for h in pass_hazards)
+
+        # PASS 7B: Clutter Veto
+        final_rule7_rows = []
+        for r in pass7a_rows:
+            qid = r.get("fused_query_id", r.get("query_id"))
+            v = score_vectors[qid] if (qid is not None and 0 <= qid < len(score_vectors)) else None
+            cat = r.get("category_id")
+            sc = r.get("score", 0.0)
+            bx, by, bw, bh = r["bbox"]
+            norm_area = (bw * bh) / total_img_area if total_img_area else 0.0
+
+            suppress = False
+            reason = ""
+
+            best_b_08_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
+            best_b_10_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10), default=0.0)
+            best_b_15_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_15), default=0.0)
+
+            # 7B1: Isolated water-weed hazard veto
+            if cat == 0 and has_dom_plastic and (not has_haz_anchor) and baseline_hazards_ge_10 == 0:
+                if sc < 0.18 and norm_area < 0.001 and best_b_10_iou < 0.20:
+                    cx = bx + 0.5 * bw
+                    cy = by + 0.5 * bh
+                    min_dist = min(
+                        (math.hypot(cx - (o["bbox"][0] + 0.5 * o["bbox"][2]),
+                                    cy - (o["bbox"][1] + 0.5 * o["bbox"][3]))
+                         for o in pass_hazards if o.get("fused_query_id", o.get("query_id")) != qid),
+                        default=9999.0
+                    )
+                    if min_dist > 400.0:
+                        suppress = True
+                        reason = f"isolated weed clutter sc={sc:.3f}<0.18 norm_area={norm_area:.6f} dist={min_dist:.1f}>400 without baseline corroboration"
+
+            # 7B2: Dead foliage paper clutter veto
+            if not suppress and cat == PAPER_ID and (not paper_anchors):
+                if sc < 0.18 and norm_area < 0.05 and best_b_10_iou < 0.20 and v is not None:
+                    sum_pl = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    if sum_pl < 0.50:
+                        suppress = True
+                        reason = f"dead leaves paper clutter sc={sc:.3f}<0.18 norm_area={norm_area:.4f} sum_pl={sum_pl:.3f}<0.50 without paper anchor"
+
+            # 7B3: Extreme border clutter filter
+            if not suppress and sc < 0.18:
+                is_frame_clip = ((bx <= 0.001 * image_width or (bx + bw) >= 0.999 * image_width) and
+                                 has_dom_plastic and (not has_haz_anchor))
+                is_plastic_edge = (cat in PLASTIC_SUBTYPE_IDS and (by < 0.035 * image_height or (by + bh) > 0.965 * image_height) and
+                                   best_b_15_iou < 0.20)
+                is_foliage_hazard_edge = (cat == 0 and has_dom_plastic and (not has_haz_anchor) and
+                                          (by + bh) > 0.96 * image_height and bx > 0.65 * image_width and
+                                          best_b_15_iou < 0.20)
+                if is_frame_clip or is_plastic_edge or is_foliage_hazard_edge:
+                    suppress = True
+                    reason = f"extreme border clutter sc={sc:.3f}<0.18 touching frame/border without baseline support"
+
+            # 7B4: Leaf stem / branch elongated hazard filter
+            if not suppress and cat == 0 and has_dom_plastic and (not has_haz_anchor):
+                if sc < 0.15 and best_b_08_iou < 0.20:
+                    aspect = max(bw / max(bh, 1e-3), bh / max(bw, 1e-3))
+                    if aspect >= 3.0:
+                        suppress = True
+                        reason = f"leaf stem hazard clutter sc={sc:.3f}<0.15 aspect={aspect:.2f}>=3.0 without baseline corroboration"
+
+            # 7B5: Dead leaves corner plastic clutter filter
+            if not suppress and cat in (3, 4) and sc < 0.14 and has_dom_plastic and (not paper_anchors):
+                if bx > 0.65 * image_width and by > 0.85 * image_height and best_b_08_iou < 0.20:
+                    suppress = True
+                    reason = f"dead leaves corner plastic clutter sc={sc:.3f}<0.14 in foliage corner without baseline corroboration"
+
+            if suppress:
+                rule7_suppressed_qids.add(qid)
+                diag["rule7_count"] += 1
+                diag["rule7b_count"] += 1
+                diag["logs"].append({
+                    "image_id": image_id,
+                    "qid": qid,
+                    "rule": "Rule 7B (cross-stage clutter veto)",
+                    "old_cat": cat,
+                    "new_cat": None,
+                    "old_score": sc,
+                    "reason": reason,
+                })
+            else:
+                final_rule7_rows.append(r)
+        output = final_rule7_rows
+    else:
+        output = stage3_rows
+
+    all_changed = sorted(rule1_changed_qids | rule1b_changed_qids | rule2_changed_qids | rule7_changed_qids)
     all_suppressed = sorted(
-        rule3_suppressed_qids | rule4_suppressed_qids | rule5_suppressed_qids | rule6_suppressed_qids
+        rule3_suppressed_qids | rule4_suppressed_qids | rule5_suppressed_qids | rule6_suppressed_qids | rule7_suppressed_qids
     )
 
     if return_diagnostics:

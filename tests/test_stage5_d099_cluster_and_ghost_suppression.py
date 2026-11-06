@@ -87,7 +87,7 @@ class TestStage5D099ClusterAndGhostSuppression(unittest.TestCase):
             vecs = self.d095_vecs["scores"][self.img_map[i_id]]
             adj, _, _, diag = apply_scene_consensus(
                 raw_rows, vecs, image_width=img["width"], image_height=img["height"],
-                enable_rule6=True, return_diagnostics=True
+                enable_rule6=True, enable_rule7=False, return_diagnostics=True
             )
             tot_6a += diag["rule6a_count"]
             tot_6b += diag["rule6b_count"]
