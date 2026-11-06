@@ -68,6 +68,7 @@ PREDICTION_SOURCES = ["single_scale_champion", "multiscale_384_448"]
 ORGANIC_SHOWCASE_FILTER = "Organic Showcase (4 Images: 68, 72, 92, 841)"
 ORGANIC_9_STATE = "Organic Showcase 9-Prompt (384/576)"
 ORGANIC_10_STATE = "Organic Showcase 10-Prompt (Hybrid)"
+VIDEO_FRAMES_FILTER = "Video Frames: Motion_Extract_Testing.mp4"
 
 
 def discover_tier1_run(explicit=None, root=ROOT):
@@ -268,6 +269,46 @@ def load_organic_showcase(root=ROOT):
         payload["manifest"] = manifest
         return payload
     return None
+
+
+def load_video_showcase(root=ROOT):
+    """Load complete, hash-bound local D-106 video showcase replay artifact when available."""
+    import hashlib
+    video_dir = Path(root) / "runs/video_detection/motion_extract_testing"
+    showcase_path = video_dir / "video-showcase.json"
+    manifest_path = video_dir / "manifest.json"
+    vectors_path = video_dir / "video-score-vectors.npz"
+
+    if not showcase_path.is_file() or not manifest_path.is_file() or not vectors_path.is_file():
+        return None
+
+    manifest = strict_load(manifest_path)
+    if manifest.get("authorization") != "D-106":
+        return None
+
+    showcase_sha = hashlib.sha256(showcase_path.read_bytes()).hexdigest()
+    if manifest.get("files", {}).get("video-showcase.json") != showcase_sha:
+        return None
+
+    vectors_sha = hashlib.sha256(vectors_path.read_bytes()).hexdigest()
+    if manifest.get("files", {}).get("video-score-vectors.npz") != vectors_sha:
+        return None
+
+    payload = strict_load(showcase_path)
+    payload["manifest"] = manifest
+    payload["video_dir"] = video_dir
+
+    with np.load(vectors_path) as npz:
+        image_ids = npz["image_ids"]
+        scores = npz["scores"]
+        payload["scores_by_image"] = {int(iid): scores[idx] for idx, iid in enumerate(image_ids)}
+
+    payload["images"] = {int(k): v for k, v in payload.get("images", {}).items()}
+    norm_preds = {}
+    for state, by_img in payload.get("predictions", {}).items():
+        norm_preds[state] = {int(k): v for k, v in by_img.items()}
+    payload["predictions"] = norm_preds
+    return payload
 
 
 def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float = 0.80):
@@ -639,6 +680,16 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
 
     consensus = load_consensus_score_vectors(tier2_run_dir, images, ROOT)
     organic_showcase = load_organic_showcase(ROOT)
+    video_showcase = load_video_showcase(ROOT)
+    if video_showcase:
+        for state, by_image in video_showcase["predictions"].items():
+            if state not in preds_by_state:
+                preds_by_state[state] = defaultdict(list)
+            for image_id, rows in by_image.items():
+                preds_by_state[state][int(image_id)] = rows
+        if d095_vectors is None:
+            d095_vectors = {"scores_by_image": {}}
+        d095_vectors["scores_by_image"].update(video_showcase["scores_by_image"])
     if organic_showcase:
         for state, by_image in organic_showcase["predictions"].items():
             preds_by_state[state] = defaultdict(list)
@@ -657,6 +708,7 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
         "multiscale_predictions": multiscale_preds,
         "multiscale_score_vectors": multiscale_vectors,
         "organic_showcase": organic_showcase,
+        "video_showcase": video_showcase,
         "metrics": {
             "Baseline": baseline_data.get("combined_65", {}),
             "Stage 5 (256/384)": ep2_data.get("combined_65", {}),
@@ -743,7 +795,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
 
 class Stage5ViewerGUI:
-    def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 15, prediction_source: str = PREDICTION_SOURCES[0]):
+    def __init__(self, data: dict, initial_image_id: int | None = None, default_threshold: float = 0.10, default_top_k: int = 15, prediction_source: str = PREDICTION_SOURCES[0], initial_filter: str | None = None):
         configure_tcl_tk_environment()
         import tkinter as tk
         from tkinter import ttk
@@ -762,6 +814,7 @@ class Stage5ViewerGUI:
         self.d095_vectors = data.get("d095_score_vectors")
         self.d098_vectors = data.get("d098_score_vectors")
         self.organic_showcase = data.get("organic_showcase")
+        self.video_showcase = data.get("video_showcase")
         self.dataset_root = data["dataset_root"]
         self.prediction_source = prediction_source
 
@@ -785,20 +838,31 @@ class Stage5ViewerGUI:
         filter_values = ["Paper Images (18)", "All Images (65)"]
         if self.organic_showcase:
             filter_values.append(ORGANIC_SHOWCASE_FILTER)
-        filter_cb = ttk.Combobox(ctrl_frame, textvariable=self.filter_var, values=filter_values, state="readonly", width=35)
+        if self.video_showcase:
+            filter_values.append(VIDEO_FRAMES_FILTER)
+        filter_cb = ttk.Combobox(ctrl_frame, textvariable=self.filter_var, values=filter_values, state="readonly", width=38)
         filter_cb.pack(side="left", padx=4)
         filter_cb.bind("<<ComboboxSelected>>", self.on_filter_change)
 
         # Image Dropdown
         ttk.Label(ctrl_frame, text="Image:").pack(side="left", padx=(10, 2))
         self.img_var = tk.StringVar()
-        self.img_cb = ttk.Combobox(ctrl_frame, textvariable=self.img_var, state="readonly", width=26)
+        self.img_cb = ttk.Combobox(ctrl_frame, textvariable=self.img_var, state="readonly", width=32)
         self.img_cb.pack(side="left", padx=4)
         self.img_cb.bind("<<ComboboxSelected>>", self.on_image_change)
 
         # Prev / Next Buttons
         ttk.Button(ctrl_frame, text="◀ Prev", width=7, command=self.prev_image).pack(side="left", padx=2)
         ttk.Button(ctrl_frame, text="Next ▶", width=7, command=self.next_image).pack(side="left", padx=2)
+
+        # Dedicated Video Frames Button
+        if self.video_showcase:
+            self.video_frames_btn = ttk.Button(
+                ctrl_frame,
+                text="Check Video Frames (data/input)",
+                command=self.toggle_video_frames_mode,
+            )
+            self.video_frames_btn.pack(side="left", padx=(6, 4))
 
         # Threshold Control
         ttk.Label(ctrl_frame, text="Score Threshold:").pack(side="left", padx=(14, 2))
@@ -950,8 +1014,16 @@ class Stage5ViewerGUI:
         status_bar = ttk.Label(self.root, textvariable=self.status_var, relief="sunken", anchor="w", padding=4)
         status_bar.pack(side="bottom", fill="x")
 
-        self.populate_image_list()
-        if (initial_image_id is not None and self.organic_showcase
+        if initial_filter == VIDEO_FRAMES_FILTER and self.video_showcase:
+            self.filter_var.set(VIDEO_FRAMES_FILTER)
+            if hasattr(self, "video_frames_btn"):
+                self.video_frames_btn.config(text="Back to Validation Images (65)")
+            if D095_CHAMPION_STATE in self.preds:
+                self.review_state_var.set(D095_CHAMPION_STATE)
+            self.populate_image_list()
+            first_id = sorted(self.video_showcase["image_ids"])[0]
+            self.set_current_image(first_id)
+        elif (initial_image_id is not None and self.organic_showcase
                 and initial_image_id in {68, 72, 92, 841}):
             self.filter_var.set(ORGANIC_SHOWCASE_FILTER)
             if ORGANIC_10_STATE in self.preds:
@@ -981,7 +1053,24 @@ class Stage5ViewerGUI:
 
     def populate_image_list(self):
         f = self.filter_var.get()
-        if f == ORGANIC_SHOWCASE_FILTER and self.organic_showcase:
+        if f == VIDEO_FRAMES_FILTER and self.video_showcase:
+            target_ids = sorted(self.video_showcase["image_ids"])
+            source_images = self.video_showcase["images"]
+            frames_summary = self.video_showcase.get("manifest", {}).get("frames_summary", {})
+            items = []
+            for img_id in target_ids:
+                img = source_images[img_id]
+                ts = img.get("timestamp_sec", 0.0)
+                ts_str = f"{int(ts // 60):02d}:{ts % 60:04.1f}s"
+                f_sum = frames_summary.get(str(img_id), {})
+                v_count = f_sum.get("visible_items_count", 0)
+                tag = f"[{ts_str} | {'TRASH' if v_count > 0 else 'CLEAN'}]"
+                fname = Path(img["file_name"]).name
+                items.append(f"Image {img_id} {tag} ({fname})")
+            self.img_cb["values"] = items
+            self.active_ids = target_ids
+            return
+        elif f == ORGANIC_SHOWCASE_FILTER and self.organic_showcase:
             target_ids = [68, 72, 92, 841]
             source_images = {int(k): v for k, v in self.organic_showcase["images"].items()}
         elif "Paper" in f:
@@ -1002,7 +1091,29 @@ class Stage5ViewerGUI:
         self.img_cb["values"] = items
         self.active_ids = target_ids
 
+    def toggle_video_frames_mode(self):
+        if not self.video_showcase:
+            return
+        if self.filter_var.get() == VIDEO_FRAMES_FILTER:
+            self.filter_var.set("All Images (65)")
+            if hasattr(self, "video_frames_btn"):
+                self.video_frames_btn.config(text="Check Video Frames (data/input)")
+        else:
+            self.filter_var.set(VIDEO_FRAMES_FILTER)
+            if hasattr(self, "video_frames_btn"):
+                self.video_frames_btn.config(text="Back to Validation Images (65)")
+            if D095_CHAMPION_STATE in self.preds:
+                self.review_state_var.set(D095_CHAMPION_STATE)
+        self.on_filter_change()
+
     def on_filter_change(self, event=None):
+        if hasattr(self, "video_frames_btn"):
+            if self.filter_var.get() == VIDEO_FRAMES_FILTER:
+                self.video_frames_btn.config(text="Back to Validation Images (65)")
+                if D095_CHAMPION_STATE in self.preds:
+                    self.review_state_var.set(D095_CHAMPION_STATE)
+            else:
+                self.video_frames_btn.config(text="Check Video Frames (data/input)")
         if self.filter_var.get() == ORGANIC_SHOWCASE_FILTER and ORGANIC_10_STATE in self.preds:
             self.review_state_var.set(ORGANIC_10_STATE)
         elif (self.consensus_vectors and CONSENSUS_STATE in self.preds
@@ -1050,9 +1161,20 @@ class Stage5ViewerGUI:
         organic_mode = (self.organic_showcase is not None
                         and self.filter_var.get() == ORGANIC_SHOWCASE_FILTER
                         and img_id in (68, 72, 92, 841))
-        img_entry = ({int(k): v for k, v in self.organic_showcase["images"].items()}[img_id]
-                     if organic_mode else self.images[img_id])
-        image_root = Path(self.organic_showcase["dataset_root"]).resolve() if organic_mode else self.dataset_root
+        video_mode = (self.video_showcase is not None
+                      and self.filter_var.get() == VIDEO_FRAMES_FILTER
+                      and img_id in self.video_showcase.get("images", {}))
+
+        if video_mode:
+            img_entry = self.video_showcase["images"][img_id]
+            ds_root = Path(self.video_showcase["dataset_root"])
+            image_root = ds_root.resolve() if ds_root.is_absolute() else (ROOT / ds_root).resolve()
+        elif organic_mode:
+            img_entry = {int(k): v for k, v in self.organic_showcase["images"].items()}[img_id]
+            image_root = Path(self.organic_showcase["dataset_root"]).resolve()
+        else:
+            img_entry = self.images[img_id]
+            image_root = self.dataset_root
         photo_path = (image_root / img_entry["file_name"]).resolve()
         if not photo_path.is_relative_to(image_root):
             raise ValueError("Validation photo path escapes dataset root")
@@ -1080,9 +1202,13 @@ class Stage5ViewerGUI:
         img_id = self.current_image_id
         showcase_mode = (self.organic_showcase is not None
                          and self.filter_var.get() == ORGANIC_SHOWCASE_FILTER)
-        self.details_notebook.tab(3, text=self.review_state_var.get())
+        video_mode = (self.video_showcase is not None
+                      and self.filter_var.get() == VIDEO_FRAMES_FILTER
+                      and img_id in self.video_showcase.get("images", {}))
+        self.details_notebook.tab(0, text="Clean Frame" if video_mode else "Ground Truth")
         self.details_notebook.tab(1, text="9-Prompt" if showcase_mode else "Baseline")
         self.details_notebook.tab(2, text="10-Prompt Hybrid" if showcase_mode else "Stage 5 (256/384)")
+        self.details_notebook.tab(3, text=self.review_state_var.get())
         thresh = float(self.thresh_var.get())
         top_k = int(self.topk_var.get())
 
@@ -1142,6 +1268,7 @@ class Stage5ViewerGUI:
             from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus, apply_to_query_rows
             w, h = self.current_pil.size
             base_r = self.preds.get("Baseline", {}).get(img_id, None)
+            run1_r = self.preds.get("Stage 5 (256/384)", {}).get(img_id, None)
             if is_d098_champ:
                 highres_preds, _, _ = apply_scene_consensus(
                     highres_preds, self.d098_vectors["scores_by_image"][img_id],
@@ -1156,6 +1283,7 @@ class Stage5ViewerGUI:
                     enable_rule6=scene_active,
                     enable_rule7=scene_active,
                     baseline_rows=base_r,
+                    run1_rows=run1_r,
                 )
             elif is_d095_champ:
                 highres_preds, _, _ = apply_scene_consensus(
@@ -1171,6 +1299,7 @@ class Stage5ViewerGUI:
                     enable_rule6=scene_active,
                     enable_rule7=scene_active,
                     baseline_rows=base_r,
+                    run1_rows=run1_r,
                 )
             elif is_multiscale:
                 s_vec = self.multiscale_vectors["scores_by_image"][img_id]
@@ -1283,8 +1412,19 @@ class Stage5ViewerGUI:
             highres_filtered = hr_grp["annotated_rows"]
             highres_regions = hr_grp["regions"]
 
-        draw_panel(self.axes["GT"], self.current_pil, gt_boxes, is_gt=True)
-        self.axes["GT"].set_title(f"Ground Truth ({len(gt_boxes)} objects)", fontsize=11, weight="bold")
+        if video_mode:
+            img_entry = self.video_showcase["images"][img_id]
+            f_idx = img_entry.get("frame_index", 0)
+            ts = img_entry.get("timestamp_sec", 0.0)
+            ts_str = f"{int(ts // 60):02d}:{ts % 60:04.1f}s"
+            draw_panel(self.axes["GT"], self.current_pil, [], is_gt=True)
+            self.axes["GT"].set_title(
+                f"Extracted Video Frame #{f_idx} (t = {ts_str}) — Motion_Extract_Testing.mp4",
+                fontsize=9, weight="bold"
+            )
+        else:
+            draw_panel(self.axes["GT"], self.current_pil, gt_boxes, is_gt=True)
+            self.axes["GT"].set_title(f"Ground Truth ({len(gt_boxes)} objects)", fontsize=11, weight="bold")
 
         # Rows were already filtered by the selected uniform/calibrated profile.
         # A second uniform filter here would silently hide 0.06-0.10 cigarettes.
@@ -1433,6 +1573,7 @@ def main() -> int:
     parser.add_argument("--d098-run-dir", type=Path, default=None, help="Explicit D-098 replay run; otherwise discover newest completed local run")
     parser.add_argument("--prediction-source", type=str, choices=PREDICTION_SOURCES, default=PREDICTION_SOURCES[0], help="Prediction source / replay mode")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
+    parser.add_argument("--video-frames", action="store_true", help="Launch interactive TkAgg GUI viewer directly in Video Frames mode for Motion_Extract_Testing.mp4")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
     parser.add_argument("--box-top-k", type=int, default=15, help="Maximum boxes drawn per panel (default: 15)")
@@ -1483,6 +1624,9 @@ def main() -> int:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1
 
+    if args.video_frames:
+        args.gui = True
+
     if args.gui:
         app = Stage5ViewerGUI(
             data,
@@ -1490,6 +1634,7 @@ def main() -> int:
             default_threshold=args.score_threshold,
             default_top_k=args.box_top_k,
             prediction_source=args.prediction_source,
+            initial_filter=VIDEO_FRAMES_FILTER if args.video_frames else None,
         )
         app.run()
     else:

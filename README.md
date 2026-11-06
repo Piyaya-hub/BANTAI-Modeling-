@@ -1,6 +1,18 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-105
+## Current Stage 5 state through D-106
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-106, video frame extraction
+and Three-Model Stage 5 detection were implemented in `scripts/taco_stage5_video_extract_and_detect.py`
+on `data/input/Motion_Extract_Testing.mp4` (16 frames at 1.0 FPS), with D-105 consensus
+and bounded-density spatial grouping replay, plus dedicated GUI toggle buttons in `scripts/taco_stage5_visual_review.py`:
+- **Official 9-Specific AP**: **0.298963** (frozen validation benchmark preserved).
+- **BANTAI 5-Category AP**: **0.492729** (frozen validation benchmark preserved).
+- **Video Extraction Verified**: 16 sequential RGB frames extracted from `data/input/Motion_Extract_Testing.mp4` (IDs 10001..10016).
+- **Three-Model Detection Verified**: Warm-Start Baseline (18.27s) + Stage 5 Run 1 (5.74s) + D-095 Champion (6.69s).
+- **Spatial Grouping on Video**: Dense Garbage Pile identified on Frame 10014 (t=13.0s); Group of Individual Litter and Individual Litter on other frames.
+- **GUI Video Mode**: Dedicated `Check Video Frames (data/input)` button and `--video-frames` CLI flag.
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
 validation / 65-image test memberships frozen. Under D-105, bounded-density DBSCAN
@@ -32,6 +44,7 @@ This is validation evidence, not test generalization or production promotion; no
 
 | Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
 | --- | --- | --- | --- |
+| D-106 | Video frame extraction & Three-Model Stage 5 detection on Motion_Extract_Testing.mp4 + GUI review | **0.298963** | **0.492729** |
 | D-105 | Bounded-density DBSCAN calibration ($\rho \ge 0.45$), false pile elimination & Pass 7B repetitive clutter suppression | **0.298963** | **0.492729** |
 | D-104 | Scale-normalized spatial grouping & GUI integration; hygiene removal of hardcoded IDs | **0.295136** | **0.491688** |
 | D-103 | Full 65-image precision sweep; Pass 7A plastic restoration, 7B10-12 clutter veto | **0.295084** | **0.491560** |

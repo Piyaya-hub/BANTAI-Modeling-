@@ -1,5 +1,33 @@
 # BANTAI Stage 4 handoff
 
+## D-106: Video Frame Extraction & Three-Model Stage 5 Detection on Motion_Extract_Testing.mp4 - 2026-11-06
+
+Owner authorization D-106 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Video Decoding & Deterministic Frame Extraction**:
+   - Inspected `data/input/Motion_Extract_Testing.mp4` (SHA-256 `a10bb8ebf616be46f1da0fde85355673f9c90726243c29050c58f0e9d8319602`, 1080x1920, 24.03 FPS, 377 frames, 15.69s duration).
+   - Installed `opencv-python` strictly into `.venv-training` (preserving Phase 2A `.venv`).
+   - Extracted 16 sequential RGB frames at 1.0 FPS into git-ignored `runs/video_detection/motion_extract_testing/frames/` with unique non-colliding IDs `10001..10016`.
+2. **Three-Model Forward Execution & Score Vectors**:
+   - Executed sequential forward passes across all 16 frames on GPU:
+     - `Warm-Start Baseline` (Stage 4 blend, 384x576) in 18.27s.
+     - `Stage 5 Run 1` (256/384 epoch-2 checkpoint, 256x384) in 5.74s.
+     - `D-095 Champion` (soup 50/50, 384x576) in 6.69s.
+   - Saved full 900 queries per model and `[16, 900, 9]` float32 sigmoid score vectors to `video-score-vectors.npz`.
+   - Saved `video-showcase.json` and cryptographic `manifest.json`.
+3. **Consensus & Spatial Grouping Replay**:
+   - Replayed full D-105 Three-Model Consensus (`apply_scene_consensus`) and Bounded-Density Spatial Grouping (`compute_spatial_grouping`).
+   - Frame 10014 (t=13.0s) correctly classified 1 dense `Garbage Pile` (26 visible items), while other frames formed `Group of Individual Litter` and `Individual Litter`.
+4. **Visual Review GUI Integration**:
+   - Added `load_video_showcase` discovery to `scripts/taco_stage5_visual_review.py`.
+   - Added top control bar toggle button `Check Video Frames (data/input)` / `Back to Validation Images (65)`.
+   - Added `Video Frames: Motion_Extract_Testing.mp4` to `Filter:` dropdown.
+   - Added CLI flag `--video-frames` to launch GUI directly in video frames inspection mode.
+5. **Verified Evidence**:
+   - Unit tests: 5 passed in `tests/test_stage5_d106_video_extraction.py`; 123 passed in `tests/test_stage5*.py`; 401 passed (0 failures, 0 errors) in `scripts/verify_stage4_guarded.py`.
+   - All 65 validation images retain exact metrics: $AP_9 = 0.298963, AP_5 = 0.492729$, 76 TPs, 63 visible FPs, 36 clean images.
+   - See [TACO Stage 5 D-106 Video Extraction Report](TACO_STAGE_5_D106_VIDEO_EXTRACTION.md).
+
 ## D-105: Elimination of False Spatial Groupings, Repetitive Background Clutter Suppression & Bounded-Density Calibration - 2026-11-06
 
 Owner authorization D-105 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were introduced. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
