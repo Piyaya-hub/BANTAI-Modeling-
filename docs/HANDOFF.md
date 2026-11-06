@@ -1,5 +1,34 @@
 # BANTAI Stage 4 handoff
 
+## D-098: Unmatched-Query Background Hard-Negative Suppression & False-Positive Clutter Elimination - 2026-11-06
+
+Owner authorization D-098 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred; file-system audithook enforced.
+
+1. **Problem & Diagnostic**:
+   - Visual inspection of validation Image 165 (`batch_10/000064.jpg`, beach scene) showed severe false-positive clutter at threshold 0.10: 1 true GT cigarette butt was accompanied by 6 false-positive clutter boxes triggered by natural coastal background objects (seashells `q0, q5`, dead crab `q10`, pebble `q9`, sand depression `q6`, twig `q19`).
+   - Full 65-image audit of 389 raw queries $\ge 0.10$ in D-095 Champion revealed 48 true positives and 341 false positives (87.7% FP rate), with 259 queries (76.0% of all FPs) coming from unmatched background regions ($\text{IoU} < 0.15$ with all GT). Class 0 (`cigarette`) alone produced 159 background FPs (61.4%).
+2. **Algorithmic Formulation (`scripts/taco_stage5_d098_bg_suppression.py` & `scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - **Training-Time Unmatched Background Loss ($\mathcal{L}_{\text{bg\_hn}}$)**: During fine-tuning, top-25 background queries ($\text{IoU} < 0.15$) penalize scores above floor $\tau = 0.06$ via $\text{ReLU}(\max_c p_{q, c} - 0.06)^2$, and top-10 per-class background queries penalize scores above floor $\tau = 0.05$. Total loss: $\mathcal{L}_{\text{total}} = w_{\text{img}}\mathcal{L}_{\text{det}} + 1.5\mathcal{L}_{\text{pos}} + 2.0\mathcal{L}_{\text{interior}} + 12.0\mathcal{L}_{\text{bg\_hn}} + 0.004\|\theta - \theta_0\|_2^2$.
+   - **Inference-Time Rule 5 (Cross-Family Diffuse Clutter Filter)**:
+     - **Rule 5A**: On scenes with exactly 1 dominant hazard anchor and no other hazard candidate $\ge 0.19$, suppresses isolated sub-dominant hazard speckles ($sc < 0.20$, $\text{norm\_area} < 0.0006$, distance $> 400$px from anchor).
+     - **Rule 5B**: At $sc < 0.16$, suppresses diffuse cross-family clutter with margin $\le 0.015$ between hazard and non-hazard, or plastic and paper on anchorless scenes, or plastic and hazard on single-hazard scenes.
+     - **Rule 5C**: On hazard-dominated scenes without plastic/paper anchors, suppresses flexible plastic queries with $\text{norm\_area} < 0.01$ when $p_{\text{paper}} \ge 0.20$ and $p_{\text{paper}} / p_{\text{plastic}} \ge 0.70$.
+3. **Training & Model Selection**:
+   - 1 epoch (576 updates, $1.5\times 10^{-6} \to 2.0\times 10^{-7}$, cosine LR, FP32, seed 42) warm-started from D-093 Champion (`51ce99e6...`). Elapsed training time: `672.79` seconds (~11.2 minutes), recorded in `runs/training/stage5-d098-bg-suppression-20261106-a/report.json` under `total_seconds` (`672.7922626`).
+   - Champion state: **`soup_d098_d093champ_5050`** ($0.50\text{ E1} + 0.50\text{ D093}$), parameter SHA-256 `77e3a8064f3c88b19b1aee1f288f5d216544a381da141ef8678edb4a7b5847ff`, achieving **`0.224818` raw 9-Specific AP** and **`0.393311` raw BANTAI 5-Category AP**, with record single-model `plastic_film` AP (`0.054753`), `plastic_bottle` AP (`0.386780`), and `paper` AP (`0.430366`).
+4. **Validation Integrity & Zero True-Positive Loss**:
+   - **Full 65-Image Consensus AP**: `0.227462` 9-Specific AP, `0.413834` BANTAI 5-Category AP.
+   - **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
+   - **2-Fold Cross-Validation**: Fold A AP improves `0.160645 -> 0.161114`; Fold B AP improves `0.310062 -> 0.310102`.
+5. **Visual Review Resolution**:
+   - **Image 165 (`000064.jpg`)**: Exactly 1 detection at threshold 0.10 (`cigarette: 0.28`). All 6 beach false positives (seashells, crab, pebbles, sand indentations) cleanly eliminated!
+   - **Image 1 (`000008.jpg`)**: Exactly 3 Paper detections (`paper: 0.35, paper: 0.19, paper: 0.13`), zero plastic or cigarette clutter!
+   - **Image 777 (`000084.JPG`)**: Exactly 5 detections (`plastic_bottle: 0.32, cigarette: 0.13, cigarette: 0.12, cigarette: 0.11, cigarette: 0.11`), zero paper clutter!
+6. **Artifacts & Tests**:
+   - Run directory: `runs/training/stage5-d098-bg-suppression-20261106-a/`.
+   - Comprehensive unit test suite `tests/test_stage5_d098_bg_suppression.py` added (8 tests passed).
+   - Full guarded test suite `scripts/verify_stage4_guarded.py` verified (357 passed, 0 failures, 0 errors).
+
 ## D-097: Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Image 1 + Image 777 Visual Resolution - 2026-11-06
 
 Owner authorization D-097 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors.

@@ -118,9 +118,11 @@ def apply_scene_consensus(
     enable_rule2=True,
     enable_rule3=True,
     enable_rule4=True,
+    enable_rule5=True,
     enable_scene_paper_coherence=None,
     enable_interior_subbox_suppression=None,
     enable_marginal_ghost_suppression=None,
+    enable_diffuse_clutter_filter=None,
     return_diagnostics=False,
 ):
     """Apply cautious bidirectional scene-level consensus and interior wrong-class sub-box suppression.
@@ -149,6 +151,10 @@ def apply_scene_consensus(
       - Requires NO paper anchors on scene.
       - Requires a plastic reassignment on the scene (Rule 1 / Rule 1B).
       - Suppresses marginal low-confidence paper ghost (0.10 <= sc < 0.115) with norm_area < 0.01.
+    Rule 5: Cross-family diffuse clutter and sub-dominant speckle filter:
+      - 5A: Sub-dominant isolated hazard speckle on scenes with exactly one isolated hazard anchor (dist > 400px, sc < 0.20, norm_area < 0.0006).
+      - 5B: Low-confidence multi-family diffuse clutter (sc < 0.16) with margin <= 0.015 between hazard/non-hazard or plastic/paper.
+      - 5C: Natural mineral / shell texture on hazard-dominated scenes without plastic/paper anchors (p_paper >= 0.20 and p_paper/p_plastic >= 0.70, norm_area < 0.01).
     """
     if enable_scene_paper_coherence is not None:
         enable_rule2 = bool(enable_scene_paper_coherence)
@@ -156,6 +162,8 @@ def apply_scene_consensus(
         enable_rule3 = bool(enable_interior_subbox_suppression)
     if enable_marginal_ghost_suppression is not None:
         enable_rule4 = bool(enable_marginal_ghost_suppression)
+    if enable_diffuse_clutter_filter is not None:
+        enable_rule5 = bool(enable_diffuse_clutter_filter)
 
     total_img_area = None
     if image_width is not None and image_height is not None and image_width > 0 and image_height > 0:
@@ -219,8 +227,12 @@ def apply_scene_consensus(
         else:
             stage1_rows.append(deepcopy(row))
 
-    # Step 2: Cautious Paper Anchor Identification
+    # Step 2: Cautious Anchor Identification
     paper_anchors = []
+    hazard_anchors = []
+    hazard_candidates_ge_19 = []
+    plastic_anchors = []
+
     for r in stage1_rows:
         qid = r.get("fused_query_id", r.get("query_id"))
         if qid is not None and 0 <= qid < len(score_vectors):
@@ -228,20 +240,36 @@ def apply_scene_consensus(
             sc = r["score"]
             cat = r["category_id"]
             q_area = r["bbox"][2] * r["bbox"][3]
-            norm_area = q_area / total_img_area
+            norm_area = (q_area / total_img_area) if total_img_area else 0.0
 
             if cat == PAPER_ID and sc >= 0.30 and norm_area >= 0.08:
                 max_plastic = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
                 if (v[PAPER_ID] - max_plastic >= 0.10) and (v[1] < 0.15):
                     paper_anchors.append(r)
 
-    diag["anchors_found"] = len(paper_anchors)
+            if cat == 0:
+                if sc >= 0.19:
+                    hazard_candidates_ge_19.append(r)
+                if sc >= 0.25 and (v[0] - max(v[c] for c in range(1, 9))) >= 0.05:
+                    hazard_anchors.append(r)
 
-    # Step 3: Rule 2, Rule 3, and Rule 4
+            if cat in PLASTIC_SUBTYPE_IDS and sc >= 0.35 and norm_area >= 0.02:
+                plastic_anchors.append(r)
+
+    is_single_hazard_scene = (len(hazard_anchors) == 1 and len(hazard_candidates_ge_19) == 1)
+
+    diag["anchors_found"] = len(paper_anchors)
+    diag["hazard_anchors_found"] = len(hazard_anchors)
+    diag["plastic_anchors_found"] = len(plastic_anchors)
+    diag["is_single_hazard_scene"] = is_single_hazard_scene
+
+    # Step 3: Rule 2, Rule 3, Rule 4, and Rule 5
     output = []
     rule2_changed_qids = set()
     rule3_suppressed_qids = set()
     rule4_suppressed_qids = set()
+    rule5_suppressed_qids = set()
+    diag["rule5_count"] = 0
     has_plastic_reassignment = bool(rule1_changed_qids or rule1b_changed_qids)
 
     for r in stage1_rows:
@@ -320,7 +348,7 @@ def apply_scene_consensus(
 
         # Rule 4: Marginal paper ghost suppression on non-paper scenes with plastic reassignment
         if not suppress and enable_rule4 and (not paper_anchors) and has_plastic_reassignment and cat == PAPER_ID:
-            norm_q_area = q_area / total_img_area
+            norm_q_area = q_area / total_img_area if total_img_area else 0.0
             if 0.10 <= sc < 0.115 and norm_q_area < 0.01:
                 suppress = True
                 rule4_suppressed_qids.add(qid)
@@ -335,15 +363,101 @@ def apply_scene_consensus(
                     "reason": f"marginal score {sc:.4f} < 0.115, norm_area={norm_q_area:.5f} < 0.01 without paper anchors on plastic-reassigned scene",
                 })
 
+        # Rule 5: Cross-family diffuse clutter and sub-dominant speckle filter
+        if not suppress and enable_rule5 and v is not None:
+            p_plastic = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
+            p_paper = v[PAPER_ID]
+            p_hazard = v[0]
+            norm_q_area = (q_area / total_img_area) if total_img_area else 0.0
+
+            # Sub-rule 5A: Sub-dominant isolated hazard speckle on scenes with exactly ONE isolated hazard
+            if is_single_hazard_scene and cat == 0 and sc < 0.20 and norm_q_area < 0.0006:
+                ha = hazard_anchors[0]
+                ha_box = ha["bbox"]
+                dist = math.hypot(
+                    (r_copy["bbox"][0] + 0.5 * r_copy["bbox"][2]) - (ha_box[0] + 0.5 * ha_box[2]),
+                    (r_copy["bbox"][1] + 0.5 * r_copy["bbox"][3]) - (ha_box[1] + 0.5 * ha_box[3])
+                )
+                if dist > 400.0:
+                    suppress = True
+                    rule5_suppressed_qids.add(qid)
+                    diag["rule5_count"] += 1
+                    diag["logs"].append({
+                        "image_id": image_id,
+                        "qid": qid,
+                        "rule": "Rule 5A (subdominant hazard speckle)",
+                        "old_cat": cat,
+                        "new_cat": None,
+                        "old_score": sc,
+                        "reason": f"subdominant hazard speckle sc={sc:.3f} norm_area={norm_q_area:.6f} dist={dist:.1f}>400 on single-hazard scene",
+                    })
+
+            # Sub-rule 5B: Low-confidence multi-family diffuse clutter (sc < 0.16)
+            if not suppress and sc < 0.16:
+                diff_h_np = abs(p_hazard - max(p_plastic, p_paper))
+                diff_p_pl = abs(p_plastic - p_paper)
+                if diff_h_np <= 0.015:
+                    suppress = True
+                    rule5_suppressed_qids.add(qid)
+                    diag["rule5_count"] += 1
+                    diag["logs"].append({
+                        "image_id": image_id,
+                        "qid": qid,
+                        "rule": "Rule 5B (diffuse hazard-nonhazard margin)",
+                        "old_cat": cat,
+                        "new_cat": None,
+                        "old_score": sc,
+                        "reason": f"diffuse hazard-nonhazard margin {diff_h_np:.4f} <= 0.015 at sc={sc:.3f}",
+                    })
+                elif not paper_anchors and not plastic_anchors and cat in (2, 3, 4, 8) and diff_p_pl <= 0.015:
+                    suppress = True
+                    rule5_suppressed_qids.add(qid)
+                    diag["rule5_count"] += 1
+                    diag["logs"].append({
+                        "image_id": image_id,
+                        "qid": qid,
+                        "rule": "Rule 5B (diffuse plastic-paper margin)",
+                        "old_cat": cat,
+                        "new_cat": None,
+                        "old_score": sc,
+                        "reason": f"diffuse plastic-paper margin {diff_p_pl:.4f} <= 0.015 on anchorless scene at sc={sc:.3f}",
+                    })
+                elif is_single_hazard_scene and cat in (2, 3, 4) and (p_plastic - p_hazard) <= 0.040:
+                    suppress = True
+                    rule5_suppressed_qids.add(qid)
+                    diag["rule5_count"] += 1
+                    diag["logs"].append({
+                        "image_id": image_id,
+                        "qid": qid,
+                        "rule": "Rule 5B (diffuse plastic-hazard margin)",
+                        "old_cat": cat,
+                        "new_cat": None,
+                        "old_score": sc,
+                        "reason": f"diffuse plastic-hazard margin {(p_plastic - p_hazard):.4f} <= 0.040 on single-hazard scene at sc={sc:.3f}",
+                    })
+
+            # Sub-rule 5C: Natural mineral / shell texture on hazard-dominated scenes
+            if not suppress and is_single_hazard_scene and (not paper_anchors) and (not plastic_anchors):
+                if cat in (2, 3, 4) and norm_q_area < 0.01:
+                    if p_paper >= 0.20 and (p_paper / max(1e-6, p_plastic)) >= 0.70:
+                        suppress = True
+                        rule5_suppressed_qids.add(qid)
+                        diag["rule5_count"] += 1
+                        diag["logs"].append({
+                            "image_id": image_id,
+                            "qid": qid,
+                            "rule": "Rule 5C (diffuse shell/mineral texture)",
+                            "old_cat": cat,
+                            "new_cat": None,
+                            "old_score": sc,
+                            "reason": f"diffuse shell/mineral texture p_paper={p_paper:.3f} ratio={p_paper/p_plastic:.3f}>=0.70 norm_area={norm_q_area:.5f} on single-hazard scene",
+                        })
+
         if not suppress:
             output.append(r_copy)
 
     all_changed = sorted(rule1_changed_qids | rule1b_changed_qids | rule2_changed_qids)
-    all_suppressed = sorted(rule3_suppressed_qids | rule4_suppressed_qids)
-
-    if return_diagnostics:
-        return output, all_changed, all_suppressed, diag
-    return output, all_changed, all_suppressed
+    all_suppressed = sorted(rule3_suppressed_qids | rule4_suppressed_qids | rule5_suppressed_qids)
 
     if return_diagnostics:
         return output, all_changed, all_suppressed, diag

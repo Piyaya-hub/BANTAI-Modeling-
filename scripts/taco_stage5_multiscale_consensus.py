@@ -32,6 +32,7 @@ D089_RUN = ROOT / "runs/training/stage5-d089-tier3-core-20261031-a"
 D091_RUN = ROOT / "runs/training/stage5-d091-balanced-tier3-20261101-a"
 D093_RUN = ROOT / "runs/training/stage5-d093-multiepoch-hn-20261102-a"
 D095_RUN = ROOT / "runs/training/stage5-d095-box-contrastive-20261102-a"
+D098_RUN = ROOT / "runs/training/stage5-d098-bg-suppression-20261106-a"
 
 ROUTING_POLICIES = [
     "uniform_both",
@@ -455,6 +456,31 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
             "spec_categories": (5, 8),
         }
 
+    if (D098_RUN / "soup_d098_d093champ_5050.json").is_file():
+        d098_champ_json = strict_load(D098_RUN / "soup_d098_d093champ_5050.json")
+        d098_champ_vecs = np.load(D098_RUN / "best-score-vectors.npz")
+        d098_img_map = {img_id: idx for idx, img_id in enumerate(d098_champ_vecs["image_ids"])}
+        pairings["D098_Champion_384_plus_D086_HR448"] = {
+            "std_queries": d098_champ_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d098_champ_vecs,
+            "std_img_map": d098_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+        }
+        pairings["Tri_Model_D086_S2575_HR448_D098_Champ"] = {
+            "std_queries": d086_s2575_json["raw_queries"],
+            "hr_queries": d086_hr_json["raw_queries"],
+            "std_vecs": d086_s2575_vecs,
+            "std_img_map": s2575_img_map,
+            "hr_vecs": d086_hr_vecs,
+            "hr_img_map": hr_img_map,
+            "spec_queries": d098_champ_json["raw_queries"],
+            "spec_vecs": d098_champ_vecs,
+            "spec_img_map": d098_img_map,
+            "spec_categories": (5, 8),
+        }
+
     results = {}
     winning_pool = None
     winning_vectors = None
@@ -623,6 +649,8 @@ def run_d088_multiscale_consensus(output_dir: Path = D086_RUN):
         atomic_json(D093_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
     if D095_RUN.exists():
         atomic_json(D095_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
+    if D098_RUN.exists():
+        atomic_json(D098_RUN / "multiscale-consensus-audit.json", audit_summary, replace=True)
 
     print(json.dumps({
         "status": "complete",

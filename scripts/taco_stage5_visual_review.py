@@ -58,6 +58,8 @@ D093_CHAMPION_STATE = "D-093 Champion (soup 50/50)"
 D093_CONSENSUS_STATE = "D-093 Champion + D-079 consensus"
 D095_CHAMPION_STATE = "D-095 Champion (soup 50/50)"
 D095_CONSENSUS_STATE = "D-095 Champion + Scene Consensus"
+D098_CHAMPION_STATE = "D-098 Champion (soup 50/50)"
+D098_CONSENSUS_STATE = "D-098 Champion + Scene Consensus"
 PREDICTION_SOURCES = ["single_scale_champion", "multiscale_384_448"]
 ORGANIC_SHOWCASE_FILTER = "Organic Showcase (4 Images: 68, 72, 92, 841)"
 ORGANIC_9_STATE = "Organic Showcase 9-Prompt (384/576)"
@@ -184,6 +186,26 @@ def discover_d095_run(explicit=None, root=ROOT):
     return max(candidates, key=lambda p: (p / 'report.json').stat().st_mtime) if candidates else None
 
 
+def discover_d098_run(explicit=None, root=ROOT):
+    """Discover only a completed local D-098 run with bg-suppression artifacts."""
+    if explicit is not None:
+        return Path(explicit)
+    candidates = []
+    for candidate in (Path(root) / 'runs/training').glob('stage5-d098-bg-suppression-*'):
+        report_path = candidate / 'report.json'
+        if not report_path.is_file():
+            continue
+        try:
+            report = strict_load(report_path)
+            if (report.get('authorization') == 'D-098' and report.get('status') == 'complete'
+                    and (candidate / 'soup_d098_d093champ_5050.json').is_file()
+                    and (candidate / 'best-score-vectors.npz').is_file()):
+                candidates.append(candidate)
+        except (OSError, ValueError, KeyError):
+            continue
+    return max(candidates, key=lambda p: (p / 'report.json').stat().st_mtime) if candidates else None
+
+
 def load_consensus_score_vectors(tier2_run_dir, images, root=ROOT):
     """Load only the verified D078 validation vectors matching the saved state."""
     if tier2_run_dir is None:
@@ -285,7 +307,7 @@ def apply_containment_nms(objects, iou_thresh: float = 0.50, iomin_thresh: float
     return kept
 
 
-def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None, d086_run_dir: Path | None = None, d091_run_dir: Path | None = None, d093_run_dir: Path | None = None, d095_run_dir: Path | None = None):
+def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | None = None, tier1_run_dir: Path | None = None, tier2_run_dir: Path | None = None, d083_run_dir: Path | None = None, d086_run_dir: Path | None = None, d091_run_dir: Path | None = None, d093_run_dir: Path | None = None, d095_run_dir: Path | None = None, d098_run_dir: Path | None = None):
     val_json_path = dataset_dir / "validation.json"
     val_data = strict_load(val_json_path)
 
@@ -551,6 +573,55 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
                         )
                         preds_by_state[D095_CONSENSUS_STATE][img_id] = c_rows
 
+    d098_vectors = None
+    if d098_run_dir is not None:
+        d098_report = strict_load(d098_run_dir / "report.json")
+        if (d098_report.get("authorization") != "D-098" or d098_report.get("status") != "complete"):
+            raise ValueError("D-098 replay requires completed bounded training evidence")
+
+        state_files = (
+            ("D-098 BG Suppression E1 (384/576)", "validation-d098-bg-e1.json"),
+            (D098_CHAMPION_STATE, "soup_d098_d093champ_5050.json"),
+            ("D-098 + D093 soup (75/25)", "soup_d098_d093champ_7525.json"),
+            ("D-098 + D095 soup (50/50)", "soup_d098_d095champ_5050.json"),
+            ("D-098 Hybrid soup", "soup_d098_d093e3_d091_hybrid.json"),
+        )
+        for label, filename in state_files:
+            file_path = d098_run_dir / filename
+            if not file_path.is_file():
+                continue
+            saved = strict_load(file_path)
+            rows = saved.get("raw_queries", [])
+            if len(rows) != 65 * 900 or {r["image_id"] for r in rows} != set(images):
+                raise ValueError(f"D-098 saved replay {filename} does not contain exactly 65 x 900 queries")
+            preds_by_state[label] = defaultdict(list)
+            for row in rows:
+                preds_by_state[label][row["image_id"]].append(row)
+
+        vec_path = d098_run_dir / "best-score-vectors.npz"
+        if vec_path.is_file():
+            with np.load(vec_path, allow_pickle=False) as npz:
+                v_ids = npz["image_ids"].tolist()
+                v_scores = npz["scores"].copy()
+            if v_scores.shape == (65, 900, 9) and set(v_ids) == set(images):
+                d098_vectors = {
+                    "scores_by_image": {img_id: v_scores[idx] for idx, img_id in enumerate(v_ids)},
+                    "shape": list(v_scores.shape),
+                    "dtype": str(v_scores.dtype),
+                }
+                if D098_CHAMPION_STATE in preds_by_state:
+                    from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus
+                    preds_by_state[D098_CONSENSUS_STATE] = defaultdict(list)
+                    for img_id, rows in preds_by_state[D098_CHAMPION_STATE].items():
+                        s_vec = d098_vectors["scores_by_image"][img_id]
+                        w = images[img_id]["width"]
+                        h = images[img_id]["height"]
+                        c_rows, _, _ = apply_scene_consensus(
+                            rows, s_vec, image_width=w, image_height=h,
+                            coactivation="3 plastic subtypes >= 0.20",
+                        )
+                        preds_by_state[D098_CONSENSUS_STATE][img_id] = c_rows
+
     # Sort predictions by score descending
     for state in preds_by_state:
         for img_id in preds_by_state[state]:
@@ -572,6 +643,7 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
         "d091_score_vectors": d091_vectors,
         "d093_score_vectors": d093_vectors,
         "d095_score_vectors": d095_vectors,
+        "d098_score_vectors": d098_vectors,
         "multiscale_predictions": multiscale_preds,
         "multiscale_score_vectors": multiscale_vectors,
         "organic_showcase": organic_showcase,
@@ -648,6 +720,7 @@ class Stage5ViewerGUI:
         self.d091_vectors = data.get("d091_score_vectors")
         self.d093_vectors = data.get("d093_score_vectors")
         self.d095_vectors = data.get("d095_score_vectors")
+        self.d098_vectors = data.get("d098_score_vectors")
         self.organic_showcase = data.get("organic_showcase")
         self.dataset_root = data["dataset_root"]
         self.prediction_source = prediction_source
@@ -726,6 +799,8 @@ class Stage5ViewerGUI:
         choices=[n for n in self.preds if n not in ("Baseline", "Stage 5 (256/384)")]
         if prediction_source == "multiscale_384_448" and MULTISCALE_STATE in choices:
             initial = MULTISCALE_STATE
+        elif D098_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
+            initial = D098_CHAMPION_STATE
         elif D095_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
             initial = D095_CHAMPION_STATE
         elif D093_CHAMPION_STATE in choices and prediction_source == "single_scale_champion":
@@ -740,7 +815,7 @@ class Stage5ViewerGUI:
                               state="readonly", width=38)
         state_cb.pack(side="left")
         state_cb.bind("<<ComboboxSelected>>", lambda e:self.update_plots())
-        has_vectors = bool(self.consensus_vectors or self.multiscale_vectors or self.d091_vectors or self.d093_vectors or self.d095_vectors)
+        has_vectors = bool(self.consensus_vectors or self.multiscale_vectors or self.d091_vectors or self.d093_vectors or self.d095_vectors or self.d098_vectors)
         self.consensus_var = tk.BooleanVar(value=has_vectors)
         self.consensus_check = ttk.Checkbutton(
             state_frame, text="Score-preserving plastic consensus",
@@ -995,6 +1070,9 @@ class Stage5ViewerGUI:
         is_d095_champ = (self.review_state_var.get() == D095_CHAMPION_STATE
                          and self.d095_vectors is not None
                          and img_id in self.d095_vectors["scores_by_image"])
+        is_d098_champ = (self.review_state_var.get() == D098_CHAMPION_STATE
+                         and self.d098_vectors is not None
+                         and img_id in self.d098_vectors["scores_by_image"])
 
         rule1_active = bool(self.consensus_var.get())
         scene_active = bool(self.scene_consensus_var.get())
@@ -1002,6 +1080,7 @@ class Stage5ViewerGUI:
                          and scheme == "bantai-5-category"
                          and self.taxonomy_var.get() != VIEWS[2]
                          and ((is_multiscale)
+                              or (is_d098_champ)
                               or (is_d095_champ)
                               or (is_d093_champ)
                               or (is_d091_champ)
@@ -1012,7 +1091,19 @@ class Stage5ViewerGUI:
         if use_consensus:
             from scripts.taco_stage5_consensus_tiebreak import apply_scene_consensus, apply_to_query_rows
             w, h = self.current_pil.size
-            if is_d095_champ:
+            if is_d098_champ:
+                highres_preds, _, _ = apply_scene_consensus(
+                    highres_preds, self.d098_vectors["scores_by_image"][img_id],
+                    image_width=w, image_height=h,
+                    delta=0.016, coactivation="3 plastic subtypes >= 0.20",
+                    confidence_mode="top1_score",
+                    enable_rule1=rule1_active,
+                    enable_rule2=scene_active,
+                    enable_rule3=scene_active,
+                    enable_rule4=scene_active,
+                    enable_rule5=scene_active,
+                )
+            elif is_d095_champ:
                 highres_preds, _, _ = apply_scene_consensus(
                     highres_preds, self.d095_vectors["scores_by_image"][img_id],
                     image_width=w, image_height=h,
@@ -1022,6 +1113,7 @@ class Stage5ViewerGUI:
                     enable_rule2=scene_active,
                     enable_rule3=scene_active,
                     enable_rule4=scene_active,
+                    enable_rule5=scene_active,
                 )
             elif is_multiscale:
                 s_vec = self.multiscale_vectors["scores_by_image"][img_id]
@@ -1208,6 +1300,14 @@ def print_cli_summary(data: dict, score_thresh: float, top_k: int, image_id: int
             d095c_preds = [p for p in data["predictions"][D095_CONSENSUS_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
             d095c_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in d095c_preds]
             print(f"  D-095 + Consensus @ {score_thresh:.2f} ({len(d095c_preds)}): {', '.join(d095c_desc) if d095c_desc else 'None'}")
+        if D098_CHAMPION_STATE in data["predictions"]:
+            d098_preds = [p for p in data["predictions"][D098_CHAMPION_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
+            d098_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in d098_preds]
+            print(f"  D-098 Champion  @ {score_thresh:.2f} ({len(d098_preds)}): {', '.join(d098_desc) if d098_desc else 'None'}")
+        if D098_CONSENSUS_STATE in data["predictions"]:
+            d098c_preds = [p for p in data["predictions"][D098_CONSENSUS_STATE].get(img_id, []) if p["score"] >= score_thresh][:top_k]
+            d098c_desc = [f"{LABELS[p['category_id']]}:{p['score']:.2f}" for p in d098c_preds]
+            print(f"  D-098 + Consensus @ {score_thresh:.2f} ({len(d098c_preds)}): {', '.join(d098c_desc) if d098c_desc else 'None'}")
 
 
 def main() -> int:
@@ -1237,6 +1337,7 @@ def main() -> int:
     parser.add_argument("--d091-run-dir", type=Path, default=None, help="Explicit D-091 replay run; otherwise discover newest completed local run")
     parser.add_argument("--d093-run-dir", type=Path, default=None, help="Explicit D-093 replay run; otherwise discover newest completed local run")
     parser.add_argument("--d095-run-dir", type=Path, default=None, help="Explicit D-095 replay run; otherwise discover newest completed local run")
+    parser.add_argument("--d098-run-dir", type=Path, default=None, help="Explicit D-098 replay run; otherwise discover newest completed local run")
     parser.add_argument("--prediction-source", type=str, choices=PREDICTION_SOURCES, default=PREDICTION_SOURCES[0], help="Prediction source / replay mode")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
@@ -1255,6 +1356,7 @@ def main() -> int:
     args.d091_run_dir = discover_d091_run(args.d091_run_dir)
     args.d093_run_dir = discover_d093_run(args.d093_run_dir)
     args.d095_run_dir = discover_d095_run(args.d095_run_dir)
+    args.d098_run_dir = discover_d098_run(args.d098_run_dir)
     if args.tier2_run_dir is not None and not args.tier2_run_dir.is_dir():
         print("ERROR: Explicit Tier2 replay directory is missing",file=sys.stderr)
         return 1
@@ -1276,11 +1378,14 @@ def main() -> int:
     if args.d095_run_dir is not None and not args.d095_run_dir.is_dir():
         print(f"ERROR: Explicit D-095 replay directory is missing: {args.d095_run_dir}", file=sys.stderr)
         return 1
+    if args.d098_run_dir is not None and not args.d098_run_dir.is_dir():
+        print(f"ERROR: Explicit D-098 replay directory is missing: {args.d098_run_dir}", file=sys.stderr)
+        return 1
     if not (args.dataset_dir / "validation.json").is_file():
         print("ERROR: Saved review needs the private validation export; no model will be run.", file=sys.stderr)
         return 1
     try:
-        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir, args.d086_run_dir, args.d091_run_dir, args.d093_run_dir, args.d095_run_dir)
+        data = load_review_data(args.run_dir, args.dataset_dir, args.highres_run_dir, args.tier1_run_dir, args.tier2_run_dir, args.d083_run_dir, args.d086_run_dir, args.d091_run_dir, args.d093_run_dir, args.d095_run_dir, args.d098_run_dir)
     except (OSError, ValueError, KeyError) as exc:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1

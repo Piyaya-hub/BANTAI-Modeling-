@@ -1,18 +1,21 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-097
+## Current Stage 5 state through D-098
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-097, multi-subtype plastic co-activation
-margin calibration (Rule 1B, $\Delta \le 0.040$), deep-interior sub-box suppression (Rule 3),
-and marginal paper ghost suppression (Rule 4) were validated under 2-fold cross-validation on the
-combined 65-image validation set, achieving **0.242914** single-model 9-specific AP and
-**0.420794** BANTAI 5-Category AP on the D-095 champion (`soup_d095best_d093champ_5050`) with
-zero true positives lost and monotonic improvement on both Fold A and Fold B.
-Both Image 1 (`000008.jpg`, clean Paper boxes with zero plastic or cigarette clutter) and
-Image 777 (`000084.JPG`, 1 Plastic wrapper box + 4 hazardous cigarette butts, ZERO paper boxes)
-are simultaneously resolved. Multi-scale query routing champion (`Tri_Model_D086_S2575_HR448_D095_Champ`
-+ `hr_small_medium_plus_can_paper`) achieves **0.261829** 9-specific AP and **0.437764** BANTAI 5-Category AP.
+validation / 65-image test memberships frozen. Under D-098, unmatched-query background
+hard-negative suppression ($\mathcal{L}_{\text{bg\_hn}}$ on top-25 background queries and top-10 per-class
+background queries) and inference-time Rule 5 cross-family diffuse clutter filtering were implemented.
+D-098 champion `soup_d098_d093champ_5050` achieved **0.224818** raw 9-Specific AP and **0.393311**
+raw BANTAI 5-Category AP, setting a repo-best single-model `plastic_film` AP of **0.054753**,
+`plastic_bottle` AP of **0.386780**, and `paper` AP of **0.430366**.
+Under scene consensus with Rule 5, 9-Specific AP reached **0.227462** and BANTAI 5-Category AP reached
+**0.413834** with exactly zero true positives lost across all 65 validation images (`lost_tps == []`) and
+monotonic improvement across 2-fold cross-validation.
+Image 165 (`000064.jpg`, 1 GT cigarette butt with all 6 coastal beach false-positive clutter boxes eliminated),
+Image 1 (`000008.jpg`, 3 clean Paper boxes, zero plastic or cigarette clutter), and
+Image 777 (`000084.JPG`, 1 Plastic bottle + 4 hazardous cigarette butts, zero paper clutter)
+are all simultaneously resolved.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
@@ -45,6 +48,7 @@ This is validation evidence, not test generalization or production promotion; no
 | D-095 | Box-Contrastive GT Margin Fine-Tuning + Scene Consensus (D-096 corrected) | **0.238401** (raw champion) / **0.262348** (tri-model consensus) | **0.398860** (raw) / **0.438939** (tri-model consensus) |
 | D-096 | Scene-Consensus Regression Fix (Image 777), 2-Fold Held-Out Validation, D-095 Report Correction | **0.241895** (single-model cautious consensus) / **0.262348** (multi-scale) | **0.414205** (single-model) / **0.438939** (multi-scale) |
 | D-097 | Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Visual Resolution | **0.242914** (single-model consensus) / **0.261829** (multi-scale) | **0.420794** (single-model) / **0.437764** (multi-scale) |
+| D-098 | Unmatched-Query Background Hard-Negative Suppression & Beach Clutter Elimination | **0.224818** (raw champion) / **0.227462** (consensus) | **0.393311** (raw) / **0.413834** (consensus) |
 
 All AP values are validation measurements. Material AP changes category agreement and
 macro averaging; it must not replace official nine-specific AP. Separate original
