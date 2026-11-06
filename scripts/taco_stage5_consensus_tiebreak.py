@@ -10,7 +10,6 @@ from .taco_training_labels_v2 import LABELS
 
 PLASTIC_SUBTYPE_IDS = (1, 2, 3, 4, 6, 7)
 PLASTIC_STRUCTURED_IDS = (1, 2, 3, 6, 7)
-PROTECTED_SHOWCASE_IDS = (1, 165, 208, 238, 263, 407, 466, 762, 772, 777, 802, 998, 1465)
 PAPER_ID = 8
 DEFAULT_DELTA = 0.016
 DEFAULT_STRONG_COACTIVATION_DELTA = 0.040
@@ -803,7 +802,21 @@ def apply_scene_consensus(
         total_b_cig_08 = sum(1 for b in b_ge_08 if b.get("category_id") == 0)
         total_r1_cig_08 = sum(1 for r in r1_ge_08 if r.get("category_id") == 0)
         has_ancestor_cig_energy = (total_b_cig_08 >= 8 and total_r1_cig_08 >= 8)
-        effective_image_id = image_id if image_id is not None else (rows[0].get("image_id") if rows else None)
+
+        # Genuine compact hazard cluster (distinguishes true cigarette clusters like Image 777 from isolated speckles)
+        compact_hazards = [h for h in pass_hazards if max(h["bbox"][2], h["bbox"][3]) <= 75.0]
+        has_compact_haz_cluster = sum(
+            1 for h in compact_hazards
+            if sum(
+                1 for o in compact_hazards
+                if o != h
+                and _compute_iou(h["bbox"], o["bbox"]) < 0.20
+                and math.hypot(
+                    (h["bbox"][0] + 0.5 * h["bbox"][2]) - (o["bbox"][0] + 0.5 * o["bbox"][2]),
+                    (h["bbox"][1] + 0.5 * h["bbox"][3]) - (o["bbox"][1] + 0.5 * o["bbox"][3])
+                ) <= 160.0
+            ) >= 2
+        ) >= 3
 
         # PASS 7B: Clutter Veto
         final_rule7_rows = []
@@ -937,20 +950,18 @@ def apply_scene_consensus(
                     reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
 
             # 7B10: Non-hazard scene hazard speckle suppression
-            if not suppress and cat == 0 and has_dom_object and (not has_strong_haz_anchor) and (not has_ancestor_cig_energy):
-                if effective_image_id not in PROTECTED_SHOWCASE_IDS:
-                    if sc < 0.22 and norm_area < 0.002:
-                        suppress = True
-                        reason = f"non-hazard scene hazard speckle sc={sc:.3f}<0.22 norm_area={norm_area:.6f} without ancestor hazard energy"
+            if not suppress and cat == 0 and has_dom_object and (not has_strong_haz_anchor) and (not has_ancestor_cig_energy) and (not has_compact_haz_cluster):
+                if sc < 0.22 and norm_area < 0.002:
+                    suppress = True
+                    reason = f"non-hazard scene hazard speckle sc={sc:.3f}<0.22 norm_area={norm_area:.6f} without ancestor hazard energy"
 
-            # 7B11: Uncorroborated tiny plastic clutter on non-showcase images
+            # 7B11: Uncorroborated tiny plastic clutter
             if not suppress and cat in PLASTIC_SUBTYPE_IDS and sc < 0.16 and norm_area < 0.002:
                 best_b_any = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
                 best_r1_any = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
                 if best_b_any < 0.20 and best_r1_any < 0.20:
-                    if effective_image_id not in PROTECTED_SHOWCASE_IDS:
-                        suppress = True
-                        reason = f"uncorroborated tiny plastic clutter sc={sc:.3f}<0.16 norm_area={norm_area:.6f} with zero baseline/run1 support"
+                    suppress = True
+                    reason = f"uncorroborated tiny plastic clutter sc={sc:.3f}<0.16 norm_area={norm_area:.6f} with zero baseline/run1 support"
 
             # 7B12: Uncorroborated low-score drink can clutter
             if not suppress and cat == 5 and sc < 0.12:

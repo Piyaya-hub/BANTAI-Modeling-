@@ -36,7 +36,6 @@ sys.path.insert(0, str(ROOT))
 from scripts.configuration import strict_load
 from scripts.taco_stage5_consensus_tiebreak import (
     apply_scene_consensus,
-    PROTECTED_SHOWCASE_IDS,
     _get_default_baseline_rows,
     _get_default_run1_rows,
 )

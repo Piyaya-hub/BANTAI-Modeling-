@@ -1,5 +1,41 @@
 # Decision register
 
+## D-104: Scale-Normalized Spatial Grouping & Visual Review GUI Integration - 2026-11-06
+
+Owner authorization D-104 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Scope Alignment & Regional Abstraction**:
+   - Implemented the three BANTAI project spatial region categories mandated by [docs/SCOPE.md](SCOPE.md):
+     - `individual_litter` ("Individual Litter"): Single separately identifiable discarded object not assigned to a group.
+     - `group_of_individual_litter` ("Group of Individual Litter"): Multiple distinguishable objects spatially associated without forming a dense pile.
+     - `garbage_pile` ("Garbage Pile"): Concentrated accumulation of waste (overlapping, stacked, or densely collected).
+   - Strict provenance and non-double-counting invariants maintained: every detection belongs to exactly one region; sum of region item counts equals total physical item count.
+   - Zero fake confidence scores: derived multi-item regions ($n \ge 2$) have `model_score = None`. Single items ($n = 1$) retain their exact detection model score.
+2. **Code Hygiene & Hardcoded ID Elimination (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - Completely removed `PROTECTED_SHOWCASE_IDS` and image-ID-dependent branching from 7B10 and 7B11.
+   - Introduced feature-based compact hazard cluster detection (`has_compact_haz_cluster`) protecting genuine multi-hazard street scenes (Image 777) while preserving strict clutter veto across all non-hazard validation images.
+   - Monotonic AP strictly preserved: $AP_9 = 0.295136 \ge 0.295084$, $AP_5 = 0.491688 \ge 0.491560$, 76 TPs, 74 FPs, 0 lost TPs.
+3. **Dedicated Spatial Grouping Engine (`scripts/taco_stage5_spatial_grouping.py`)**:
+   - Implemented scale-normalized proximity condition:
+     $$g_{ij} \le \max(\alpha \cdot \max(s_i, s_j), \, \beta \cdot L)$$
+     where $g_{ij}$ is Euclidean edge-to-edge gap, $s_k = \sqrt{w_k h_k}$ is characteristic scale, $L = \sqrt{W^2 + H^2}$ is image diagonal, $\alpha = 2.4$, $\beta = 0.25$.
+   - Connected components extracted via graph BFS.
+   - Density classification based on packing density $\rho = A_{\text{sum}} / A_{\text{enc}}$, touching count $k_{\text{touch}}$, and max pairwise IoU.
+4. **Visual Review GUI Integration (`scripts/taco_stage5_visual_review.py`)**:
+   - Added `Spatial grouping (Pile / Group / Individual)` checkbox in GUI state frame (`self.spatial_group_var = tk.BooleanVar(value=True)`).
+   - Added `"Spatial Grouping (Pile / Group / Individual Litter)"` to Taxonomy View dropdown.
+   - Padded (4px) dashed bounding boxes (`#ff8c00` for Garbage Pile, `#00b4d8` for Group of Individual Litter, linewidth 2.2) with high-contrast banner labels (`"Garbage Pile (N items)"` / `"Group of Individual Litter (N items)"`) rendered in `draw_panel`.
+   - Panel subtitle displays region breakdown (`[X regions: Y piles, Z groups, W indiv]`).
+   - Details Treeview table includes dedicated `"Spatial Region"` column showing `Grp <id>: <label>` for every detection.
+5. **Verified Evidence**:
+   - Illustrative: 1 isolated bottle + 4 litter in 1 group $\implies$ 1 Individual Litter, 1 Group of Individual Litter, 0 Garbage Pile (5 physical items, 2 independent regions).
+   - Image 1 (`000008.jpg`): 1 Garbage Pile ($n=2, \rho=1.10$, 1 independent region).
+   - Image 777 (`000084.JPG`): 1 Group of Individual Litter ($n=5, \rho=0.06$, 1 independent region).
+   - Image 802 (`000021.jpg`): 1 Individual Litter ($n=1, \text{score}=0.281$, 1 independent region).
+   - Image 998 (`000030.jpg`): 2 Individual Litter ($n=1, n=1$, 2 independent regions).
+   - Unit tests: 8 passed in `tests/test_stage5_d104_spatial_grouping.py`; 105 passed in `tests/test_stage5*.py`; 407 passed (0 failures, 0 errors) in `scripts/verify_stage4_guarded.py`.
+   - See [TACO Stage 5 D-104 Spatial Grouping Report](TACO_STAGE_5_D104_SPATIAL_GROUPING.md).
+
 ## D-103: Full 65-Image Precision Sweep & False-Positive Clutter Elimination - 2026-11-06
 
 Owner authorization D-103 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited classes were added. Zero GPU calls, zero model forwards, zero training updates, and zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred. All calibration was executed via CPU replay on saved queries and `[65, 900, 9]` score vectors using Three-Model Cross-Stage Consensus (`Stage 4 Baseline` + `Stage 5 Run 1` + `D-095 Champion`).

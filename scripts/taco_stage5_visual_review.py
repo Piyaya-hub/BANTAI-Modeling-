@@ -32,6 +32,10 @@ from scripts.taco_stage5_material_hierarchy import (VIEWS, VIEW_SCHEMES, NAMES, 
 from scripts.taco_stage5_display_profiles import (NMS_CHOICES, THRESHOLD_CHOICES,
                                                    visible_rows)
 from scripts.taco_stage5_consensus_tiebreak import apply_to_query_rows, apply_consensus_tiebreak
+from scripts.taco_stage5_spatial_grouping import compute_spatial_grouping
+
+SPATIAL_VIEW = "Spatial Grouping (Pile / Group / Individual Litter)"
+REVIEW_VIEWS = VIEWS + (SPATIAL_VIEW,)
 import numpy as np
 
 # 9 distinct high-contrast colors for waste categories
@@ -661,7 +665,7 @@ def load_review_data(run_dir: Path, dataset_dir: Path, highres_run_dir: Path | N
     }
 
 
-def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.10, top_k: int = 15):
+def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.10, top_k: int = 15, spatial_regions: list = None):
     from matplotlib.patches import Rectangle
 
     w, h = image.size
@@ -706,6 +710,36 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
             zorder=4,
         )
         rendered += 1
+
+    # Draw enclosing multi-item spatial regions if provided
+    if spatial_regions and not is_gt:
+        for reg in spatial_regions:
+            if reg.get("item_count", 1) >= 2:
+                rx, ry, rw, rh = reg["bbox"]
+                # 4px padding
+                px = max(0.0, rx - 4.0)
+                py = max(0.0, ry - 4.0)
+                pw = min(float(w) - px, rw + 8.0)
+                ph = min(float(h) - py, rh + 8.0)
+
+                cat = reg.get("category", "")
+                reg_color = "#ff8c00" if cat == "garbage_pile" else "#00b4d8"
+
+                enc_rect = Rectangle(
+                    (px, py), pw, ph,
+                    fill=False, edgecolor=reg_color,
+                    linestyle="--", linewidth=2.2,
+                    zorder=5,
+                )
+                ax.add_patch(enc_rect)
+
+                banner_text = f"{reg['label']} ({reg['item_count']} items)"
+                ax.text(
+                    px, max(0.0, py - 6.0), banner_text,
+                    fontsize=8, weight="bold", color="white",
+                    bbox=dict(boxstyle="square,pad=0.25", facecolor=reg_color, edgecolor="black", linewidth=0.8, alpha=0.9),
+                    zorder=6,
+                )
 
 
 class Stage5ViewerGUI:
@@ -789,7 +823,7 @@ class Stage5ViewerGUI:
         ttk.Label(ctrl_frame, text="Taxonomy View:").pack(side="left", padx=4)
         self.taxonomy_var = tk.StringVar(value=VIEWS[0])
         taxonomy_cb = ttk.Combobox(ctrl_frame, textvariable=self.taxonomy_var,
-                                  values=VIEWS, state="readonly", width=38)
+                                  values=REVIEW_VIEWS, state="readonly", width=42)
         taxonomy_cb.pack(side="left")
         taxonomy_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
         state_frame = ttk.Frame(self.root)
@@ -835,6 +869,12 @@ class Stage5ViewerGUI:
             variable=self.scene_consensus_var, command=self.update_plots,
             state="normal" if has_vectors else "disabled")
         self.scene_consensus_check.pack(side="left", padx=8)
+
+        self.spatial_group_var = tk.BooleanVar(value=True)
+        self.spatial_group_check = ttk.Checkbutton(
+            state_frame, text="Spatial grouping (Pile / Group / Individual)",
+            variable=self.spatial_group_var, command=self.update_plots)
+        self.spatial_group_check.pack(side="left", padx=8)
         ttk.Label(state_frame, text="Threshold Mode:").pack(side="left", padx=(14, 2))
         self.threshold_mode_var = tk.StringVar(value=THRESHOLD_CHOICES[0])
         threshold_cb = ttk.Combobox(state_frame, textvariable=self.threshold_mode_var,
@@ -876,7 +916,7 @@ class Stage5ViewerGUI:
         self.details_notebook = notebook
         notebook.pack(fill="both", expand=True)
         self.tables = {}
-        columns = ("rank", "category", "specific_class", "hazard_flag", "score", "bbox_xywh")
+        columns = ("rank", "category", "specific_class", "hazard_flag", "score", "spatial_region", "bbox_xywh")
         for tab_name in ("Ground Truth", "Baseline", "Stage 5 (256/384)", "Stage 5 High-Res (384/576)"):
             tab_f = ttk.Frame(notebook)
             notebook.add(tab_f, text=tab_name)
@@ -885,14 +925,16 @@ class Stage5ViewerGUI:
             tree.heading("category", text="Category")
             tree.heading("specific_class", text="specific_class")
             tree.heading("hazard_flag", text="hazard_flag")
-            tree.column("specific_class", width=150)
-            tree.column("hazard_flag", width=80)
+            tree.column("specific_class", width=140)
+            tree.column("hazard_flag", width=75)
             tree.heading("score", text="Score")
+            tree.heading("spatial_region", text="Spatial Region")
             tree.heading("bbox_xywh", text="BBox [x, y, w, h]")
-            tree.column("rank", width=60, stretch=False)
-            tree.column("category", width=140, stretch=False)
-            tree.column("score", width=100, stretch=False)
-            tree.column("bbox_xywh", width=320, stretch=True)
+            tree.column("rank", width=50, stretch=False)
+            tree.column("category", width=120, stretch=False)
+            tree.column("score", width=80, stretch=False)
+            tree.column("spatial_region", width=170, stretch=False)
+            tree.column("bbox_xywh", width=280, stretch=True)
             y_sb = ttk.Scrollbar(tab_f, orient="vertical", command=tree.yview)
             x_sb = ttk.Scrollbar(tab_f, orient="horizontal", command=tree.xview)
             tree.configure(yscrollcommand=y_sb.set, xscrollcommand=x_sb.set)
@@ -1044,8 +1086,10 @@ class Stage5ViewerGUI:
         thresh = float(self.thresh_var.get())
         top_k = int(self.topk_var.get())
 
-        scheme = VIEW_SCHEMES[self.taxonomy_var.get()]
-        hierarchical = self.taxonomy_var.get() == VIEWS[3]
+        selected_view = self.taxonomy_var.get()
+        is_spatial_view = (selected_view == SPATIAL_VIEW)
+        scheme = VIEW_SCHEMES.get(selected_view, "bantai-5-category")
+        hierarchical = (selected_view == VIEWS[3])
         import tkinter as tk
         for child in self.legend_frame.winfo_children(): child.destroy()
         gt_rows = (self.organic_showcase["ground_truth"].get(str(img_id), []) if showcase_mode
@@ -1218,23 +1262,54 @@ class Stage5ViewerGUI:
         run1_filtered = filter_preds(run1_preds)
         highres_filtered = filter_preds(highres_preds)
 
+        spatial_active = bool(self.spatial_group_var.get() or is_spatial_view)
+        w, h = self.current_pil.size
+
+        base_regions = None
+        run1_regions = None
+        highres_regions = None
+        hr_grp = None
+
+        if spatial_active:
+            base_grp = compute_spatial_grouping(base_filtered, image_width=w, image_height=h)
+            base_filtered = base_grp["annotated_rows"]
+            base_regions = base_grp["regions"]
+
+            run1_grp = compute_spatial_grouping(run1_filtered, image_width=w, image_height=h)
+            run1_filtered = run1_grp["annotated_rows"]
+            run1_regions = run1_grp["regions"]
+
+            hr_grp = compute_spatial_grouping(highres_filtered, image_width=w, image_height=h)
+            highres_filtered = hr_grp["annotated_rows"]
+            highres_regions = hr_grp["regions"]
+
         draw_panel(self.axes["GT"], self.current_pil, gt_boxes, is_gt=True)
         self.axes["GT"].set_title(f"Ground Truth ({len(gt_boxes)} objects)", fontsize=11, weight="bold")
 
         # Rows were already filtered by the selected uniform/calibrated profile.
         # A second uniform filter here would silently hide 0.06-0.10 cigarettes.
-        draw_panel(self.axes["Baseline"], self.current_pil, base_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
+        draw_panel(self.axes["Baseline"], self.current_pil, base_filtered, is_gt=False, score_thresh=0.0, top_k=top_k, spatial_regions=base_regions)
         threshold_caption = (f"uniform >= {thresh:.2f}" if self.threshold_mode_var.get() == THRESHOLD_CHOICES[0]
                              else f"cigarette >= 0.06 / macro >= {max(thresh, .15):.2f}")
         self.axes["Baseline"].set_title((f"9-Prompt (384/576; {threshold_caption})" if showcase_mode
                                            else f"Warm-Start Baseline ({threshold_caption})"), fontsize=11)
 
-        draw_panel(self.axes["Stage 5 (256/384)"], self.current_pil, run1_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
+        draw_panel(self.axes["Stage 5 (256/384)"], self.current_pil, run1_filtered, is_gt=False, score_thresh=0.0, top_k=top_k, spatial_regions=run1_regions)
         self.axes["Stage 5 (256/384)"].set_title((f"10-Prompt Hybrid (384/576; {threshold_caption})" if showcase_mode
                                                    else f"Stage 5 Run 1 (256/384; {threshold_caption})"), fontsize=11)
 
-        draw_panel(self.axes["Stage 5 High-Res (384/576)"], self.current_pil, highres_filtered, is_gt=False, score_thresh=0.0, top_k=top_k)
-        self.axes["Stage 5 High-Res (384/576)"].set_title(self.review_state_var.get(), fontsize=11, color="#005500", weight="bold")
+        draw_panel(self.axes["Stage 5 High-Res (384/576)"], self.current_pil, highres_filtered, is_gt=False, score_thresh=0.0, top_k=top_k, spatial_regions=highres_regions)
+        if spatial_active and hr_grp is not None:
+            s = hr_grp["summary"]
+            reg_sub = f"[{s['total_regions']} regions: {s['garbage_pile_count']} piles, {s['group_of_individual_litter_count']} groups, {s['individual_litter_count']} indiv]"
+            self.axes["Stage 5 High-Res (384/576)"].set_title(
+                f"{self.review_state_var.get()}\n{reg_sub}",
+                fontsize=10, color="#005500", weight="bold"
+            )
+        else:
+            self.axes["Stage 5 High-Res (384/576)"].set_title(
+                self.review_state_var.get(), fontsize=11, color="#005500", weight="bold"
+            )
 
         self.canvas.draw_idle()
 
@@ -1246,7 +1321,7 @@ class Stage5ViewerGUI:
         for r_idx, ann in enumerate(gt_boxes, 1):
             c_name = ann["display_label"]
             bx = [round(v, 1) for v in ann["bbox"]]
-            self.tables["Ground Truth"].insert("", "end", values=(f"GT-{ann['id']}", c_name, ann["specific_class"], ann["hazard_flag"], "1.000", str(bx)))
+            self.tables["Ground Truth"].insert("", "end", values=(f"GT-{ann['id']}", c_name, ann["specific_class"], ann["hazard_flag"], "1.000", "-", str(bx)))
 
         # Baseline, Stage 5 Run 1, Stage 5 High-Res tables
         for tab_name, passing in [
@@ -1257,16 +1332,21 @@ class Stage5ViewerGUI:
             for r_idx, p in enumerate(passing, 1):
                 c_name = p["display_label"]
                 bx = [round(v, 1) for v in p["bbox"]]
-                self.tables[tab_name].insert("", "end", values=(f"q{p['query_id']}", c_name, p["specific_class"], p["hazard_flag"], f"{p['score']:.4f}", str(bx)))
+                sp_desc = f"Grp {p.get('spatial_group_id', 0)}: {p.get('spatial_label', '-')}" if p.get("spatial_label") else "-"
+                self.tables[tab_name].insert("", "end", values=(f"q{p['query_id']}", c_name, p["specific_class"], p["hazard_flag"], f"{p['score']:.4f}", sp_desc, str(bx)))
 
         # Update status bar
         gt_types = [a["display_label"] for a in gt_boxes]
         hr_types = [f"{p['display_label']}({p['score']:.2f})" for p in highres_filtered]
         nms_str = " | NMS: " + self.nms_var.get() + " | " + self.threshold_mode_var.get()
+        status_regions = ""
+        if spatial_active and hr_grp is not None:
+            s = hr_grp["summary"]
+            status_regions = f" | Regions: {s['total_regions']} ({s['garbage_pile_count']} Piles, {s['group_of_individual_litter_count']} Groups, {s['individual_litter_count']} Indiv)"
         self.status_var.set(
             f"Image ID: {img_id} [{self.current_pil.size[0]}x{self.current_pil.size[1]}]{nms_str} | "
             f"GT: {len(gt_boxes)} {gt_types} | "
-            f"High-Res Detections ({threshold_caption}, top-{top_k}): {len(highres_filtered)} {hr_types}"
+            f"High-Res Detections ({threshold_caption}, top-{top_k}): {len(highres_filtered)} {hr_types}{status_regions}"
         )
 
     def run(self):

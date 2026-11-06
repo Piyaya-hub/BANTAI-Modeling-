@@ -1,43 +1,37 @@
 # BANTAI Modeling
 
-## Current Stage 5 state through D-103
+## Current Stage 5 state through D-104
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-103, full 65-image precision
-sweep and false-positive clutter elimination via Three-Model Cross-Stage Consensus
-(`Stage 4 Baseline` + `Stage 5 Run 1` + `D-095 Champion`) was implemented in `scripts/taco_stage5_consensus_tiebreak.py`.
-Applying refactored Rules 1-7 (including Pass 7A Case C plastic restoration and Pass 7B10-7B12 clutter veto)
-to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) sets new single-model
-records across all metrics:
-- **Official 9-Specific AP**: **0.295084** (`+0.010800` over D-102's 0.284284, new benchmark high).
-- **BANTAI 5-Category AP**: **0.491560** (`+0.018737` over D-102's 0.472823, new benchmark high).
-- **`paper` AP**: Jumps from `0.612674` to **`0.640610`** (`+0.027936`, +4.6% relative gain).
-- **`cigarette` AP**: Jumps from `0.124046` to **`0.141913`** (`+0.017867`, +14.4% relative gain).
-- **`styrofoam_piece` AP**: Preserved at **`0.287129`**.
-- **Total Visible False Positives**: Reduced from 105 down to **74** (**-31 false positives, -29.5%**).
-- **Total Visible True Positives**: Increased from 74 up to **76** (**+2 true positives gained**).
-- **Clean Images (0 FP)**: Increased from 31 to **34 / 65** (**52.3% clean validation split**).
-- **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
-- **Monotonic 2-Fold Split Improvement**: Fold A 9-spec increases `0.230857 -> 0.236406` (`+0.005549`), Fold B increases `0.339500 -> 0.376387` (`+0.036887`).
-All 13 benchmark showcase validation images are simultaneously clean and verified:
-- Image 1 (`000008.jpg`): exactly 2 Paper boxes (`Paper 0.36`, `Paper 0.19`), zero plastic clutter.
-- Image 165 (`000064.jpg`): exactly 1 Potentially Hazardous box (`0.282`), zero beach clutter.
-- Image 208 (`000007.jpg`): exactly 1 Plastic box (`0.344`), top-border ghost (`0.136`) eliminated.
-- Image 238 (`000037.jpg`): exactly 1 Paper box (`Paper 0.393`), secondary bush foliage plastic clutter eliminated.
-- Image 263 (`000062.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.457`), dry brush twig clutter eliminated.
-- Image 407 (`000006.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.363`), floating water-weed hazard false positives vetoed.
-- Image 466 (`000065.jpg`): exactly 1 Plastic box (`Plastic 0.282`), dead foliage paper clutter eliminated.
-- Image 762 (`000014.JPG`): exactly 1 Plastic box (`Plastic [plastic_film] 0.307`), dead-leaves paper clutter and leaf stems vetoed.
-- Image 772 (`000095.JPG`): exactly 1 Plastic box (`0.211`), 5 stacked sub-boxes consolidated.
-- Image 777 (`000084.JPG`): exactly 1 Plastic box (`0.323`) + 4 Potentially Hazardous cigarette butts, zero paper confusion.
-- Image 802 (`IMG_5052.JPG`): exactly 1 Paper box (`Paper 0.281`), 0 interior sub-boxes, 0 carpet floor speckles.
-- Image 998 (`000069.JPG`): exactly 2 boxes (`Paper 0.315` + `Plastic 0.442`), 0 false positives.
-- Image 1465 (`000065.jpg`): exactly 2 boxes (`Plastic 0.303` + `Paper 0.154`), duplicate paper, shadow crack hazard, shadow rock paper, and shadow cigarette eliminated.
+validation / 65-image test memberships frozen. Under D-104, scale-normalized spatial
+grouping (`individual_litter`, `group_of_individual_litter`, `garbage_pile`) was
+implemented in `scripts/taco_stage5_spatial_grouping.py` and integrated into the Visual Review GUI.
+Additionally, hardcoded `PROTECTED_SHOWCASE_IDS` was completely removed from `scripts/taco_stage5_consensus_tiebreak.py`
+and replaced with a feature-based compact hazard cluster check while maintaining 100% of D-103 AP metrics:
+- **Official 9-Specific AP**: **0.295136** (target >= 0.295084, new benchmark high).
+- **BANTAI 5-Category AP**: **0.491688** (target >= 0.491560, new benchmark high).
+- **`paper` AP**: Preserved at **0.640610**.
+- **`cigarette` AP**: **0.142380** (target >= 0.141913).
+- **`styrofoam_piece` AP**: Preserved at **0.287129**.
+- **Spatial Grouping Verified**:
+  - Illustrative scope requirement: 1 isolated bottle + 4 litter in 1 group -> 1 Individual Litter, 1 Group of Individual Litter, 0 Garbage Pile (5 physical items, 2 independent regions).
+  - Image 1 (`000008.jpg`): 1 Garbage Pile (2 physical items, 1 independent region).
+  - Image 777 (`000084.JPG`): 1 Group of Individual Litter (5 physical items, 1 independent region).
+  - Image 802 (`IMG_5052.JPG`): 1 Individual Litter (1 physical item, 1 independent region).
+  - Image 998 (`000069.JPG`): 2 Individual Litter (2 physical items, 2 independent regions).
+- **Total Visible False Positives**: Preserved at **74** (**52.3% clean validation split**).
+- **Total Visible True Positives**: Preserved at **76**.
+- **Clean Images (0 FP)**: Preserved at **34 / 65**.
+- **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images.
+
+All 13 benchmark showcase validation images remain clean and verified.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
 | Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
 | --- | --- | --- | --- |
+| D-104 | Scale-normalized spatial grouping & GUI integration; hygiene removal of hardcoded IDs | **0.295136** | **0.491688** |
+| D-103 | Full 65-image precision sweep; Pass 7A plastic restoration, 7B10-12 clutter veto | **0.295084** | **0.491560** |
 | D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
 | D-071 | 384/576 saved blend2575; HR E1 | 0.171262; 0.202020 | - |
 | D-072 | HR E1 hierarchy and four-view GUI | same saved HR E1, not rerun | 0.314188 / 0.398843 |
