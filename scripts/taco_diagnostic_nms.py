@@ -5,6 +5,16 @@ NMS_MODES = ('none (raw queries)', 'class-agnostic IoU 0.50', 'class-aware IoU 0
              'agnostic IoU 0.50 + containment 0.80',
              'class-aware IoU 0.50 + containment 0.80')
 
+_MATERIAL_FAMILY = (0, 1, 1, 1, 1, 2, 1, 3, 4)
+
+
+def _same_material_family(cat_a, cat_b):
+    if cat_a == cat_b:
+        return True
+    if 0 <= cat_a < len(_MATERIAL_FAMILY) and 0 <= cat_b < len(_MATERIAL_FAMILY):
+        return _MATERIAL_FAMILY[cat_a] == _MATERIAL_FAMILY[cat_b]
+    return False
+
 
 def intersection_over_minimum_area(a,b):
     """Symmetric IoMin for original-pixel xywh boxes; zero for empty boxes."""

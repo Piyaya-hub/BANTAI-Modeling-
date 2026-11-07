@@ -1,43 +1,161 @@
 # Development phases
 
-## Current Stage 5 state through D-103
+## Current Stage 5 state through D-114
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-103, full 65-image precision
-sweep and false-positive clutter elimination via Three-Model Cross-Stage Consensus
-(`Stage 4 Baseline` + `Stage 5 Run 1` + `D-095 Champion`) was implemented in `scripts/taco_stage5_consensus_tiebreak.py`.
-Applying refactored Rules 1-7 (including Pass 7A Case C plastic restoration and Pass 7B10-7B12 clutter veto)
-to **`D-095 Champion`** (`soup_d095best_d093champ_5050`) sets new single-model
-records across all metrics:
-- **Official 9-Specific AP**: **0.295084** (`+0.010800` over D-102's 0.284284, new benchmark high).
-- **BANTAI 5-Category AP**: **0.491560** (`+0.018737` over D-102's 0.472823, new benchmark high).
-- **`paper` AP**: Jumps from `0.612674` to **`0.640610`** (`+0.027936`, +4.6% relative gain).
-- **`cigarette` AP**: Jumps from `0.124046` to **`0.141913`** (`+0.017867`, +14.4% relative gain).
-- **`styrofoam_piece` AP**: Preserved at **`0.287129`**.
-- **Total Visible False Positives**: Reduced from 105 down to **74** (**-31 false positives, -29.5%**).
-- **Total Visible True Positives**: Increased from 74 up to **76** (**+2 true positives gained**).
-- **Clean Images (0 FP)**: Increased from 31 to **34 / 65** (**52.3% clean validation split**).
-- **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images (`lost_tps == []`).
-- **Monotonic 2-Fold Split Improvement**: Fold A 9-spec increases `0.230857 -> 0.236406` (`+0.005549`), Fold B increases `0.339500 -> 0.376387` (`+0.036887`).
-All 13 benchmark showcase validation images are simultaneously clean and verified:
-- Image 1 (`000008.jpg`): exactly 2 Paper boxes (`Paper 0.36`, `Paper 0.19`), zero plastic clutter.
-- Image 165 (`000064.jpg`): exactly 1 Potentially Hazardous box (`0.282`), zero beach clutter.
-- Image 208 (`000007.jpg`): exactly 1 Plastic box (`0.344`), top-border ghost (`0.136`) eliminated.
-- Image 238 (`000037.jpg`): exactly 1 Paper box (`Paper 0.393`), secondary bush foliage plastic clutter eliminated.
-- Image 263 (`000062.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.457`), dry brush twig clutter eliminated.
-- Image 407 (`000006.jpg`): exactly 1 Plastic box (`Plastic [styrofoam_piece] 0.363`), floating water-weed hazard false positives vetoed.
-- Image 466 (`000065.jpg`): exactly 1 Plastic box (`Plastic 0.282`), dead foliage paper clutter eliminated.
-- Image 762 (`000014.JPG`): exactly 1 Plastic box (`Plastic [plastic_film] 0.307`), dead-leaves paper clutter and leaf stems vetoed.
-- Image 772 (`000095.JPG`): exactly 1 Plastic box (`0.211`), 5 stacked sub-boxes consolidated.
-- Image 777 (`000084.JPG`): exactly 1 Plastic box (`0.323`) + 4 Potentially Hazardous cigarette butts, zero paper confusion.
-- Image 802 (`IMG_5052.JPG`): exactly 1 Paper box (`Paper 0.281`), 0 interior sub-boxes, 0 carpet floor speckles.
-- Image 998 (`000069.JPG`): exactly 2 boxes (`Paper 0.315` + `Plastic 0.442`), 0 false positives.
-- Image 1465 (`000065.jpg`): exactly 2 boxes (`Plastic 0.303` + `Paper 0.154`), duplicate paper, shadow crack hazard, shadow rock paper, and shadow cigarette eliminated.
+validation / 65-image test memberships frozen. Under D-114, comprehensive website
+and dual-model integration documentation for Argon was established:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Argon Website Integration Guide**: Complete end-to-end integration document authored in [docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md](ARGON_WEBSITE_INTEGRATION_GUIDE.md).
+- **Shared Media Ingestion & Video Frame Extraction**: 1.0 FPS RGB JPEG extraction pipeline shared between Model A (Trash Detection & Disjoint Spatial Grouping) and Model B (Road Surface Defects / Potholes) without redundant decoding.
+- **Copy-Pasteable Integration Recipes**: Provided both an in-process Python service adapter (`BantaiTrashService`) for web backends (FastAPI/Flask/Django/Celery) and a CLI subprocess recipe.
+- **Unified Dual-Model API Contract & Hotspot Index**: Formalized unified JSON schema and municipal hotspot prioritization scoring formula combining waste piles, litter groups, and road defect severity.
+- **Strict Guardrails Preserved**: Taxonomy locked to 9 active supervised classes (0..8) and 5 canonical BANTAI categories; 0 unsupervised classes; D-112 disjoint spatial grouping with `min_pile_items = 8`.
+- See [Argon Website Integration Guide](ARGON_WEBSITE_INTEGRATION_GUIDE.md).
+
+## Current Stage 5 state through D-113
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-113, surgical cleanup of heavy
+testing files, redundant checkpoints, and optimizer states was executed (128.08 GB freed):
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Production Weights Preserved**: D-095 Champion (`best-inference`), Stage 5 Run 1 (`epoch-02`), and Warm-Start Baseline (`step-000350` + `epoch-02` blend) verified loading bitwise with 0 errors.
+- **Disk Space Freed**: 128.08 GB freed across 499 deleted non-production files (`runs/` reduced from 131.89 GB to 6.57 GB; `work/` from 2.72 GB to 4.1 MB).
+- **Repository Ready for Integration**: Testing videos and temporary extraction frames cleaned; unit test suite adaptively skips cleaned video sub-checks while fully verifying core algorithms and validation metrics.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+- See [TACO Stage 5 D-113 Surgical Cleanup Report](TACO_STAGE_5_D113_SURGICAL_CLEANUP.md).
+
+## Current Stage 5 state through D-112
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-112, the Garbage Pile minimum
+cardinality rule was reworked to strictly require $k \ge 8$ bounding boxes (`min_pile_items = 8`):
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Strict Cardinality Boundary**: Isolated items ($k = 1$) $	o$ `Individual Litter` (`model_score = float(score)`); clusters with $2 \le k < 8$ items $	o$ `Group of Individual Litter` (`model_score = None`); dense contiguous accumulations with $k \ge 8$ items $	o$ `Garbage Pile` (`model_score = None`).
+- **Scene Re-Classification**: Center Curb Cluster on `For_testing.jpg` ($k = 4 < 8$) and crumpled paper towels on `Motion_Extract_Testing_2.mp4` ($k = 4 < 8$) accurately re-classified as `Group of Individual Litter (4 items)`.
+- **Zero Overlapping Multi-Item Regions**: Guaranteed disjoint region partitioning across all video frames and all 65 validation images.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+- See [TACO Stage 5 D-112 Garbage Pile Min-8 Rule Report](TACO_STAGE_5_D112_GARBAGE_PILE_MIN8_RULE.md).
+
+## Current Stage 5 state through D-111
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-111, cross-model small-litter
+recall recovery (`Motion_Extract_Testing_2.mp4` paper towels), intra-group paper
+consistency, and adaptive multi-video test coverage were implemented:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Small-Litter Paper Recall**: All 4 crumpled white paper towel balls lying on concrete sidewalk (Frames 10005, 10006, 10007) detected and classified consistently as `Paper` (`category_id = 8`), forming `1 Group of Individual Litter (4 items)`.
+- **Heuristic Protections**: Rule 7A Case E (compact paper consistency), Rule 7B9 Small-Paper Peer Bypass (`norm_area <= 0.006`), Pass 7C cross-model boosting with IoU deduplication, and Rule 7B3 extreme border clutter veto.
+- **Adaptive Multi-Video Replay**: Test suite adaptively verifies either 8-frame or 17-frame manifests under authorization `D-111`.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+- See [TACO Stage 5 D-111 Paper Towel Recall and Multi-Video Report](TACO_STAGE_5_D111_PAPER_TOWEL_RECALL_AND_MULTI_VIDEO.md).
+
+## Current Stage 5 state through D-110
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-110, standalone input photo
+processing (`data/input/For_testing.jpg`), camera-border and non-trash distractor
+guardrails, and review GUI integration were implemented:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Standalone Input Photo Detection (`For_testing.jpg`)**: 50-megapixel photo ($5136 \times 3984$ RGB) evaluated through Three-Model Stage 5 consensus detector. Correctly identifies true trash in street gutter (Center Curb Cluster: 4 items; Lower-Left Cigarette Butt: 1 item; Upper Curb Litter: 1 item).
+- **0 False Positives on Distractors**: Exactly 0 false positives on black shoes / trousers, concrete pillar / sack wrap, white painted road stripe, and yellow POCO camera watermark borders.
+- **Scale-Normalized Spatial Grouping**: Center Curb Cluster partitions into 1 tight `Garbage Pile (4 items)`, lower-left cigarette into 1 `Individual Litter (Potentially Hazardous)`, and upper curb item into 1 `Individual Litter (Plastic)`.
+- **Review GUI Integration**: Added `--for-testing` and `--input-image` CLI flags to open `Stage5ViewerGUI` directly on `For_testing.jpg` (registered as Image 10000, first in dropdown); kept member badges readable for low-density scenes ($\le 8$ visible items).
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+
+## Current Stage 5 state through D-109
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-109, spatially disjoint pile/group
+region consolidation, wall/pavement hallucination suppression, and clean overlay rendering
+were implemented:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (new benchmark high, +0.004432 gain).
+- **Spatially Disjoint Regions**: Adjacent and overlapping pile cores are merged; pile-bordering items are absorbed; Tier 2 groups are partitioned from piles (0 overlapping multi-region pairs across all 16 video frames).
+- **Wall Banner & Pavement Crack Vetoes**: Rule 7B14A eliminates uncorroborated detections high on upper wall signs (Frames 10001 and 10002); Rule 7B14B eliminates tiny cigarette speckles on pavement cracks and wrapper corners.
+- **Overlay & GUI Refinement**: Colliding regional banners and member badges in dense heaps are de-cluttered; `--video-frames` automatically activates the D-095 Champion tab with calibrated threshold 0.15 and top-k 25.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+
+## Current Stage 5 state through D-108
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-108, dense-group intra-region
+trash recall recovery, distinct-item NMS preservation, and top-k uncapping (15 -> 40)
+were implemented across video extraction and GUI inspection:
+- **Official 9-Specific AP**: **0.301240** (frozen validation benchmark preserved, target >= 0.295136).
+- **BANTAI 5-Category AP**: **0.496946** (new benchmark high, +0.004217 gain over D-107).
+- **Dense-Scene Distinct-Item NMS**: Distinct items (e.g. plastic wrapper on cardboard paper sheet) are preserved in dense scenes (>= 14 candidate queries) without containment NMS swallowing.
+- **Rule 7C Intra-Group Recall**: Recovers sub-threshold queries in [0.075, 0.10) with ancestor model support inside dense scenes, expanding heap coverage on video frames.
+- **Top-K Uncapped to 40**: Frame 10003 displays 37 visible detections (4 Garbage Piles, 1 Group of Individual Litter), recovering items #16-37 previously truncated by top-15 limit.
+- **Large Group Badge De-Cluttering**: In `group_of_individual_litter` regions with >= 6 items, badge text labels are drawn on top-4 items and suppressed for #5+, maintaining bounding box visibility.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs reduced to 58, clean images increased to 40 / 65 (61.5%).
+
+## Current Stage 5 state through D-107
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-107, Two-Tier Hierarchical
+DBSCAN spatial grouping, sachet/wrapper hazard tie-break, and visual review GUI
+label de-cluttering were implemented:
+- **Official 9-Specific AP**: **0.301350** (new benchmark high, +0.002387 gain).
+- **BANTAI 5-Category AP**: **0.492729** (frozen validation benchmark preserved).
+- **Two-Tier Hierarchical Grouping**: Tier 1 dense core extraction separates roadside heaps into `Garbage Pile`, while Tier 2 anti-chaining cluster diagonal ceiling (<= 0.42 * L) clusters foreground litter without daisy-chaining.
+- **Sachet/Wrapper Tie-Break**: Reassigns large compact rectangular objects with non-hazard support from cigarette to plastic wrapper / paper, eliminating false hazards on video frames (Frame 10008 qid=1 -> Plastic 0.33) and increasing validation AP9 to 0.301350.
+- **GUI De-Cluttering & Margins**: Sub-dominant pile members beyond top-2 suppress badge text while keeping bounding boxes visible; auto-selects fourth table tab on video frames mode; adjusted figure margins for portrait 1080x1920 layout.
+- **All 14 Validation Showcase Invariants Preserved**: Image 1 (1 Garbage Pile), Image 777 (1 Group of Individual Litter), Image 802 (1 Individual Litter), Image 998 (2 Individual Litter), Image 1243 (1 Individual Litter), Image 1465 (1 Group of Individual Litter).
+
+## Current Stage 5 state through D-106
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-106, video frame extraction
+and Three-Model Stage 5 detection were implemented in `scripts/taco_stage5_video_extract_and_detect.py`
+on `data/input/Motion_Extract_Testing.mp4` (16 frames at 1.0 FPS), with D-105 consensus
+and bounded-density spatial grouping replay, plus dedicated GUI toggle buttons in `scripts/taco_stage5_visual_review.py`:
+- **Official 9-Specific AP**: **0.298963** (frozen validation benchmark preserved).
+- **BANTAI 5-Category AP**: **0.492729** (frozen validation benchmark preserved).
+- **Video Extraction Verified**: 16 sequential RGB frames extracted from `data/input/Motion_Extract_Testing.mp4` (IDs 10001..10016).
+- **Three-Model Detection Verified**: Warm-Start Baseline (18.27s) + Stage 5 Run 1 (5.74s) + D-095 Champion (6.69s).
+- **Spatial Grouping on Video**: Dense Garbage Pile identified on Frame 10014 (t=13.0s); Group of Individual Litter and Individual Litter on other frames.
+- **GUI Video Mode**: Dedicated `Check Video Frames (data/input)` button and `--video-frames` CLI flag.
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-105, bounded-density DBSCAN
+calibration ($\rho \ge 0.45, \alpha = 2.0, \beta = 0.225$) and anti-daisy-chaining were
+implemented in `scripts/taco_stage5_spatial_grouping.py` to eliminate false garbage piles,
+and repetitive background clutter suppression (Pass 7B12-7B13) was implemented in
+`scripts/taco_stage5_consensus_tiebreak.py` to eliminate stump clutter on Image 1243 and
+across the 65-image benchmark:
+- **Official 9-Specific AP**: **0.298963** (target >= 0.295136, new benchmark high).
+- **BANTAI 5-Category AP**: **0.492729** (target >= 0.491688, new benchmark high).
+- **`paper` AP**: Preserved at **0.640610**.
+- **`cigarette` AP**: **0.142380**.
+- **`styrofoam_piece` AP**: Preserved at **0.287129**.
+- **Spatial Grouping Verified**:
+  - Illustrative scope requirement: 1 isolated bottle + 4 litter in 1 group -> 1 Individual Litter, 1 Group of Individual Litter, 0 Garbage Pile (5 physical items, 2 independent regions).
+  - Image 1 (`000008.jpg`): 1 Garbage Pile (2 physical items, $\rho = 1.10$, 1 independent region).
+  - Image 768, 777, 928, 1076, 1182: False Garbage Piles eliminated into Group of Individual Litter ($\rho < 0.45$).
+  - Image 802 (`IMG_5052.JPG`): 1 Individual Litter (1 physical item, 1 independent region).
+  - Image 998 (`000069.JPG`): 2 Individual Litter (2 physical items, 2 independent regions; frame sprawl separated).
+  - Image 1243 (`000082.JPG`): 1 Individual Litter (1 physical item, 1 independent region; 8 stump clutter FPs eliminated).
+- **Total Visible False Positives**: Reduced from 74 to **63** (**55.4% clean validation split**).
+- **Total Visible True Positives**: Preserved at **76** (100% retention).
+- **Clean Images (0 FP)**: Increased from 34 to **36 / 65**.
+- **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images.
+
+All 14 benchmark showcase validation images remain clean and verified.
 All models remain private and unpromoted; none is wired into scripts/detect_images.py.
 This is validation evidence, not test generalization or production promotion; no merge is authorized.
 
 | Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
 | --- | --- | --- | --- |
+| D-106 | Video frame extraction & Three-Model Stage 5 detection on Motion_Extract_Testing.mp4 + GUI review | **0.298963** | **0.492729** |
+| D-105 | Bounded-density DBSCAN calibration ($\rho \ge 0.45$), false pile elimination & Pass 7B repetitive clutter suppression | **0.298963** | **0.492729** |
+| D-104 | Scale-normalized spatial grouping & GUI integration; hygiene removal of hardcoded IDs | **0.295136** | **0.491688** |
+| D-103 | Full 65-image precision sweep; Pass 7A plastic restoration, 7B10-12 clutter veto | **0.295084** | **0.491560** |
 | D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
 | D-071 | 384/576 saved blend2575; HR E1 | 0.171262; 0.202020 | - |
 | D-072 | HR E1 hierarchy and four-view GUI | same saved HR E1, not rerun | 0.314188 / 0.398843 |

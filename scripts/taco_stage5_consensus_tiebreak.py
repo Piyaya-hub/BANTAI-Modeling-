@@ -10,7 +10,6 @@ from .taco_training_labels_v2 import LABELS
 
 PLASTIC_SUBTYPE_IDS = (1, 2, 3, 4, 6, 7)
 PLASTIC_STRUCTURED_IDS = (1, 2, 3, 6, 7)
-PROTECTED_SHOWCASE_IDS = (1, 165, 208, 238, 263, 407, 466, 762, 772, 777, 802, 998, 1465)
 PAPER_ID = 8
 DEFAULT_DELTA = 0.016
 DEFAULT_STRONG_COACTIVATION_DELTA = 0.040
@@ -355,11 +354,15 @@ def apply_scene_consensus(
                 plastic_anchors.append(r)
 
     is_single_hazard_scene = (len(hazard_anchors) == 1 and len(hazard_candidates_ge_19) == 1)
+    is_dense_litter_scene = (
+        sum(1 for r in stage1_rows if r.get("score", 0.0) >= 0.15) >= 14
+    )
 
     diag["anchors_found"] = len(paper_anchors)
     diag["hazard_anchors_found"] = len(hazard_anchors)
     diag["plastic_anchors_found"] = len(plastic_anchors)
     diag["is_single_hazard_scene"] = is_single_hazard_scene
+    diag["is_dense_litter_scene"] = is_dense_litter_scene
 
     # Step 3: Rule 2, Rule 3, Rule 4, and Rule 5
     stage2_rows = []
@@ -781,6 +784,79 @@ def apply_scene_consensus(
                                     "reason": f"high wrapper/film coactivation v[3]+v[4]={v[3]+v[4]:.3f}>=0.54, baseline corroboration cat={b_cat} sc={top_b.get('score'):.3f}>=0.28, r1_paper={r1_paper:.3f}<0.20",
                                 })
 
+            # Case D: Sachet/wrapper hazard tie-break (large compact objects with non-hazard support)
+            if cat == 0 and norm_area >= 0.0018 and min(bw, bh) >= 35.0 and v is not None:
+                aspect = max(bw, bh) / max(1e-6, min(bw, bh))
+                if aspect <= 2.5:
+                    non_haz_cands = [(v[c], c) for c in (1, 2, 3, 4, 6, 7, 8)]
+                    best_sc, best_c = max(non_haz_cands)
+                    if best_sc >= 0.035:
+                        if best_c == 8 and v[8] >= max(v[c] for c in (1, 2, 3, 4, 6, 7)) + 0.01:
+                            target_c = 8
+                        elif best_c in (1, 2, 3, 4, 6, 7):
+                            target_c = 3 if v[3] >= 0.035 else best_c
+                        else:
+                            target_c = 3
+                        r_mod["raw_category_id"] = cat
+                        r_mod["category_id"] = target_c
+                        r_mod["specific_category_id"] = target_c
+                        r_mod["consensus_reassigned"] = True
+                        r_mod["sachet_wrapper_reassigned"] = True
+                        r_mod["consensus_rule7a"] = True
+                        rule7_changed_qids.add(qid)
+                        diag["rule7_count"] += 1
+                        diag["rule7a_count"] += 1
+                        diag["logs"].append({
+                            "image_id": image_id,
+                            "qid": qid,
+                            "rule": f"Rule 7A (sachet/wrapper hazard to {target_c} reassignment)",
+                            "old_cat": cat,
+                            "new_cat": target_c,
+                            "old_score": sc,
+                            "reason": f"compact large object norm_area={norm_area:.6f}>=0.0018 min_dim={min(bw, bh):.1f}>=35 aspect={aspect:.2f}<=2.5 with non-hazard support best_c={best_c} sc={best_sc:.3f}>=0.035",
+                        })
+
+            # Case E: Compact white paper-ball group material consistency (video frames)
+            compact_paper_anchors = [
+                pa for pa in stage3_rows
+                if pa.get("category_id") == PAPER_ID and pa.get("score", 0.0) >= 0.26 and (pa["bbox"][2] * pa["bbox"][3] / total_img_area) <= 0.006
+            ]
+            if cat in (0, 3, 4) and norm_area <= 0.006 and sc >= 0.15 and compact_paper_anchors and v is not None:
+                cx = bx + 0.5 * bw
+                cy = by + 0.5 * bh
+                L = max(image_width or 1, image_height or 1)
+                min_pa_dist = min(
+                    (math.hypot(cx - (pa["bbox"][0] + 0.5 * pa["bbox"][2]),
+                                cy - (pa["bbox"][1] + 0.5 * pa["bbox"][3]))
+                     for pa in compact_paper_anchors
+                     if pa.get("fused_query_id", pa.get("query_id")) != qid),
+                    default=9999.0
+                )
+                if min_pa_dist <= 0.38 * L:
+                    has_paper_support = (
+                        (v[PAPER_ID] >= 0.10) or
+                        r.get("raw_category_id") == PAPER_ID or
+                        any(r1.get("category_id") == PAPER_ID and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30 for r1 in r1_ge_08)
+                    )
+                    if has_paper_support:
+                        r_mod["raw_category_id"] = r.get("raw_category_id", cat)
+                        r_mod["category_id"] = PAPER_ID
+                        r_mod["specific_category_id"] = PAPER_ID
+                        r_mod["consensus_reassigned"] = True
+                        r_mod["consensus_rule7a"] = True
+                        rule7_changed_qids.add(qid)
+                        diag["rule7_count"] += 1
+                        diag["rule7a_count"] += 1
+                        diag["logs"].append({
+                            "image_id": image_id,
+                            "qid": qid,
+                            "rule": "Rule 7A (compact white paper-ball group consistency)",
+                            "old_cat": cat,
+                            "new_cat": PAPER_ID,
+                            "old_score": sc,
+                            "reason": f"compact detection norm_area={norm_area:.6f}<=0.006 dist={min_pa_dist:.1f}<={0.38*L:.1f} to compact paper anchor with paper support v[8]={v[PAPER_ID]:.3f}>=0.10",
+                        })
+
             pass7a_rows.append(r_mod)
 
         # Inspect post-7A scene characteristics
@@ -803,7 +879,33 @@ def apply_scene_consensus(
         total_b_cig_08 = sum(1 for b in b_ge_08 if b.get("category_id") == 0)
         total_r1_cig_08 = sum(1 for r in r1_ge_08 if r.get("category_id") == 0)
         has_ancestor_cig_energy = (total_b_cig_08 >= 8 and total_r1_cig_08 >= 8)
-        effective_image_id = image_id if image_id is not None else (rows[0].get("image_id") if rows else None)
+
+        # Genuine compact hazard cluster (distinguishes true cigarette clusters like Image 777 from isolated speckles)
+        compact_hazards = [h for h in pass_hazards if max(h["bbox"][2], h["bbox"][3]) <= 75.0]
+        has_compact_haz_cluster = sum(
+            1 for h in compact_hazards
+            if sum(
+                1 for o in compact_hazards
+                if o != h
+                and _compute_iou(h["bbox"], o["bbox"]) < 0.20
+                and math.hypot(
+                    (h["bbox"][0] + 0.5 * h["bbox"][2]) - (o["bbox"][0] + 0.5 * o["bbox"][2]),
+                    (h["bbox"][1] + 0.5 * h["bbox"][3]) - (o["bbox"][1] + 0.5 * o["bbox"][3])
+                ) <= 160.0
+            ) >= 2
+        ) >= 3
+
+        # Scene-level distributions for Rule 7B14
+        high_sc_rows = [r for r in pass7a_rows if r.get("score", 0.0) >= 0.18]
+        if len(high_sc_rows) >= 5 and image_height and image_height > 0:
+            cys = [r["bbox"][1] + 0.5 * r["bbox"][3] for r in high_sc_rows]
+            med_cy = sorted(cys)[len(cys) // 2]
+            is_ground_dominated = (med_cy >= 0.40 * image_height)
+        else:
+            is_ground_dominated = False
+
+        macro_waste_rows = [r for r in pass7a_rows if r.get("category_id") != 0 and r.get("score", 0.0) >= 0.18]
+        is_macro_waste_dominated = (len(macro_waste_rows) >= 5)
 
         # PASS 7B: Clutter Veto
         final_rule7_rows = []
@@ -821,6 +923,8 @@ def apply_scene_consensus(
             best_b_08_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
             best_b_10_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10), default=0.0)
             best_b_15_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_15), default=0.0)
+            best_r1_08_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
+            best_r1_10_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_10), default=0.0)
 
             # 7B1: Isolated background hazard speckle clutter filter
             if cat == 0 and sc < 0.18:
@@ -876,7 +980,11 @@ def apply_scene_consensus(
                 is_foliage_hazard_edge = (cat == 0 and has_dom_plastic and (not has_haz_anchor) and
                                           (by + bh) > 0.96 * image_height and bx > 0.65 * image_width and
                                           best_b_15_iou < 0.20)
-                if is_frame_clip or is_plastic_edge or is_foliage_hazard_edge:
+                is_uncorroborated_extreme_edge = (
+                    image_width is not None and (bx <= 0.005 * image_width or (bx + bw) >= 0.995 * image_width) and
+                    best_b_10_iou < 0.20 and best_r1_10_iou < 0.20
+                )
+                if is_frame_clip or is_plastic_edge or is_foliage_hazard_edge or is_uncorroborated_extreme_edge:
                     suppress = True
                     reason = f"extreme border clutter sc={sc:.3f}<0.18 touching frame/border without baseline support"
 
@@ -929,36 +1037,103 @@ def apply_scene_consensus(
 
             # 7B9: Shadow rock paper confusion with zero Baseline paper support and marginal Run 1 paper
             if not suppress and cat == PAPER_ID and (not paper_sheet_anchors) and sc < 0.28 and v is not None:
-                pl_sum = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
-                best_b_paper_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10 if b.get("category_id") == 8), default=0.0)
-                best_r1_paper_sc = max((r1["score"] for r1 in r1_ge_10 if r1.get("category_id") == 8 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
-                if best_b_paper_iou < 0.20 and best_r1_paper_sc < 0.19 and pl_sum >= 0.50:
-                    suppress = True
-                    reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
+                has_scene_paper = any(
+                    p.get("category_id") == PAPER_ID and p.get("score", 0.0) >= 0.26
+                    for p in pass7a_rows if p.get("fused_query_id", p.get("query_id")) != qid
+                )
+                b_any_corrob = any(
+                    _compute_iou(r["bbox"], b["bbox"]) >= 0.30 and b.get("score", 0.0) >= 0.10
+                    for b in baseline_rows
+                )
+                r1_any_corrob = any(
+                    _compute_iou(r["bbox"], r1["bbox"]) >= 0.30 and r1.get("score", 0.0) >= 0.12
+                    for r1 in run1_rows
+                )
+                has_litter_corrob = (b_any_corrob or r1_any_corrob)
+                is_small_paper_peer = (norm_area <= 0.006 and has_scene_paper and has_litter_corrob)
+                if not is_small_paper_peer:
+                    pl_sum = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    best_b_paper_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10 if b.get("category_id") == 8), default=0.0)
+                    best_r1_paper_sc = max((r1["score"] for r1 in r1_ge_10 if r1.get("category_id") == 8 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
+                    if best_b_paper_iou < 0.20 and best_r1_paper_sc < 0.19 and pl_sum >= 0.50:
+                        suppress = True
+                        reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
 
             # 7B10: Non-hazard scene hazard speckle suppression
-            if not suppress and cat == 0 and has_dom_object and (not has_strong_haz_anchor) and (not has_ancestor_cig_energy):
-                if effective_image_id not in PROTECTED_SHOWCASE_IDS:
-                    if sc < 0.22 and norm_area < 0.002:
-                        suppress = True
-                        reason = f"non-hazard scene hazard speckle sc={sc:.3f}<0.22 norm_area={norm_area:.6f} without ancestor hazard energy"
+            if not suppress and cat == 0 and has_dom_object and (not has_strong_haz_anchor) and (not has_ancestor_cig_energy) and (not has_compact_haz_cluster):
+                if sc < 0.22 and norm_area < 0.002:
+                    suppress = True
+                    reason = f"non-hazard scene hazard speckle sc={sc:.3f}<0.22 norm_area={norm_area:.6f} without ancestor hazard energy"
 
-            # 7B11: Uncorroborated tiny plastic clutter on non-showcase images
+            # 7B11: Uncorroborated tiny plastic clutter
             if not suppress and cat in PLASTIC_SUBTYPE_IDS and sc < 0.16 and norm_area < 0.002:
                 best_b_any = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
                 best_r1_any = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
                 if best_b_any < 0.20 and best_r1_any < 0.20:
-                    if effective_image_id not in PROTECTED_SHOWCASE_IDS:
-                        suppress = True
-                        reason = f"uncorroborated tiny plastic clutter sc={sc:.3f}<0.16 norm_area={norm_area:.6f} with zero baseline/run1 support"
+                    suppress = True
+                    reason = f"uncorroborated tiny plastic clutter sc={sc:.3f}<0.16 norm_area={norm_area:.6f} with zero baseline/run1 support"
 
             # 7B12: Uncorroborated low-score drink can clutter
-            if not suppress and cat == 5 and sc < 0.12:
-                best_b_any = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_08), default=0.0)
-                best_r1_any = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_08), default=0.0)
-                if best_b_any < 0.20 and best_r1_any < 0.20:
+            if not suppress and cat == 5 and sc < 0.15:
+                best_b_can = max((b["score"] for b in b_ge_08 if b.get("category_id") == 5 and _compute_iou(r["bbox"], b["bbox"]) >= 0.20), default=0.0)
+                best_r1_can = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 5 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.20), default=0.0)
+                if best_b_can < 0.10 and best_r1_can < 0.10:
                     suppress = True
-                    reason = f"uncorroborated low-score drink can sc={sc:.3f}<0.12 with zero baseline/run1 support"
+                    reason = f"uncorroborated low-score drink can sc={sc:.3f}<0.15 with zero baseline/run1 can support"
+
+            # 7B13A: Uncorroborated styrofoam clutter
+            if not suppress and cat == 7 and sc < 0.18:
+                best_b_styro = max((b["score"] for b in b_ge_08 if b.get("category_id") == 7 and _compute_iou(r["bbox"], b["bbox"]) >= 0.20), default=0.0)
+                best_r1_styro = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 7 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.20), default=0.0)
+                if best_b_styro < 0.10 and best_r1_styro < 0.10:
+                    suppress = True
+                    reason = f"uncorroborated styrofoam sc={sc:.3f}<0.18 without baseline/run1 styrofoam support"
+
+            # 7B13B: Bamboo stump / hollow cylinder cup hallucination on natural ground
+            if not suppress and cat == 6 and sc < 0.30:
+                b_matches = [b for b in b_ge_08 if _compute_iou(r["bbox"], b["bbox"]) >= 0.30]
+                r1_matches = [r1 for r1 in r1_ge_08 if _compute_iou(r["bbox"], r1["bbox"]) >= 0.30]
+                b_top = max(b_matches, key=lambda x: x["score"]) if b_matches else None
+                r1_top = max(r1_matches, key=lambda x: x["score"]) if r1_matches else None
+                if b_top and r1_top:
+                    if b_top.get("category_id") == 6 and b_top.get("score", 0.0) < 0.15 and r1_top.get("category_id") == 4 and r1_top.get("score", 0.0) < 0.20:
+                        suppress = True
+                        reason = f"bamboo stump cup/film contradiction sc={sc:.3f} b_sc={b_top.get('score'):.3f}<0.15 r1_sc={r1_top.get('score'):.3f}<0.20"
+
+            # 7B13C: Macro ground clutter plastic bottle without bottle support
+            if not suppress and cat == 1 and ((sc < 0.25 and norm_area >= 0.035) or sc < 0.12):
+                b_bottle = max((b["score"] for b in b_ge_08 if b.get("category_id") == 1 and _compute_iou(r["bbox"], b["bbox"]) >= 0.30), default=0.0)
+                r1_bottle = max((r1["score"] for r1 in r1_ge_08 if r1.get("category_id") == 1 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
+                if b_bottle < 0.10 and r1_bottle < 0.10:
+                    suppress = True
+                    reason = f"uncorroborated plastic bottle sc={sc:.3f} norm_area={norm_area:.4f} without baseline/run1 bottle support"
+
+            # 7B13D: Marginal plastic film contradicted by baseline cup
+            if not suppress and cat == 4 and sc < 0.15:
+                b_matches = [b for b in baseline_rows if _compute_iou(r["bbox"], b["bbox"]) >= 0.30]
+                b_cup_sc = max((b["score"] for b in b_matches if b.get("category_id") == 6), default=0.0)
+                has_b_cup = (b_cup_sc >= 0.08) or (b_cup_sc >= 0.05 and v is not None and v[6] >= 0.10)
+                if has_b_cup:
+                    suppress = True
+                    reason = f"marginal film sc={sc:.3f}<0.15 contradicted by baseline cup c=6 (b_cup={b_cup_sc:.3f})"
+
+            # 7B14A: Upper-Wall Sign/Banner Clutter Veto
+            if not suppress and is_ground_dominated and image_height and image_height > 0:
+                if by < 0.08 * image_height and (by + bh) < 0.22 * image_height and sc < 0.24:
+                    b_agree = any(_compute_iou(r["bbox"], b["bbox"]) >= 0.25 and b.get("score", 0.0) >= 0.20 for b in b_ge_08)
+                    r1_agree = any(_compute_iou(r["bbox"], r1["bbox"]) >= 0.25 and r1.get("score", 0.0) >= 0.20 for r1 in r1_ge_08)
+                    if not (b_agree and r1_agree):
+                        suppress = True
+                        reason = f"upper wall sign/banner clutter sc={sc:.3f}<0.24 by={by:.1f}<0.08*H without high-conf baseline+run1 agreement"
+
+            # 7B14B: Macro-Heap Cigarette/Hazard Speckle Veto
+            if not suppress and cat == 0 and is_macro_waste_dominated and (not has_compact_haz_cluster):
+                if norm_area < 0.0015 and sc < 0.25:
+                    b_agree = any(_compute_iou(r["bbox"], b["bbox"]) >= 0.30 and b.get("category_id") == 0 and b.get("score", 0.0) >= 0.16 for b in b_ge_08)
+                    r1_agree = any(_compute_iou(r["bbox"], r1["bbox"]) >= 0.30 and r1.get("category_id") == 0 and r1.get("score", 0.0) >= 0.16 for r1 in r1_ge_08)
+                    if not (b_agree and r1_agree):
+                        suppress = True
+                        reason = f"macro-heap hazard speckle sc={sc:.3f}<0.25 norm_area={norm_area:.6f}<0.0015 without baseline+run1 hazard agreement"
 
             if suppress:
                 rule7_suppressed_qids.add(qid)
@@ -975,6 +1150,127 @@ def apply_scene_consensus(
                 })
             else:
                 final_rule7_rows.append(r)
+
+        # PASS 7C: Cross-Model Small-Litter Recall Recovery (D-111)
+        has_clear_anchor = any(r.get("score", 0.0) >= 0.25 for r in final_rule7_rows)
+        has_compact_paper_anchor = any(
+            r.get("category_id") == PAPER_ID and r.get("score", 0.0) >= 0.26 and
+            ((r["bbox"][2] * r["bbox"][3] / total_img_area) <= 0.006)
+            for r in final_rule7_rows
+        )
+        L = max(image_width or 1, image_height or 1)
+
+        all_suppressed_qids = (
+            rule3_suppressed_qids | rule4_suppressed_qids | rule5_suppressed_qids |
+            rule6_suppressed_qids | rule7_suppressed_qids
+        )
+
+        if has_clear_anchor:
+            passing_ge_20 = [r for r in final_rule7_rows if r.get("score", 0.0) >= 0.20]
+            existing_qids = {r.get("fused_query_id", r.get("query_id")) for r in final_rule7_rows}
+
+            # Case 7C-1: Boost sub-threshold D-095 query corroborated by Stage 5 Run 1 or Baseline
+            for raw_r in rows:
+                rqid = raw_r.get("fused_query_id", raw_r.get("query_id"))
+                if rqid in existing_qids or rqid in all_suppressed_qids:
+                    continue
+                r_sc = raw_r.get("score", 0.0)
+                r_box = raw_r.get("bbox", [])
+                r_area = r_box[2] * r_box[3]
+                r_norm_area = r_area / total_img_area if total_img_area else 0.0
+                if 0.06 <= r_sc < 0.16 and r_norm_area <= 0.006:
+                    # Do not boost if already covered by an existing passing query
+                    if any(_compute_iou(r_box, ex["bbox"]) >= 0.40 for ex in final_rule7_rows):
+                        continue
+                    b_matches = [b for b in b_ge_15 if _compute_iou(r_box, b["bbox"]) >= 0.30]
+                    r1_matches = [r1 for r1 in r1_ge_10 if r1.get("score", 0.0) >= 0.15 and _compute_iou(r_box, r1["bbox"]) >= 0.30]
+                    if b_matches or r1_matches:
+                        cx = r_box[0] + 0.5 * r_box[2]
+                        cy = r_box[1] + 0.5 * r_box[3]
+                        near_anchor = any(
+                            math.hypot(cx - (a["bbox"][0] + 0.5 * a["bbox"][2]),
+                                       cy - (a["bbox"][1] + 0.5 * a["bbox"][3])) <= 0.40 * L
+                            for a in passing_ge_20
+                        )
+                        if near_anchor:
+                            max_anc_sc = max(
+                                [b.get("score", 0.0) for b in b_matches] +
+                                [r1.get("score", 0.0) for r1 in r1_matches]
+                            )
+                            boosted_sc = max(r_sc, 0.5 * (r_sc + max_anc_sc), 0.165)
+                            target_cat = raw_r.get("category_id")
+                            rv = score_vectors[rqid] if (rqid is not None and 0 <= rqid < len(score_vectors)) else None
+                            if has_compact_paper_anchor and ((rv is not None and rv[PAPER_ID] >= 0.08) or any(r1.get("category_id") == PAPER_ID for r1 in r1_matches)):
+                                target_cat = PAPER_ID
+                            recovered_r = deepcopy(raw_r)
+                            recovered_r["score"] = boosted_sc
+                            recovered_r["category_id"] = target_cat
+                            recovered_r["specific_category_id"] = target_cat
+                            recovered_r["consensus_reassigned"] = True
+                            recovered_r["consensus_rule7c"] = True
+                            rule7_changed_qids.add(rqid)
+                            diag["rule7_count"] += 1
+                            diag["logs"].append({
+                                "image_id": image_id,
+                                "qid": rqid,
+                                "rule": "Rule 7C (cross-model small-litter recall recovery Case 7C-1)",
+                                "old_cat": raw_r.get("category_id"),
+                                "new_cat": target_cat,
+                                "old_score": r_sc,
+                                "reason": f"sub-threshold D-095 sc={r_sc:.3f} boosted to {boosted_sc:.3f} via ancestor corroboration near passing anchor",
+                            })
+                            final_rule7_rows.append(recovered_r)
+                            existing_qids.add(rqid)
+
+            # Case 7C-2: Ancestor-only small object within active paper group (D-095 < 0.06)
+            compact_paper_cluster = [
+                r for r in final_rule7_rows
+                if r.get("category_id") == PAPER_ID and r.get("score", 0.0) >= 0.25 and
+                ((r["bbox"][2] * r["bbox"][3] / total_img_area) <= 0.006)
+            ]
+            if len(compact_paper_cluster) >= 2:
+                for r1 in r1_ge_10:
+                    r1_sc = r1.get("score", 0.0)
+                    r1_box = r1.get("bbox", [])
+                    r1_area = r1_box[2] * r1_box[3]
+                    r1_norm_area = r1_area / total_img_area if total_img_area else 0.0
+                    if r1_sc >= 0.17 and r1_norm_area <= 0.005:
+                        b_corrob = any(b.get("score", 0.0) >= 0.12 and _compute_iou(r1_box, b["bbox"]) >= 0.25 for b in baseline_rows)
+                        d095_corrob = any(raw_r.get("score", 0.0) >= 0.04 and _compute_iou(r1_box, raw_r["bbox"]) >= 0.25 for raw_r in rows)
+                        if b_corrob or d095_corrob:
+                            cx = r1_box[0] + 0.5 * r1_box[2]
+                            cy = r1_box[1] + 0.5 * r1_box[3]
+                            near_cluster = any(
+                                math.hypot(cx - (pa["bbox"][0] + 0.5 * pa["bbox"][2]),
+                                           cy - (pa["bbox"][1] + 0.5 * pa["bbox"][3])) <= 0.38 * L
+                                for pa in compact_paper_cluster
+                            )
+                            overlaps_existing = any(_compute_iou(r1_box, ex["bbox"]) >= 0.25 for ex in final_rule7_rows)
+                            if near_cluster and not overlaps_existing:
+                                rec_sc = max(0.165, 0.85 * r1_sc)
+                                rec_row = {
+                                    "fused_query_id": 900 + len(final_rule7_rows),
+                                    "query_id": 900 + len(final_rule7_rows),
+                                    "image_id": image_id,
+                                    "category_id": PAPER_ID,
+                                    "specific_category_id": PAPER_ID,
+                                    "score": rec_sc,
+                                    "bbox": deepcopy(r1_box),
+                                    "consensus_reassigned": True,
+                                    "consensus_rule7c": True,
+                                }
+                                diag["rule7_count"] += 1
+                                diag["logs"].append({
+                                    "image_id": image_id,
+                                    "qid": rec_row["query_id"],
+                                    "rule": "Rule 7C (cross-model small-litter recall recovery Case 7C-2)",
+                                    "old_cat": None,
+                                    "new_cat": PAPER_ID,
+                                    "old_score": r1_sc,
+                                    "reason": f"ancestor-only small paper object recovered at sc={rec_sc:.3f} within active paper cluster",
+                                })
+                                final_rule7_rows.append(rec_row)
+
         output = final_rule7_rows
     else:
         output = stage3_rows
