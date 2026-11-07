@@ -1,5 +1,19 @@
 # Development phases
 
+## Current Stage 5 state through D-114
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-114, comprehensive website
+and dual-model integration documentation for Argon was established:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Argon Website Integration Guide**: Complete end-to-end integration document authored in [docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md](ARGON_WEBSITE_INTEGRATION_GUIDE.md).
+- **Shared Media Ingestion & Video Frame Extraction**: 1.0 FPS RGB JPEG extraction pipeline shared between Model A (Trash Detection & Disjoint Spatial Grouping) and Model B (Road Surface Defects / Potholes) without redundant decoding.
+- **Copy-Pasteable Integration Recipes**: Provided both an in-process Python service adapter (`BantaiTrashService`) for web backends (FastAPI/Flask/Django/Celery) and a CLI subprocess recipe.
+- **Unified Dual-Model API Contract & Hotspot Index**: Formalized unified JSON schema and municipal hotspot prioritization scoring formula combining waste piles, litter groups, and road defect severity.
+- **Strict Guardrails Preserved**: Taxonomy locked to 9 active supervised classes (0..8) and 5 canonical BANTAI categories; 0 unsupervised classes; D-112 disjoint spatial grouping with `min_pile_items = 8`.
+- See [Argon Website Integration Guide](ARGON_WEBSITE_INTEGRATION_GUIDE.md).
+
 ## Current Stage 5 state through D-113
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

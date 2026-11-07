@@ -1,5 +1,24 @@
 # BANTAI Stage 4 handoff
 
+## D-114: Comprehensive Website & Dual-Model Integration Guide for Argon - 2026-11-07
+
+Owner authorization D-114 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Comprehensive Website & Dual-Model Integration Guide (`docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md`)**:
+   - Authored complete, production-ready integration guide for "Argon" (the backend/full-stack engineer integrating both models into the municipal website):
+     * **Executive Architecture & Flow**: Visual Mermaid architecture diagram detailing shared single-media ingestion (1.0 FPS RGB JPEG extraction for video or direct image ingestion), dual-model inference pipeline (Model A trash detector + Model B road surface / pothole detector), unified incident aggregator, and hotspot prioritization engine.
+     * **Taxonomy & Scope Guardrails**: Formal lock on the 9 active supervised classes (`0..8`) and 5 canonical BANTAI categories (`Plastic`, `Paper`, `Organic`, `Metal`, `Potentially Hazardous`), with explicit prohibition on unsupported unsupervised classes (`battery`, `aerosol`, `broken_glass`, `syringe`, `food_waste`).
+     * **Spatial Grouping Region Taxonomy (D-112 Standard)**: Clear cardinality contracts: `individual_litter` ($k = 1$, `model_score = float(score)`), `group_of_individual_litter` ($2 \le k \le 7$, `model_score = null`), `garbage_pile` ($k \ge 8$ with density/contact criteria, `model_score = null`). Disjoint non-overlapping region guarantee documented.
+     * **Deployment Environment & Weights**: Pinned Python 3.11.9 x64 and PyTorch CUDA/CPU environment; verified exact file paths to preserved production weights (`D-095 Champion`, `Stage 5 Run 1`, `Warm-Start Baseline`); memory budgeting for 6 GB VRAM devices (GTX 1660 Ti) vs persistent server deployment.
+     * **Copy-Pasteable Integration Recipes**: Provided both an in-process Python backend adapter class (`BantaiTrashService.process_media`) for FastAPI/Flask/Django/Celery and a background subprocess CLI recipe.
+     * **Unified API Contracts & Hotspot Prioritization**: Defined `manifest.json` schema, unified dual-model API response schema combining trash and road-defect findings, and calibrated municipal Hotspot Prioritization Index ($H$) formula:
+       $$H = \min\left(100, \sum \left( W_{\text{pile}} \cdot N_{\text{pile}} + W_{\text{group}} \cdot N_{\text{group}} + W_{\text{litter}} \cdot N_{\text{litter}} + W_{\text{pothole}} \cdot N_{\text{pothole}} \right)\right)$$
+     * **Argon's 6-Step Verification Checklist**: Complete post-clone testing checklist covering environment, weights, unit tests, spatial grouping, inference, and link integrity.
+2. **Verified Evidence**:
+   - Documentation created: [Argon Website Integration Guide](ARGON_WEBSITE_INTEGRATION_GUIDE.md).
+   - Zero test regressions across unit test suites and documentation links.
+
+
 ## D-113: Surgical Cleanup of Heavy Testing Files, Redundant Checkpoints & Optimizer States - 2026-11-07
 
 Owner authorization D-113 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
