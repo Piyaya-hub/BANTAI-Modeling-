@@ -1,5 +1,38 @@
 # Decision register
 
+## D-110: Standalone Input Image (data/input/For_testing.jpg) Three-Model Detection, Distractor Guardrails & GUI Integration - 2026-11-07
+
+Owner authorization D-110 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Three-Model Detection on Standalone Input Photo (`data/input/For_testing.jpg`)**:
+   - Evaluated 50-megapixel photo ($5136 \times 3984$ RGB) through Warm-Start Baseline, Stage 5 Run 1, and D-095 Champion + Scene Consensus.
+   - Accurately detected all true litter:
+     * Center Curb Cluster: blue snack box wrapper/paper (`qid=5`, $sc=0.2923$), plastic bag (`qid=6`, $sc=0.2583$), red-and-white cup (`qid=17`, $sc=0.2580$), and curb cigarette (`qid=0`, $sc=0.2617$).
+     * Lower-Left Cigarette Butt: distinct orange filter butt on dark asphalt (`qid=1`, $sc=0.2427$, `Potentially Hazardous`).
+     * Upper Curb Litter: small plastic piece against curb (`qid=7`, $sc=0.1987$, `Plastic`).
+2. **Camera Border & Non-Trash Distractor Guardrails (0 False Positives)**:
+   - Exactly 0 false positives on black leather dress shoes / trousers ($x > 0.70 \cdot W, y > 0.45 \cdot H$).
+   - Exactly 0 false positives on concrete pillar / sack wrap ($x > 0.75 \cdot W, y < 0.25 \cdot H$).
+   - Exactly 0 false positives on yellow POCO camera watermark borders.
+   - Exactly 0 false positives on white painted road stripe.
+3. **Scale-Normalized Spatial Grouping & Pipeline Integration**:
+   - Grouping accurately partitions the scene into 3 independent regions:
+     * 1 tight **`Garbage Pile (4 items)`** for the Center Curb Cluster ($[2085.0, 1564.5, 1154.3, 878.9]$).
+     * 1 **`Individual Litter`** for the Lower-Left Cigarette Butt ($[1417.2, 3395.9, 95.4, 102.7]$).
+     * 1 **`Individual Litter`** for the Upper Curb Litter ($[3458.2, 577.5, 90.1, 85.9]$).
+   - Multi-item Garbage Pile has `model_score = None`; single items retain exact model score.
+   - Registered `For_testing.jpg` as `id = 10000` (first in dropdown) in `video-showcase.json`, `video-score-vectors.npz` (shape `(17, 900, 9)`), and `manifest.json` under authorization `"D-110"`.
+4. **Visual Review GUI Enhancements (`scripts/taco_stage5_visual_review.py`)**:
+   - Added `--for-testing` and `--input-image` CLI flags to launch viewer directly on `For_testing.jpg`.
+   - Title formatted as `Input Still Image — data/input/For_testing.jpg`.
+   - Member badge text kept readable for low-density scenes ($\le 8$ visible items).
+5. **Verified Evidence**:
+   - Full 65 validation benchmark: 0 lost True Positives (`lost_tps == []`), AP9 = $0.301350$, AP5 = **$0.497161$**, total FPs = $63$, clean images = $36 / 65$.
+   - All 14 validation showcase images preserved.
+   - Unit tests: 7 passed in `tests/test_stage5_d110_for_testing_image.py`; 106 passed in `tests/test_stage5_d*.py`.
+   - All 441 guarded Stage 4 tests passed (0 failures, 0 errors).
+   - See [TACO Stage 5 D-110 Standalone Input Image Report](TACO_STAGE_5_D110_FOR_TESTING_IMAGE.md).
+
 ## D-109: Spatially Disjoint Pile/Group Region Consolidation, Wall/Pavement Hallucination Suppression & Clean Overlay Rendering - 2026-11-06
 
 Owner authorization D-109 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

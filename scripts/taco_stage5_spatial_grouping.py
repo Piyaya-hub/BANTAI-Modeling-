@@ -128,7 +128,7 @@ def compute_spatial_grouping(
             u = pairwise_ious[(i, j)]
             s_min = min(scales[i], scales[j])
             is_tight = (g == 0.0 or u > 0.01)
-            if not is_tight and g <= 0.35 * s_min:
+            if not is_tight and g <= 0.42 * s_min:
                 i_nbr = any(k != j and pairwise_gaps[(i, k)] <= 0.80 * max(scales[i], scales[k]) for k in range(n_items) if k != i)
                 j_nbr = any(k != i and pairwise_gaps[(j, k)] <= 0.80 * max(scales[j], scales[k]) for k in range(n_items) if k != j)
                 if i_nbr and j_nbr:

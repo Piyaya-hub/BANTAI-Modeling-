@@ -283,7 +283,7 @@ def load_video_showcase(root=ROOT):
         return None
 
     manifest = strict_load(manifest_path)
-    if manifest.get("authorization") not in ("D-106", "D-107", "D-108", "D-109"):
+    if manifest.get("authorization") not in ("D-106", "D-107", "D-108", "D-109", "D-110"):
         return None
 
     showcase_sha = hashlib.sha256(showcase_path.read_bytes()).hexdigest()
@@ -729,7 +729,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
     # If spatial_regions is provided, identify members of dense multi-item regions (item_count >= 3)
     skip_badge_qids = set()
-    if spatial_regions and not is_gt:
+    if spatial_regions and not is_gt and len(objects) > 8:
         for reg in spatial_regions:
             if reg.get("item_count", 0) >= 3:
                 m_indices = reg.get("member_indices", [])
@@ -1111,7 +1111,10 @@ class Stage5ViewerGUI:
                 ts_str = f"{int(ts // 60):02d}:{ts % 60:04.1f}s"
                 f_sum = frames_summary.get(str(img_id), {})
                 v_count = f_sum.get("visible_items_count", 0)
-                tag = f"[{ts_str} | {'TRASH' if v_count > 0 else 'CLEAN'}]"
+                if img_id == 10000 or img.get("media_type") == "still_image":
+                    tag = f"[STILL IMAGE | {'TRASH' if v_count > 0 else 'CLEAN'}]"
+                else:
+                    tag = f"[{ts_str} | {'TRASH' if v_count > 0 else 'CLEAN'}]"
                 fname = Path(img["file_name"]).name
                 items.append(f"Image {img_id} {tag} ({fname})")
             self.img_cb["values"] = items
@@ -1485,10 +1488,16 @@ class Stage5ViewerGUI:
             ts = img_entry.get("timestamp_sec", 0.0)
             ts_str = f"{int(ts // 60):02d}:{ts % 60:04.1f}s"
             draw_panel(self.axes["GT"], self.current_pil, [], is_gt=True)
-            self.axes["GT"].set_title(
-                f"Extracted Video Frame #{f_idx} (t = {ts_str}) — Motion_Extract_Testing.mp4",
-                fontsize=9, weight="bold"
-            )
+            if img_id == 10000 or img_entry.get("media_type") == "still_image":
+                self.axes["GT"].set_title(
+                    "Input Still Image — data/input/For_testing.jpg",
+                    fontsize=10, weight="bold"
+                )
+            else:
+                self.axes["GT"].set_title(
+                    f"Extracted Video Frame #{f_idx} (t = {ts_str}) — Motion_Extract_Testing.mp4",
+                    fontsize=9, weight="bold"
+                )
         else:
             draw_panel(self.axes["GT"], self.current_pil, gt_boxes, is_gt=True)
             self.axes["GT"].set_title(f"Ground Truth ({len(gt_boxes)} objects)", fontsize=11, weight="bold")
@@ -1642,6 +1651,8 @@ def main() -> int:
     parser.add_argument("--prediction-source", type=str, choices=PREDICTION_SOURCES, default=PREDICTION_SOURCES[0], help="Prediction source / replay mode")
     parser.add_argument("--gui", action="store_true", help="Launch interactive TkAgg GUI viewer")
     parser.add_argument("--video-frames", action="store_true", help="Launch interactive TkAgg GUI viewer directly in Video Frames mode for Motion_Extract_Testing.mp4")
+    parser.add_argument("--for-testing", action="store_true", help="Launch interactive TkAgg GUI viewer directly on data/input/For_testing.jpg (Image 10000)")
+    parser.add_argument("--input-image", action="store_true", help="Alias for --for-testing")
     parser.add_argument("--image-id", type=int, default=None, help="Inspect specific Image ID")
     parser.add_argument("--score-threshold", type=float, default=0.10, help="Confidence score threshold (default: 0.10)")
     parser.add_argument("--box-top-k", type=int, default=40, help="Maximum boxes drawn per panel (default: 40)")
@@ -1691,6 +1702,11 @@ def main() -> int:
     except (OSError, ValueError, KeyError) as exc:
         print(f"ERROR: Saved replay artifacts are unavailable/incomplete ({type(exc).__name__}); supply local run/export paths. No model will be run.", file=sys.stderr)
         return 1
+
+    if args.for_testing or args.input_image:
+        args.gui = True
+        args.video_frames = True
+        args.image_id = 10000
 
     if args.video_frames:
         args.gui = True

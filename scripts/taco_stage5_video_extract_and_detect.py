@@ -1,4 +1,4 @@
-"""Stage 5 D-106: Video Frame Extraction and Three-Model Waste Detection.
+"""Stage 5 D-110: Video Frame Extraction, Standalone Input Image Processing & Three-Model Waste Detection.
 
 Extracts frames from data/input/Motion_Extract_Testing.mp4 and performs
 inference using Three-Model Stage 5 consensus:
@@ -278,6 +278,12 @@ def main() -> int:
     parser.add_argument("--sample-fps", type=float, default=1.0, help="Frames sampled per second (default: 1.0)")
     parser.add_argument("--max-frames", type=int, default=30, help="Maximum frames to extract (default: 30)")
     parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"], help="Inference device")
+    parser.add_argument(
+        "--input-image",
+        type=Path,
+        default=ROOT / "data/input/For_testing.jpg",
+        help="Optional path to standalone input image (default: data/input/For_testing.jpg)",
+    )
     args = parser.parse_args()
 
     frames_dir = args.output_dir / "frames"
@@ -298,6 +304,27 @@ def main() -> int:
     print(f"  Duration: {video_meta['duration_sec']}s, Size: {video_meta['file_size_bytes'] / (1024*1024):.2f} MB")
     print(f"  SHA-256: {video_meta['sha256']}")
     print(f"Extracted {len(frame_entries)} frames into {frames_dir}")
+
+    if args.input_image and args.input_image.is_file():
+        import shutil
+        img_name = args.input_image.name
+        dest_p = frames_dir / img_name
+        if not dest_p.is_file() or dest_p.stat().st_size != args.input_image.stat().st_size:
+            shutil.copy2(args.input_image, dest_p)
+        with Image.open(args.input_image) as im:
+            iw, ih = im.size
+        img_entry = {
+            "id": 10000,
+            "file_name": img_name,
+            "width": iw,
+            "height": ih,
+            "frame_index": 0,
+            "timestamp_sec": 0.0,
+            "file_sha256": _sha256(dest_p),
+            "media_type": "still_image",
+        }
+        frame_entries = [img_entry] + frame_entries
+        print(f"Pre-pended standalone input image {img_name} as ID 10000 ({iw}x{ih})")
 
     # Step 2: Three-Model Stage 5 Inference
     inference_results = execute_three_model_detection(frame_entries, frames_dir, device=args.device)
@@ -380,7 +407,7 @@ def main() -> int:
     # Save video-showcase.json
     showcase_data = {
         "schema_version": "bantai.stage5-video-showcase.v1",
-        "authorization": "D-109",
+        "authorization": "D-110",
         "video_source": video_meta,
         "dataset_root": str(frames_dir.relative_to(ROOT)).replace("\\", "/"),
         "image_ids": [e["id"] for e in frame_entries],
@@ -410,7 +437,7 @@ def main() -> int:
     # Save manifest.json
     manifest_data = {
         "schema_version": "bantai.stage5-video-manifest.v1",
-        "authorization": "D-109",
+        "authorization": "D-110",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
         "video_source": video_meta,
         "extracted_frames_count": len(frame_entries),

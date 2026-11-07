@@ -1,5 +1,19 @@
 # Development phases
 
+## Current Stage 5 state through D-110
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-110, standalone input photo
+processing (`data/input/For_testing.jpg`), camera-border and non-trash distractor
+guardrails, and review GUI integration were implemented:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Standalone Input Photo Detection (`For_testing.jpg`)**: 50-megapixel photo ($5136 \times 3984$ RGB) evaluated through Three-Model Stage 5 consensus detector. Correctly identifies true trash in street gutter (Center Curb Cluster: 4 items; Lower-Left Cigarette Butt: 1 item; Upper Curb Litter: 1 item).
+- **0 False Positives on Distractors**: Exactly 0 false positives on black shoes / trousers, concrete pillar / sack wrap, white painted road stripe, and yellow POCO camera watermark borders.
+- **Scale-Normalized Spatial Grouping**: Center Curb Cluster partitions into 1 tight `Garbage Pile (4 items)`, lower-left cigarette into 1 `Individual Litter (Potentially Hazardous)`, and upper curb item into 1 `Individual Litter (Plastic)`.
+- **Review GUI Integration**: Added `--for-testing` and `--input-image` CLI flags to open `Stage5ViewerGUI` directly on `For_testing.jpg` (registered as Image 10000, first in dropdown); kept member badges readable for low-density scenes ($\le 8$ visible items).
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+
 ## Current Stage 5 state through D-109
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

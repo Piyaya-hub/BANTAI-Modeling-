@@ -123,6 +123,8 @@ class TestStage5D108DenseGroupRecallRecovery(unittest.TestCase):
         """All 16 video frames: physical item counts range between 22 and 40 items."""
         preds_dict = self.video_showcase["predictions"]["D-095 + Consensus"]
         for fid_str in self.video_showcase["images"]:
+            if int(fid_str) < 10001:
+                continue
             c_preds = preds_dict.get(fid_str) or preds_dict.get(int(fid_str))
             vis = visible_rows(
                 c_preds,

@@ -213,7 +213,7 @@ class TestStage5D107HierarchicalVideoGrouping(unittest.TestCase):
         f10006_sg = self.video_manifest["frames_summary"]["10006"]["spatial_grouping"]
         f10008_sg = self.video_manifest["frames_summary"]["10008"]["spatial_grouping"]
 
-        if self.video_manifest.get("authorization") in ("D-108", "D-109"):
+        if self.video_manifest.get("authorization") in ("D-108", "D-109", "D-110"):
             self.assertGreaterEqual(f10006_sg["garbage_piles"], 1)
             self.assertGreaterEqual(f10006_sg["total_regions"], 1)
             self.assertGreaterEqual(f10008_sg["garbage_piles"], 1)
