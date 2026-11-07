@@ -1,5 +1,19 @@
 # BANTAI Modeling
 
+## Current Stage 5 state through D-111
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-111, cross-model small-litter
+recall recovery (`Motion_Extract_Testing_2.mp4` paper towels), intra-group paper
+consistency, and adaptive multi-video test coverage were implemented:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Small-Litter Paper Recall**: All 4 crumpled white paper towel balls lying on concrete sidewalk (Frames 10005, 10006, 10007) detected and classified consistently as `Paper` (`category_id = 8`), forming `1 Group of Individual Litter (4 items)`.
+- **Heuristic Protections**: Rule 7A Case E (compact paper consistency), Rule 7B9 Small-Paper Peer Bypass (`norm_area <= 0.006`), Pass 7C cross-model boosting with IoU deduplication, and Rule 7B3 extreme border clutter veto.
+- **Adaptive Multi-Video Replay**: Test suite adaptively verifies either 8-frame or 17-frame manifests under authorization `D-111`.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+- See [TACO Stage 5 D-111 Paper Towel Recall and Multi-Video Report](docs/TACO_STAGE_5_D111_PAPER_TOWEL_RECALL_AND_MULTI_VIDEO.md).
+
 ## Current Stage 5 state through D-110
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

@@ -1,5 +1,32 @@
 # BANTAI Stage 4 handoff
 
+## D-111: Cross-Model Small-Litter Recall Recovery (Motion_Extract_Testing_2.mp4 Paper Towels) & Intra-Group Paper Consistency - 2026-11-07
+
+Owner authorization D-111 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Cross-Model Small-Litter Recall Recovery (`scripts/taco_stage5_consensus_tiebreak.py`)**:
+   - Diagnosed 8-frame video run on `data/input/Motion_Extract_Testing_2.mp4` where 4 crumpled white paper towel balls on concrete pavement were partially suppressed by shadow-rock heuristics and tie-break flips.
+   - Implemented **Rule 7A Case E** (compact paper material consistency): reassigns queries with low plastic margins near compact paper anchors to `category_id = 8` (`Paper`).
+   - Implemented **Rule 7B9 Small-Paper Peer Bypass** (`is_small_paper_peer`): exempts compact paper queries (`norm_area <= 0.006`) from dark shadow rock suppression when scene-level paper context and litter corroboration are present, preserving small paper towels while maintaining suppression of large plastic sheets (Image 906).
+   - Implemented **Pass 7C** (cross-model small-litter recall recovery): boosts corroborated sub-threshold queries with strict deduplication (`iou < 0.40`) to prevent duplicate query representations.
+   - Implemented **Rule 7B3 Extreme Border Clutter**: vetos uncorroborated border speckles ($bx \le 0.005 \cdot W$ or $bx + bw \ge 0.995 \cdot W$, $sc < 0.18$, zero ancestor support).
+2. **Video Frame Results (`Motion_Extract_Testing_2.mp4`)**:
+   - On Frames 10005, 10006, and 10007, accurately detects all **4 crumpled white paper towel balls**:
+     * Top-center ($x \sim 543, y \sim 680$)
+     * Middle-center ($x \sim 558, y \sim 931$)
+     * Bottom-center ($x \sim 545, y \sim 1121$)
+     * Middle-left ($x \sim 185, y \sim 902$)
+   - Classifies all 4 items consistently as **`Paper`** (`category_id = 8`).
+   - Clusters them into **`1 Group of Individual Litter (item_count = 4)`** across all three frames.
+3. **Adaptive Multi-Video Test & Replay Verification**:
+   - Updated `scripts/taco_stage5_visual_review.py` to accept authorization `"D-111"`.
+   - Updated tests `test_stage5_d106..d110` to adaptively accept either 8-frame (`Motion_Extract_Testing_2.mp4` + `For_testing.jpg`) or 17-frame (`Motion_Extract_Testing.mp4` + `For_testing.jpg`) replay manifests.
+   - Created comprehensive unit test suite in `tests/test_stage5_d111_paper_towel_recall_and_multi_video.py` (7 tests, all passing).
+4. **Verified Evidence**:
+   - Full 65 validation benchmark: 0 lost True Positives (`lost_tps == []`), AP9 = $0.301350$, AP5 = **$0.497161$**, `paper` AP = $0.640610$, total FPs = $63$, clean images = $36 / 65$.
+   - All 14 validation showcase images preserved with 0 bitwise regressions.
+   - See [TACO Stage 5 D-111 Paper Towel Recall and Multi-Video Report](TACO_STAGE_5_D111_PAPER_TOWEL_RECALL_AND_MULTI_VIDEO.md).
+
 ## D-110: Standalone Input Image (data/input/For_testing.jpg) Three-Model Detection, Distractor Guardrails & GUI Integration - 2026-11-07
 
 Owner authorization D-110 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

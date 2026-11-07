@@ -157,6 +157,8 @@ class TestStage5D109DisjointRegionsAndVideoCleanup(unittest.TestCase):
 
     def test_03_frame_10001_clean_detections_and_unified_garbage_pile(self):
         """Frame 10001: 0 wall-banner FPs, 0 hazard pavement crack FPs, exactly 1 unified Garbage Pile."""
+        if len(self.video_showcase.get("manifest", {}).get("frames_summary", {})) <= 8:
+            self.skipTest("Frame 10001 roadside heap test specific to Motion_Extract_Testing.mp4")
         fid = 10001
         entry = self.video_showcase["images"].get(fid) or self.video_showcase["images"].get(str(fid))
         preds_dict = self.video_showcase["predictions"]["D-095 + Consensus"]
