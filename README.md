@@ -1,5 +1,18 @@
 # BANTAI Modeling
 
+## Current Stage 5 state through D-109
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-109, spatially disjoint pile/group
+region consolidation, wall/pavement hallucination suppression, and clean overlay rendering
+were implemented:
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (new benchmark high, +0.004432 gain).
+- **Spatially Disjoint Regions**: Adjacent and overlapping pile cores are merged; pile-bordering items are absorbed; Tier 2 groups are partitioned from piles (0 overlapping multi-region pairs across all 16 video frames).
+- **Wall Banner & Pavement Crack Vetoes**: Rule 7B14A eliminates uncorroborated detections high on upper wall signs (Frames 10001 and 10002); Rule 7B14B eliminates tiny cigarette speckles on pavement cracks and wrapper corners.
+- **Overlay & GUI Refinement**: Colliding regional banners and member badges in dense heaps are de-cluttered; `--video-frames` automatically activates the D-095 Champion tab with calibrated threshold 0.15 and top-k 25.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+
 ## Current Stage 5 state through D-108
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

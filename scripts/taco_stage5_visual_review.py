@@ -283,7 +283,7 @@ def load_video_showcase(root=ROOT):
         return None
 
     manifest = strict_load(manifest_path)
-    if manifest.get("authorization") not in ("D-106", "D-107", "D-108"):
+    if manifest.get("authorization") not in ("D-106", "D-107", "D-108", "D-109"):
         return None
 
     showcase_sha = hashlib.sha256(showcase_path.read_bytes()).hexdigest()
@@ -727,25 +727,14 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
     ax.set_ylim(h, 0)
     ax.axis("off")
 
-    # If spatial_regions is provided, identify sub-dominant members of dense Garbage Piles (item_count >= 3)
+    # If spatial_regions is provided, identify members of dense multi-item regions (item_count >= 3)
     skip_badge_qids = set()
     if spatial_regions and not is_gt:
         for reg in spatial_regions:
-            if reg.get("category") == "garbage_pile" and reg.get("item_count", 0) >= 3:
+            if reg.get("item_count", 0) >= 3:
                 m_indices = reg.get("member_indices", [])
                 m_objs = [objects[i] for i in m_indices if i < len(objects)]
-                sorted_m = sorted(m_objs, key=lambda x: -x.get("score", 0.0))
-                for sub_obj in sorted_m[2:]:
-                    qid = sub_obj.get("fused_query_id", sub_obj.get("query_id"))
-                    if qid is not None:
-                        skip_badge_qids.add(qid)
-                    else:
-                        skip_badge_qids.add(id(sub_obj))
-            elif reg.get("category") == "group_of_individual_litter" and reg.get("item_count", 0) >= 6:
-                m_indices = reg.get("member_indices", [])
-                m_objs = [objects[i] for i in m_indices if i < len(objects)]
-                sorted_m = sorted(m_objs, key=lambda x: -x.get("score", 0.0))
-                for sub_obj in sorted_m[4:]:
+                for sub_obj in m_objs:
                     qid = sub_obj.get("fused_query_id", sub_obj.get("query_id"))
                     if qid is not None:
                         skip_badge_qids.add(qid)
@@ -802,6 +791,7 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
 
     # Draw enclosing multi-item spatial regions if provided
     if spatial_regions and not is_gt:
+        placed_banners = []
         for reg in spatial_regions:
             if reg.get("item_count", 1) >= 2:
                 rx, ry, rw, rh = reg["bbox"]
@@ -823,8 +813,22 @@ def draw_panel(ax, image, objects, is_gt: bool = False, score_thresh: float = 0.
                 ax.add_patch(enc_rect)
 
                 banner_text = f"{reg['label']} ({reg['item_count']} items)"
+                bx = px
+                by = max(0.0, py - 6.0)
+                bw_est = max(90.0, len(banner_text) * 7.5)
+                bh_est = 18.0
+
+                for obx, oby, obw, obh in placed_banners:
+                    if abs(bx - obx) < max(bw_est, obw) and abs(by - oby) < max(bh_est, obh):
+                        if px + pw - bw_est > bx + 40.0:
+                            bx = px + pw - bw_est
+                        else:
+                            by = min(float(h) - 10.0, py + 16.0)
+                        break
+
+                placed_banners.append((bx, by, bw_est, bh_est))
                 ax.text(
-                    px, max(0.0, py - 6.0), banner_text,
+                    bx, by, banner_text,
                     fontsize=8, weight="bold", color="white",
                     bbox=dict(boxstyle="square,pad=0.25", facecolor=reg_color, edgecolor="black", linewidth=0.8, alpha=0.9),
                     zorder=7,
@@ -1057,6 +1061,12 @@ class Stage5ViewerGUI:
                 self.video_frames_btn.config(text="Back to Validation Images (65)")
             if D095_CHAMPION_STATE in self.preds:
                 self.review_state_var.set(D095_CHAMPION_STATE)
+            if hasattr(self, "thresh_var"):
+                self.thresh_var.set(0.15)
+            if hasattr(self, "topk_var"):
+                self.topk_var.set(25)
+            if hasattr(self, "details_notebook") and self.details_notebook is not None:
+                self.details_notebook.select(3)
             self.populate_image_list()
             first_id = sorted(self.video_showcase["image_ids"])[0]
             self.set_current_image(first_id)
@@ -1135,6 +1145,10 @@ class Stage5ViewerGUI:
             self.filter_var.set("All Images (65)")
             if hasattr(self, "video_frames_btn"):
                 self.video_frames_btn.config(text="Check Video Frames (data/input)")
+            if hasattr(self, "thresh_var"):
+                self.thresh_var.set(0.10)
+            if hasattr(self, "topk_var"):
+                self.topk_var.set(40)
         else:
             self.filter_var.set(VIDEO_FRAMES_FILTER)
             if hasattr(self, "video_frames_btn"):
@@ -1143,8 +1157,10 @@ class Stage5ViewerGUI:
                 self.review_state_var.set(D095_CHAMPION_STATE)
             if hasattr(self, "details_notebook") and self.details_notebook is not None:
                 self.details_notebook.select(3)
-            if hasattr(self, "topk_var") and int(self.topk_var.get()) < 40:
-                self.topk_var.set(40)
+            if hasattr(self, "thresh_var"):
+                self.thresh_var.set(0.15)
+            if hasattr(self, "topk_var"):
+                self.topk_var.set(25)
         self.on_filter_change()
 
     def on_filter_change(self, event=None):
@@ -1155,8 +1171,16 @@ class Stage5ViewerGUI:
                     self.review_state_var.set(D095_CHAMPION_STATE)
                 if hasattr(self, "details_notebook") and self.details_notebook is not None:
                     self.details_notebook.select(3)
+                if hasattr(self, "thresh_var"):
+                    self.thresh_var.set(0.15)
+                if hasattr(self, "topk_var"):
+                    self.topk_var.set(25)
             else:
                 self.video_frames_btn.config(text="Check Video Frames (data/input)")
+                if hasattr(self, "thresh_var") and abs(float(self.thresh_var.get()) - 0.15) < 1e-4:
+                    self.thresh_var.set(0.10)
+                if hasattr(self, "topk_var") and int(self.topk_var.get()) == 25:
+                    self.topk_var.set(40)
         if self.filter_var.get() == ORGANIC_SHOWCASE_FILTER and ORGANIC_10_STATE in self.preds:
             self.review_state_var.set(ORGANIC_10_STATE)
         elif (self.consensus_vectors and CONSENSUS_STATE in self.preds

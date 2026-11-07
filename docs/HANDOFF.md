@@ -1,5 +1,27 @@
 # BANTAI Stage 4 handoff
 
+## D-109: Spatially Disjoint Pile/Group Region Consolidation, Wall/Pavement Hallucination Suppression & Clean Overlay Rendering - 2026-11-06
+
+Owner authorization D-109 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Spatially Disjoint Region Consolidation (`scripts/taco_stage5_spatial_grouping.py`)**:
+   - Implemented Step 1A (merging adjacent/overlapping pile cores), Step 1B (absorbing pile-enclosed and pile-bordering items), and Step 1C (preventing Tier 2 groups from wrapping around or overlapping garbage piles).
+   - Enforced strict spatial disjointness across all 16 video frames (0 overlapping multi-region pairs). On Frame 10001, the roadside heap forms 1 unified Garbage Pile (16 items) instead of 3 nested piles inside 1 group.
+2. **Wall-Banner & Pavement-Crack Clutter Suppression (`scripts/taco_stage5_consensus_tiebreak.py` & `scripts/taco_diagnostic_nms.py`)**:
+   - Reverted D-108's noisy Rule 7C sub-threshold boost and restored containment NMS clutter protection.
+   - Added Rule 7B14A (upper wall sign/banner veto in ground-dominated scenes), eliminating the false paper detections on hanging wall signs on Frames 10001 and 10002.
+   - Added Rule 7B14B (macro-heap cigarette/hazard speckle veto), eliminating the false pavement-crack and wrapper-corner hazard detections on Frame 10001.
+3. **Clean Visual Review Overlay & Startup Notebook Tab Selection (`scripts/taco_stage5_visual_review.py`)**:
+   - Suppressed member badge text collisions in dense regions (item_count >= 3) while keeping bounding boxes intact.
+   - Added banner collision prevention to stop regional banners from stacking.
+   - Automatically selects the 4th notebook tab (`D-095 Champion`) on startup with `--video-frames`, defaulting to threshold 0.15 and top-k 25.
+4. **Verified Evidence**:
+   - Full 65 validation benchmark: 0 lost True Positives (`lost_tps == []`), AP9 = $0.301350$, AP5 = **$0.497161$**, total FPs = $63$, clean images = $36 / 65$.
+   - Frame 10001: 0 wall-banner FPs, 0 hazard FPs, 1 unified Garbage Pile + 1 Individual Litter.
+   - 0 overlapping multi-region pairs across all 16 video frames.
+   - Unit tests: 5 passed in `tests/test_stage5_d109_disjoint_regions_and_video_cleanup.py`; 99 passed in `tests/test_stage5_d*.py`.
+   - See [TACO Stage 5 D-109 Disjoint Regions and Video Cleanup Report](TACO_STAGE_5_D109_DISJOINT_REGIONS_AND_VIDEO_CLEANUP.md).
+
 ## D-108: Dense-Group Intra-Region Trash Recall Recovery, Distinct-Item NMS Preservation & Top-K Uncapping - 2026-11-06
 
 Owner authorization D-108 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

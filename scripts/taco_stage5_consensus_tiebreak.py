@@ -521,7 +521,7 @@ def apply_scene_consensus(
                         "old_score": sc,
                         "reason": f"diffuse hazard-nonhazard margin {diff_h_np:.4f} <= 0.015 at sc={sc:.3f}",
                     })
-                elif not is_dense_litter_scene and not paper_anchors and not plastic_anchors and cat in (2, 3, 4, 8) and sc < 0.16 and diff_p_pl <= 0.015:
+                elif not paper_anchors and not plastic_anchors and cat in (2, 3, 4, 8) and sc < 0.16 and diff_p_pl <= 0.015:
                     suppress = True
                     rule5_suppressed_qids.add(qid)
                     diag["rule5_count"] += 1
@@ -854,6 +854,18 @@ def apply_scene_consensus(
             ) >= 2
         ) >= 3
 
+        # Scene-level distributions for Rule 7B14
+        high_sc_rows = [r for r in pass7a_rows if r.get("score", 0.0) >= 0.18]
+        if len(high_sc_rows) >= 5 and image_height and image_height > 0:
+            cys = [r["bbox"][1] + 0.5 * r["bbox"][3] for r in high_sc_rows]
+            med_cy = sorted(cys)[len(cys) // 2]
+            is_ground_dominated = (med_cy >= 0.40 * image_height)
+        else:
+            is_ground_dominated = False
+
+        macro_waste_rows = [r for r in pass7a_rows if r.get("category_id") != 0 and r.get("score", 0.0) >= 0.18]
+        is_macro_waste_dominated = (len(macro_waste_rows) >= 5)
+
         # PASS 7B: Clutter Veto
         final_rule7_rows = []
         for r in pass7a_rows:
@@ -904,21 +916,19 @@ def apply_scene_consensus(
 
             # 7B2: Dead foliage paper clutter veto
             if not suppress and cat == PAPER_ID and (not paper_anchors):
-                has_ancestor_support = (best_b_08_iou >= 0.15 or best_r1_08_iou >= 0.15)
-                if not (is_dense_litter_scene and has_ancestor_support):
-                    if sc < 0.18 and v is not None:
-                        max_pl = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
-                        best_r1_paper_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_10 if r1["category_id"] == 8), default=0.0)
-                        b_matches = [b for b in b_ge_10 if _compute_iou(r["bbox"], b["bbox"]) >= 0.20]
-                        base_is_plastic_or_none = (not b_matches) or all(b["category_id"] in PLASTIC_SUBTYPE_IDS for b in b_matches)
-                        if best_r1_paper_iou < 0.20 and base_is_plastic_or_none and (v[8] - max_pl < 0.08):
-                            suppress = True
-                            reason = f"dead foliage paper clutter sc={sc:.3f}<0.18 v[8]-max_pl={v[8]-max_pl:.3f}<0.08 without Run 1 paper corroboration"
-                    if not suppress and sc < 0.18 and norm_area < 0.05 and best_b_10_iou < 0.20 and v is not None:
-                        sum_pl = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
-                        if sum_pl < 0.50:
-                            suppress = True
-                            reason = f"dead leaves paper clutter sc={sc:.3f}<0.18 norm_area={norm_area:.4f} sum_pl={sum_pl:.3f}<0.50 without paper anchor"
+                if sc < 0.18 and v is not None:
+                    max_pl = max(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    best_r1_paper_iou = max((_compute_iou(r["bbox"], r1["bbox"]) for r1 in r1_ge_10 if r1["category_id"] == 8), default=0.0)
+                    b_matches = [b for b in b_ge_10 if _compute_iou(r["bbox"], b["bbox"]) >= 0.20]
+                    base_is_plastic_or_none = (not b_matches) or all(b["category_id"] in PLASTIC_SUBTYPE_IDS for b in b_matches)
+                    if best_r1_paper_iou < 0.20 and base_is_plastic_or_none and (v[8] - max_pl < 0.08):
+                        suppress = True
+                        reason = f"dead foliage paper clutter sc={sc:.3f}<0.18 v[8]-max_pl={v[8]-max_pl:.3f}<0.08 without Run 1 paper corroboration"
+                if not suppress and sc < 0.18 and norm_area < 0.05 and best_b_10_iou < 0.20 and v is not None:
+                    sum_pl = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                    if sum_pl < 0.50:
+                        suppress = True
+                        reason = f"dead leaves paper clutter sc={sc:.3f}<0.18 norm_area={norm_area:.4f} sum_pl={sum_pl:.3f}<0.50 without paper anchor"
 
             # 7B3: Extreme border clutter filter
             if not suppress and sc < 0.18:
@@ -982,14 +992,12 @@ def apply_scene_consensus(
 
             # 7B9: Shadow rock paper confusion with zero Baseline paper support and marginal Run 1 paper
             if not suppress and cat == PAPER_ID and (not paper_sheet_anchors) and sc < 0.28 and v is not None:
-                has_ancestor_support = (best_b_08_iou >= 0.15 or best_r1_08_iou >= 0.15)
-                if not (is_dense_litter_scene and has_ancestor_support):
-                    pl_sum = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
-                    best_b_paper_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10 if b.get("category_id") == 8), default=0.0)
-                    best_r1_paper_sc = max((r1["score"] for r1 in r1_ge_10 if r1.get("category_id") == 8 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
-                    if best_b_paper_iou < 0.20 and best_r1_paper_sc < 0.19 and pl_sum >= 0.50:
-                        suppress = True
-                        reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
+                pl_sum = sum(v[c] for c in PLASTIC_SUBTYPE_IDS)
+                best_b_paper_iou = max((_compute_iou(r["bbox"], b["bbox"]) for b in b_ge_10 if b.get("category_id") == 8), default=0.0)
+                best_r1_paper_sc = max((r1["score"] for r1 in r1_ge_10 if r1.get("category_id") == 8 and _compute_iou(r["bbox"], r1["bbox"]) >= 0.30), default=0.0)
+                if best_b_paper_iou < 0.20 and best_r1_paper_sc < 0.19 and pl_sum >= 0.50:
+                    suppress = True
+                    reason = f"shadow rock paper confusion sc={sc:.3f}<0.28 with plastic sum {pl_sum:.3f}>=0.50 without baseline/run1 paper support"
 
             # 7B10: Non-hazard scene hazard speckle suppression
             if not suppress and cat == 0 and has_dom_object and (not has_strong_haz_anchor) and (not has_ancestor_cig_energy) and (not has_compact_haz_cluster):
@@ -1049,6 +1057,24 @@ def apply_scene_consensus(
                     suppress = True
                     reason = f"marginal film sc={sc:.3f}<0.15 contradicted by baseline cup c=6 (b_cup={b_cup_sc:.3f})"
 
+            # 7B14A: Upper-Wall Sign/Banner Clutter Veto
+            if not suppress and is_ground_dominated and image_height and image_height > 0:
+                if by < 0.08 * image_height and (by + bh) < 0.22 * image_height and sc < 0.24:
+                    b_agree = any(_compute_iou(r["bbox"], b["bbox"]) >= 0.25 and b.get("score", 0.0) >= 0.20 for b in b_ge_08)
+                    r1_agree = any(_compute_iou(r["bbox"], r1["bbox"]) >= 0.25 and r1.get("score", 0.0) >= 0.20 for r1 in r1_ge_08)
+                    if not (b_agree and r1_agree):
+                        suppress = True
+                        reason = f"upper wall sign/banner clutter sc={sc:.3f}<0.24 by={by:.1f}<0.08*H without high-conf baseline+run1 agreement"
+
+            # 7B14B: Macro-Heap Cigarette/Hazard Speckle Veto
+            if not suppress and cat == 0 and is_macro_waste_dominated and (not has_compact_haz_cluster):
+                if norm_area < 0.0015 and sc < 0.25:
+                    b_agree = any(_compute_iou(r["bbox"], b["bbox"]) >= 0.30 and b.get("category_id") == 0 and b.get("score", 0.0) >= 0.16 for b in b_ge_08)
+                    r1_agree = any(_compute_iou(r["bbox"], r1["bbox"]) >= 0.30 and r1.get("category_id") == 0 and r1.get("score", 0.0) >= 0.16 for r1 in r1_ge_08)
+                    if not (b_agree and r1_agree):
+                        suppress = True
+                        reason = f"macro-heap hazard speckle sc={sc:.3f}<0.25 norm_area={norm_area:.6f}<0.0015 without baseline+run1 hazard agreement"
+
             if suppress:
                 rule7_suppressed_qids.add(qid)
                 diag["rule7_count"] += 1
@@ -1065,33 +1091,6 @@ def apply_scene_consensus(
             else:
                 final_rule7_rows.append(r)
 
-        # PASS 7C: Intra-Group Sub-Threshold Recovery on Dense Multi-Object Scenes
-        if enable_rule7 and is_dense_litter_scene:
-            final_qids = {r.get("fused_query_id", r.get("query_id")) for r in final_rule7_rows}
-            for r in stage1_rows:
-                qid = r.get("fused_query_id", r.get("query_id"))
-                if qid in final_qids:
-                    continue
-                sc = r.get("score", 0.0)
-                if 0.075 <= sc < 0.10:
-                    b_match = any(_compute_iou(r["bbox"], b["bbox"]) >= 0.30 and b.get("score", 0.0) >= 0.10 for b in b_ge_08)
-                    r1_match = any(_compute_iou(r["bbox"], r1["bbox"]) >= 0.30 and r1.get("score", 0.0) >= 0.10 for r1 in r1_ge_08)
-                    if b_match or r1_match:
-                        r_rec = deepcopy(r)
-                        r_rec["score"] = max(r_rec["score"], 0.105)
-                        r_rec["recovered_dense_group"] = True
-                        r_rec["consensus_rule7c"] = True
-                        final_rule7_rows.append(r_rec)
-                        diag["rule7_count"] += 1
-                        diag["logs"].append({
-                            "image_id": image_id,
-                            "qid": qid,
-                            "rule": "Rule 7C (dense group intra-region recovery)",
-                            "old_cat": r.get("category_id"),
-                            "new_cat": r.get("category_id"),
-                            "old_score": sc,
-                            "reason": f"dense group intra-region recovery sc={sc:.3f}<0.10 boosted to {r_rec['score']:.3f} with ancestor corroboration",
-                        })
         output = final_rule7_rows
     else:
         output = stage3_rows

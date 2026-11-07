@@ -53,6 +53,17 @@ def compute_edge_gap(box_a: List[float], box_b: List[float]) -> float:
     return math.hypot(gx, gy)
 
 
+def compute_box_intersection_and_areas(box_a: Tuple[float, float, float, float], box_b: Tuple[float, float, float, float]) -> Tuple[float, float, float]:
+    """Computes (intersection_area, area_a, area_b) for two xywh boxes."""
+    xa, ya, wa, ha = box_a
+    xb, yb, wb, hb = box_b
+    if wa <= 0 or ha <= 0 or wb <= 0 or hb <= 0:
+        return 0.0, max(0.0, wa * ha), max(0.0, wb * hb)
+    ix = max(0.0, min(xa + wa, xb + wb) - max(xa, xb))
+    iy = max(0.0, min(ya + ha, yb + hb) - max(ya, yb))
+    return ix * iy, wa * ha, wb * hb
+
+
 def compute_box_iou(box_a: List[float], box_b: List[float]) -> float:
     """Compute intersection-over-union between two [x, y, w, h] boxes."""
     ax, ay, aw, ah = box_a
@@ -65,36 +76,15 @@ def compute_box_iou(box_a: List[float], box_b: List[float]) -> float:
 
 
 def compute_spatial_grouping(
-    rows: List[Dict[str, Any]],
-    image_width: Optional[float] = None,
-    image_height: Optional[float] = None,
-    *,
-    scale_factor: float = DEFAULT_SCALE_FACTOR,
-    diag_fraction: float = DEFAULT_DIAG_FRACTION,
-    density_threshold: float = DEFAULT_DENSITY_THRESHOLD,
-    iou_pile_threshold: float = DEFAULT_IOU_PILE_THRESHOLD,
-    max_cluster_diag_fraction: float = DEFAULT_MAX_CLUSTER_DIAG_FRACTION,
-) -> Dict[str, Any]:
-    """Cluster visible detections into spatial regions using Two-Tier Hierarchical DBSCAN.
-
-    Parameters:
-        rows: List of visible detection dictionaries, each containing 'bbox' [x, y, w, h]
-              and 'score'.
-        image_width: Image pixel width (optional, used for diagonal calculation).
-        image_height: Image pixel height (optional, used for diagonal calculation).
-        scale_factor: Proximity scale factor multiplier alpha (default 2.0).
-        diag_fraction: Fraction of image diagonal beta (default 0.225).
-        density_threshold: Packing density threshold for garbage pile (default 0.45).
-        iou_pile_threshold: Pairwise IoU threshold indicating overlapping pile (default 0.15).
-        max_cluster_diag_fraction: Bounding box diagonal ceiling for Tier 2 clusters (default 0.42).
-
-    Returns:
-        A dictionary with:
-          - 'annotated_rows': Copy of rows with 'spatial_group_id', 'spatial_category',
-            'spatial_label'.
-          - 'regions': List of spatial region dictionaries.
-          - 'summary': Summary counts of physical items and regional categories.
-    """
+    rows,
+    image_width: float | None = None,
+    image_height: float | None = None,
+    scale_factor: float = 2.0,
+    diag_fraction: float = 0.225,
+    density_threshold: float = 0.45,
+    iou_pile_threshold: float = 0.15,
+    max_cluster_diag_fraction: float = 0.42,
+):
     if not rows:
         return {
             "annotated_rows": [],
@@ -108,11 +98,9 @@ def compute_spatial_grouping(
             },
         }
 
-    # Determine image diagonal L
-    if image_width is not None and image_height is not None and image_width > 0 and image_height > 0:
+    if image_width and image_height and image_width > 0 and image_height > 0:
         diag_l = math.hypot(image_width, image_height)
     else:
-        # Fallback to bounding box span if image dimensions not provided
         max_x = max(r["bbox"][0] + r["bbox"][2] for r in rows)
         max_y = max(r["bbox"][1] + r["bbox"][3] for r in rows)
         diag_l = math.hypot(max(100.0, max_x), max(100.0, max_y))
@@ -121,23 +109,19 @@ def compute_spatial_grouping(
     boxes = [r["bbox"] for r in rows]
     scales = [math.sqrt(max(1.0, b[2] * b[3])) for b in boxes]
 
-    # Precalculate pairwise gaps and IoUs
-    pairwise_gaps: Dict[Tuple[int, int], float] = {}
-    pairwise_ious: Dict[Tuple[int, int], float] = {}
+    pairwise_gaps = {}
+    pairwise_ious = {}
     for i in range(n_items):
         for j in range(i + 1, n_items):
-            gap = compute_edge_gap(boxes[i], boxes[j])
-            pairwise_gaps[(i, j)] = gap
-            pairwise_gaps[(j, i)] = gap
+            g = compute_edge_gap(boxes[i], boxes[j])
+            pairwise_gaps[(i, j)] = g
+            pairwise_gaps[(j, i)] = g
+            u = compute_box_iou(boxes[i], boxes[j])
+            pairwise_ious[(i, j)] = u
+            pairwise_ious[(j, i)] = u
 
-            iou_val = compute_box_iou(boxes[i], boxes[j])
-            pairwise_ious[(i, j)] = iou_val
-            pairwise_ious[(j, i)] = iou_val
-
-    # =========================================================================
-    # Tier 1: Dense Garbage Pile Core Extraction
-    # =========================================================================
-    tight_adj: Dict[int, List[int]] = {i: [] for i in range(n_items)}
+    # Tier 1: Dense core extraction
+    tight_adj = {i: [] for i in range(n_items)}
     for i in range(n_items):
         for j in range(i + 1, n_items):
             g = pairwise_gaps[(i, j)]
@@ -145,14 +129,8 @@ def compute_spatial_grouping(
             s_min = min(scales[i], scales[j])
             is_tight = (g == 0.0 or u > 0.01)
             if not is_tight and g <= 0.35 * s_min:
-                i_nbr = any(
-                    k != j and pairwise_gaps[(i, k)] <= 0.80 * max(scales[i], scales[k])
-                    for k in range(n_items) if k != i
-                )
-                j_nbr = any(
-                    k != i and pairwise_gaps[(j, k)] <= 0.80 * max(scales[j], scales[k])
-                    for k in range(n_items) if k != j
-                )
+                i_nbr = any(k != j and pairwise_gaps[(i, k)] <= 0.80 * max(scales[i], scales[k]) for k in range(n_items) if k != i)
+                j_nbr = any(k != i and pairwise_gaps[(j, k)] <= 0.80 * max(scales[j], scales[k]) for k in range(n_items) if k != j)
                 if i_nbr and j_nbr:
                     is_tight = True
             if is_tight:
@@ -164,18 +142,16 @@ def compute_spatial_grouping(
     for i in range(n_items):
         if i not in visited_t1:
             comp = []
-            queue = [i]
+            q = [i]
             visited_t1.add(i)
-            while queue:
-                curr = queue.pop(0)
+            while q:
+                curr = q.pop(0)
                 comp.append(curr)
-                for neighbor in tight_adj[curr]:
-                    if neighbor not in visited_t1:
-                        visited_t1.add(neighbor)
-                        queue.append(neighbor)
+                for nbr in tight_adj[curr]:
+                    if nbr not in visited_t1:
+                        visited_t1.add(nbr)
+                        q.append(nbr)
             tight_comps.append(sorted(comp))
-
-    tight_comps.sort(key=lambda c: c[0])
 
     pile_comps = []
     assigned_indices = set()
@@ -209,11 +185,81 @@ def compute_spatial_grouping(
             })
             assigned_indices.update(comp)
 
-    # =========================================================================
-    # Tier 2: Remaining Non-Pile Items (Local Proximity & Anti-Chaining)
-    # =========================================================================
+    # Iterative consolidation of Step 1A & 1B
+    changed_consolidation = True
+    while changed_consolidation:
+        changed_consolidation = False
+
+        # Step 1A: Merge adjacent / overlapping pile cores
+        changed_merge = True
+        while changed_merge:
+            changed_merge = False
+            for p1_i in range(len(pile_comps)):
+                for p2_i in range(p1_i + 1, len(pile_comps)):
+                    p1 = pile_comps[p1_i]
+                    p2 = pile_comps[p2_i]
+                    b1 = p1["bbox"]
+                    b2 = p2["bbox"]
+                    u = compute_box_iou(b1, b2)
+                    inter, a1, a2 = compute_box_intersection_and_areas(b1, b2)
+                    iomin = inter / min(a1, a2) if min(a1, a2) > 0 else 0.0
+                    min_gap = min(pairwise_gaps[(m1, m2)] for m1 in p1["members"] for m2 in p2["members"])
+                    max_s = max(max(scales[m] for m in p1["members"]), max(scales[m] for m in p2["members"]))
+
+                    if u > 0.02 or iomin >= 0.15 or min_gap <= max(0.85 * max_s, 0.045 * diag_l):
+                        merged_members = sorted(list(set(p1["members"] + p2["members"])))
+                        m_boxes = [boxes[idx] for idx in merged_members]
+                        enc_x = min(b[0] for b in m_boxes)
+                        enc_y = min(b[1] for b in m_boxes)
+                        enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
+                        enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
+                        area_sum = sum(b[2] * b[3] for b in m_boxes)
+                        p1["members"] = merged_members
+                        p1["bbox"] = [enc_x, enc_y, enc_w, enc_h]
+                        p1["packing_density"] = area_sum / max(1e-6, enc_w * enc_h)
+                        k = len(merged_members)
+                        p1["touching_pairs"] = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(merged_members[ii], merged_members[jj])] == 0.0)
+                        p1["max_iou"] = max((pairwise_ious[(merged_members[ii], merged_members[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+                        pile_comps.pop(p2_i)
+                        changed_merge = True
+                        changed_consolidation = True
+                        break
+                if changed_merge:
+                    break
+
+        # Step 1B: Absorb pile-enclosed & pile-bordering items
+        unassigned = [i for i in range(n_items) if i not in assigned_indices]
+        for i in unassigned:
+            b_i = boxes[i]
+            s_i = scales[i]
+            absorbed_into = None
+            for p in pile_comps:
+                b_p = p["bbox"]
+                inter, a_i, a_p = compute_box_intersection_and_areas(b_i, b_p)
+                enclosed = (a_i > 0 and (inter / a_i) >= 0.25)
+                bordering = any(pairwise_gaps[(i, m)] <= max(1.15 * max(s_i, scales[m]), 0.05 * diag_l) for m in p["members"])
+                if enclosed or bordering:
+                    absorbed_into = p
+                    break
+            if absorbed_into is not None:
+                absorbed_into["members"] = sorted(absorbed_into["members"] + [i])
+                assigned_indices.add(i)
+                m_boxes = [boxes[idx] for idx in absorbed_into["members"]]
+                enc_x = min(b[0] for b in m_boxes)
+                enc_y = min(b[1] for b in m_boxes)
+                enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
+                enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
+                area_sum = sum(b[2] * b[3] for b in m_boxes)
+                absorbed_into["bbox"] = [enc_x, enc_y, enc_w, enc_h]
+                absorbed_into["packing_density"] = area_sum / max(1e-6, enc_w * enc_h)
+                k = len(absorbed_into["members"])
+                absorbed_into["touching_pairs"] = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(absorbed_into["members"][ii], absorbed_into["members"][jj])] == 0.0)
+                absorbed_into["max_iou"] = max((pairwise_ious[(absorbed_into["members"][ii], absorbed_into["members"][jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+                changed_consolidation = True
+
+    # Tier 2: Non-pile items
     rem_indices = [i for i in range(n_items) if i not in assigned_indices]
-    t2_adj: Dict[int, List[int]] = {i: [] for i in rem_indices}
+    t2_adj = {i: [] for i in rem_indices}
     for i_idx, i in enumerate(rem_indices):
         for j in rem_indices[i_idx + 1:]:
             g = pairwise_gaps[(i, j)]
@@ -227,28 +273,89 @@ def compute_spatial_grouping(
     for i in rem_indices:
         if i not in visited_t2:
             comp = []
-            queue = [i]
+            q = [i]
             visited_t2.add(i)
-            while queue:
-                curr = queue.pop(0)
+            while q:
+                curr = q.pop(0)
                 comp.append(curr)
-                for neighbor in t2_adj[curr]:
-                    if neighbor not in visited_t2:
-                        test_boxes = [boxes[idx] for idx in comp + [neighbor]]
+                for nbr in t2_adj[curr]:
+                    if nbr not in visited_t2:
+                        test_boxes = [boxes[idx] for idx in comp + [nbr]]
                         min_x = min(b[0] for b in test_boxes)
                         min_y = min(b[1] for b in test_boxes)
                         mw = max(b[0] + b[2] for b in test_boxes) - min_x
                         mh = max(b[1] + b[3] for b in test_boxes) - min_y
-                        if math.hypot(mw, mh) <= max_cluster_diag_fraction * diag_l:
-                            visited_t2.add(neighbor)
-                            queue.append(neighbor)
+                        if math.hypot(mw, mh) > max_cluster_diag_fraction * diag_l:
+                            continue
+                        c_box = [min_x, min_y, mw, mh]
+                        overlaps_pile = any(
+                            compute_box_intersection_and_areas(c_box, p["bbox"])[0] / p["bbox"][2] / p["bbox"][3] >= 0.20
+                            for p in pile_comps if p["bbox"][2] * p["bbox"][3] > 0
+                        )
+                        if not overlaps_pile:
+                            visited_t2.add(nbr)
+                            q.append(nbr)
             t2_comps.append(sorted(comp))
 
     t2_comps.sort(key=lambda c: c[0])
 
-    # =========================================================================
-    # Build Unified Regions & Annotated Rows
-    # =========================================================================
+    # Step 1C: Absorb any Tier 2 cluster overlapping a pile by >= 0.20 of either area
+    final_t2_comps = []
+    for comp in t2_comps:
+        m_boxes = [boxes[idx] for idx in comp]
+        min_x = min(b[0] for b in m_boxes)
+        min_y = min(b[1] for b in m_boxes)
+        mw = max(b[0] + b[2] for b in m_boxes) - min_x
+        mh = max(b[1] + b[3] for b in m_boxes) - min_y
+        c_box = [min_x, min_y, mw, mh]
+
+        merged_pile = None
+        for p in pile_comps:
+            inter, a_c, a_p = compute_box_intersection_and_areas(c_box, p["bbox"])
+            if (a_c > 0 and inter / a_c >= 0.20) or (a_p > 0 and inter / a_p >= 0.20):
+                merged_pile = p
+                break
+
+        if merged_pile is not None:
+            merged_pile["members"] = sorted(list(set(merged_pile["members"] + comp)))
+            all_m_boxes = [boxes[idx] for idx in merged_pile["members"]]
+            enc_x = min(b[0] for b in all_m_boxes)
+            enc_y = min(b[1] for b in all_m_boxes)
+            enc_w = max(b[0] + b[2] for b in all_m_boxes) - enc_x
+            enc_h = max(b[1] + b[3] for b in all_m_boxes) - enc_y
+            area_sum = sum(b[2] * b[3] for b in all_m_boxes)
+            merged_pile["bbox"] = [enc_x, enc_y, enc_w, enc_h]
+            merged_pile["packing_density"] = area_sum / max(1e-6, enc_w * enc_h)
+            k = len(merged_pile["members"])
+            merged_pile["touching_pairs"] = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(merged_pile["members"][ii], merged_pile["members"][jj])] == 0.0)
+            merged_pile["max_iou"] = max((pairwise_ious[(merged_pile["members"][ii], merged_pile["members"][jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+        else:
+            final_t2_comps.append(comp)
+
+    # Also merge any two Tier 2 clusters that overlap each other by >= 0.20
+    changed_t2_merge = True
+    while changed_t2_merge:
+        changed_t2_merge = False
+        for c1_i in range(len(final_t2_comps)):
+            for c2_i in range(c1_i + 1, len(final_t2_comps)):
+                comp1 = final_t2_comps[c1_i]
+                comp2 = final_t2_comps[c2_i]
+                b1 = [min(boxes[idx][0] for idx in comp1), min(boxes[idx][1] for idx in comp1),
+                      max(boxes[idx][0] + boxes[idx][2] for idx in comp1) - min(boxes[idx][0] for idx in comp1),
+                      max(boxes[idx][1] + boxes[idx][3] for idx in comp1) - min(boxes[idx][1] for idx in comp1)]
+                b2 = [min(boxes[idx][0] for idx in comp2), min(boxes[idx][1] for idx in comp2),
+                      max(boxes[idx][0] + boxes[idx][2] for idx in comp2) - min(boxes[idx][0] for idx in comp2),
+                      max(boxes[idx][1] + boxes[idx][3] for idx in comp2) - min(boxes[idx][1] for idx in comp2)]
+                inter, a1, a2 = compute_box_intersection_and_areas(b1, b2)
+                if (a1 > 0 and inter / a1 >= 0.20) or (a2 > 0 and inter / a2 >= 0.20):
+                    final_t2_comps[c1_i] = sorted(list(set(comp1 + comp2)))
+                    final_t2_comps.pop(c2_i)
+                    changed_t2_merge = True
+                    break
+            if changed_t2_merge:
+                break
+
+    # Build regions and annotated rows
     regions = []
     annotated_rows = [deepcopy(r) for r in rows]
     reg_id = 0
@@ -269,7 +376,7 @@ def compute_spatial_grouping(
             annotated_rows[idx]["spatial_label"] = SPATIAL_CATEGORIES["garbage_pile"]
         reg_id += 1
 
-    for comp in t2_comps:
+    for comp in final_t2_comps:
         k = len(comp)
         m_boxes = [boxes[idx] for idx in comp]
         enc_x = min(b[0] for b in m_boxes)
