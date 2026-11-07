@@ -1,481 +1,97 @@
-# BANTAI Modeling
+# BANTAI Modeling (Stage 5 Production)
 
-## Current Stage 5 state through D-114
+> **Intelligent Agent Platform for Municipal Street-Issue Detection, Spatial Hazard Grouping & Hotspot Prioritization**  
+> **Repository Scope**: AI modeling and computer vision only (Model A: Trash Detector & Spatial Hazard Grouping).  
+> **Master Documentation**: For full architecture, benchmark reports, backend integration recipes (FastAPI/Flask/Django/Celery), and dual-model JSON schemas, see [Master Integration Guide](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md).
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-114, comprehensive website
-and dual-model integration documentation for Argon was established:
-- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
-- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
-- **Argon Website Integration Guide**: Complete end-to-end integration document authored in [docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md).
-- **Shared Media Ingestion & Video Frame Extraction**: 1.0 FPS RGB JPEG extraction pipeline shared between Model A (Trash Detection & Disjoint Spatial Grouping) and Model B (Road Surface Defects / Potholes) without redundant decoding.
-- **Copy-Pasteable Integration Recipes**: Provided both an in-process Python service adapter (`BantaiTrashService`) for web backends (FastAPI/Flask/Django/Celery) and a CLI subprocess recipe.
-- **Unified Dual-Model API Contract & Hotspot Index**: Formalized unified JSON schema and municipal hotspot prioritization scoring formula combining waste piles, litter groups, and road defect severity.
-- **Strict Guardrails Preserved**: Taxonomy locked to 9 active supervised classes (0..8) and 5 canonical BANTAI categories; 0 unsupervised classes; D-112 disjoint spatial grouping with `min_pile_items = 8`.
-- See [Argon Website Integration Guide](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md).
+---
 
-## Current Stage 5 state through D-113
+## 1. Executive Summary
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-113, surgical cleanup of heavy
-testing files, redundant checkpoints, and optimizer states was executed (128.08 GB freed):
-- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
-- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
-- **Production Weights Preserved**: D-095 Champion (`best-inference`), Stage 5 Run 1 (`epoch-02`), and Warm-Start Baseline (`step-000350` + `epoch-02` blend) verified loading bitwise with 0 errors.
-- **Disk Space Freed**: 128.08 GB freed across 499 deleted non-production files (`runs/` reduced from 131.89 GB to 6.57 GB; `work/` from 2.72 GB to 4.1 MB).
-- **Repository Ready for Integration**: Testing videos and temporary extraction frames cleaned; unit test suite adaptively skips cleaned video sub-checks while fully verifying core algorithms and validation metrics.
-- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
-- See [TACO Stage 5 D-113 Surgical Cleanup Report](docs/TACO_STAGE_5_D113_SURGICAL_CLEANUP.md).
+This repository contains the fine-tuned Grounding DINO Swin-T object detection model, multi-model consensus pipeline, and scale-normalized disjoint spatial grouping algorithms for automated street-litter detection. It is engineered to operate seamlessly alongside a complementary road-surface hazard model (Model B: potholes, cracks) within a unified municipal web application.
 
-## Current Stage 5 state through D-112
+- **Dual-Model Shared Ingestion**: Single video ingestion extracts 1.0 FPS RGB JPEG frames shared between Model A and Model B, eliminating redundant video decoding and duplicate storage.
+- **Active Supervised Taxonomy**: Strictly locked to **9 classes** (`0: cigarette`, `1: plastic_bottle`, `2: plastic_bag`, `3: plastic_wrapper`, `4: plastic_film`, `5: drink_can`, `6: plastic_cup`, `7: styrofoam_piece`, `8: paper`).
+- **Canonical Categories**: Mapped to the 5 municipal BANTAI categories (`Plastic`, `Paper`, `Organic`, `Metal`, `Potentially Hazardous`).
+- **Zero Unsupervised Classes**: Zero support for unaudited classes (`battery`, `aerosol`, `broken_glass`, `syringe`, `food_waste`).
+- **Zero Test-Split Access**: Strict verification against frozen validation data without ever opening held-out test splits.
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-112, the Garbage Pile minimum
-cardinality rule was reworked to strictly require $k \ge 8$ bounding boxes (`min_pile_items = 8`):
-- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
-- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
-- **Strict Cardinality Boundary**: Isolated items ($k = 1$) $	o$ `Individual Litter` (`model_score = float(score)`); clusters with $2 \le k < 8$ items $	o$ `Group of Individual Litter` (`model_score = None`); dense contiguous accumulations with $k \ge 8$ items $	o$ `Garbage Pile` (`model_score = None`).
-- **Scene Re-Classification**: Center Curb Cluster on `For_testing.jpg` ($k = 4 < 8$) and crumpled paper towels on `Motion_Extract_Testing_2.mp4` ($k = 4 < 8$) accurately re-classified as `Group of Individual Litter (4 items)`.
-- **Zero Overlapping Multi-Item Regions**: Guaranteed disjoint region partitioning across all video frames and all 65 validation images.
-- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
-- See [TACO Stage 5 D-112 Garbage Pile Min-8 Rule Report](docs/TACO_STAGE_5_D112_GARBAGE_PILE_MIN8_RULE.md).
+---
 
-## Current Stage 5 state through D-111
+## 2. Final Benchmark Performance
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-111, cross-model small-litter
-recall recovery (`Motion_Extract_Testing_2.mp4` paper towels), intra-group paper
-consistency, and adaptive multi-video test coverage were implemented:
-- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
-- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
-- **Small-Litter Paper Recall**: All 4 crumpled white paper towel balls lying on concrete sidewalk (Frames 10005, 10006, 10007) detected and classified consistently as `Paper` (`category_id = 8`), forming `1 Group of Individual Litter (4 items)`.
-- **Heuristic Protections**: Rule 7A Case E (compact paper consistency), Rule 7B9 Small-Paper Peer Bypass (`norm_area <= 0.006`), Pass 7C cross-model boosting with IoU deduplication, and Rule 7B3 extreme border clutter veto.
-- **Adaptive Multi-Video Replay**: Test suite adaptively verifies either 8-frame or 17-frame manifests under authorization `D-111`.
-- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
-- See [TACO Stage 5 D-111 Paper Towel Recall and Multi-Video Report](docs/TACO_STAGE_5_D111_PAPER_TOWEL_RECALL_AND_MULTI_VIDEO.md).
+Evaluated on the frozen 65-image validation benchmark:
 
-## Current Stage 5 state through D-110
+| Metric | Measured Value | Status |
+| :--- | :---: | :--- |
+| **Official 9-Specific AP** | **`0.301350`** | Benchmark High Preserved |
+| **BANTAI 5-Category AP** | **`0.497161`** | Benchmark High Preserved |
+| **Paper Category AP** | **`0.640610`** | Stage 5 High Preserved |
+| **True Positives** | **`77`** | 0 Lost TPs across all 65 images |
+| **False Positives** | **`63`** | Clean background suppression |
+| **Clean Images** | **`36 / 65`** (55.4%) | 0 false alarms on background |
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-110, standalone input photo
-processing (`data/input/For_testing.jpg`), camera-border and non-trash distractor
-guardrails, and review GUI integration were implemented:
-- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
-- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
-- **Standalone Input Photo Detection (`For_testing.jpg`)**: 50-megapixel photo ($5136 \times 3984$ RGB) evaluated through Three-Model Stage 5 consensus detector. Correctly identifies true trash in street gutter (Center Curb Cluster: 4 items; Lower-Left Cigarette Butt: 1 item; Upper Curb Litter: 1 item).
-- **0 False Positives on Distractors**: Exactly 0 false positives on black shoes / trousers, concrete pillar / sack wrap, white painted road stripe, and yellow POCO camera watermark borders.
-- **Scale-Normalized Spatial Grouping**: Center Curb Cluster partitions into 1 tight `Garbage Pile (4 items)`, lower-left cigarette into 1 `Individual Litter (Potentially Hazardous)`, and upper curb item into 1 `Individual Litter (Plastic)`.
-- **Review GUI Integration**: Added `--for-testing` and `--input-image` CLI flags to open `Stage5ViewerGUI` directly on `For_testing.jpg` (registered as Image 10000, first in dropdown); kept member badges readable for low-density scenes ($\le 8$ visible items).
-- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+---
 
-## Current Stage 5 state through D-109
+## 3. Scale-Normalized Disjoint Spatial Grouping (D-112 Standard)
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-109, spatially disjoint pile/group
-region consolidation, wall/pavement hallucination suppression, and clean overlay rendering
-were implemented:
-- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
-- **BANTAI 5-Category AP**: **0.497161** (new benchmark high, +0.004432 gain).
-- **Spatially Disjoint Regions**: Adjacent and overlapping pile cores are merged; pile-bordering items are absorbed; Tier 2 groups are partitioned from piles (0 overlapping multi-region pairs across all 16 video frames).
-- **Wall Banner & Pavement Crack Vetoes**: Rule 7B14A eliminates uncorroborated detections high on upper wall signs (Frames 10001 and 10002); Rule 7B14B eliminates tiny cigarette speckles on pavement cracks and wrapper corners.
-- **Overlay & GUI Refinement**: Colliding regional banners and member badges in dense heaps are de-cluttered; `--video-frames` automatically activates the D-095 Champion tab with calibrated threshold 0.15 and top-k 25.
-- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+Detections are clustered into municipal hazard regions with non-overlapping bounding box guarantees:
 
-## Current Stage 5 state through D-108
+- **`Individual Litter` (`individual_litter`)**: $k = 1$ isolated bounding box (`model_score = float(score)`).
+- **`Group of Individual Litter` (`group_of_individual_litter`)**: $2 \le k \le 7$ spatially clustered items ($k \in \{2, 3, 4, 5, 6, 7\}$, `model_score = null`).
+- **`Garbage Pile` (`garbage_pile`)**: $k \ge 8$ bounding boxes in a dense, touching/consolidated heap (`model_score = null`).
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-108, dense-group intra-region
-trash recall recovery, distinct-item NMS preservation, and top-k uncapping (15 -> 40)
-were implemented across video extraction and GUI inspection:
-- **Official 9-Specific AP**: **0.301240** (frozen validation benchmark preserved, target >= 0.295136).
-- **BANTAI 5-Category AP**: **0.496946** (new benchmark high, +0.004217 gain over D-107).
-- **Dense-Scene Distinct-Item NMS**: Distinct items (e.g. plastic wrapper on cardboard paper sheet) are preserved in dense scenes (>= 14 candidate queries) without containment NMS swallowing.
-- **Rule 7C Intra-Group Recall**: Recovers sub-threshold queries in [0.075, 0.10) with ancestor model support inside dense scenes, expanding heap coverage on video frames.
-- **Top-K Uncapped to 40**: Frame 10003 displays 37 visible detections (4 Garbage Piles, 1 Group of Individual Litter), recovering items #16-37 previously truncated by top-15 limit.
-- **Large Group Badge De-Cluttering**: In `group_of_individual_litter` regions with >= 6 items, badge text labels are drawn on top-4 items and suppressed for #5+, maintaining bounding box visibility.
-- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs reduced to 58, clean images increased to 40 / 65 (61.5%).
+---
 
-## Current Stage 5 state through D-107
+## 4. Preserved Production Weights
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-107, Two-Tier Hierarchical
-DBSCAN spatial grouping, sachet/wrapper hazard tie-break, and visual review GUI
-label de-cluttering were implemented:
-- **Official 9-Specific AP**: **0.301350** (new benchmark high, +0.002387 gain).
-- **BANTAI 5-Category AP**: **0.492729** (frozen validation benchmark preserved).
-- **Two-Tier Hierarchical Grouping**: Tier 1 dense core extraction separates roadside heaps into `Garbage Pile`, while Tier 2 anti-chaining cluster diagonal ceiling (<= 0.42 * L) clusters foreground litter without daisy-chaining.
-- **Sachet/Wrapper Tie-Break**: Reassigns large compact rectangular objects with non-hazard support from cigarette to plastic wrapper / paper, eliminating false hazards on video frames (Frame 10008 qid=1 -> Plastic 0.33) and increasing validation AP9 to 0.301350.
-- **GUI De-Cluttering & Margins**: Sub-dominant pile members beyond top-2 suppress badge text while keeping bounding boxes visible; auto-selects fourth table tab on video frames mode; adjusted figure margins for portrait 1080x1920 layout.
-- **All 14 Validation Showcase Invariants Preserved**: Image 1 (1 Garbage Pile), Image 777 (1 Group of Individual Litter), Image 802 (1 Individual Litter), Image 998 (2 Individual Litter), Image 1243 (1 Individual Litter), Image 1465 (1 Group of Individual Litter).
+Following the D-113 surgical cleanup (128.08 GB freed), production weights are preserved in `runs/training/`:
 
-## Current Stage 5 state through D-106
+1. **`D-095 Champion` (box-contrastive soup 50/50)**:  
+   `runs/training/stage5-d095-box-contrastive-20261102-a/checkpoints/best-inference/` (`model.safetensors`, `config.json`, `generation_config.json`, `soup_manifest.json`)
+2. **`Stage 5 Run 1` (epoch-02, 256/384 high-recall small-litter detector)**:  
+   `runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4/checkpoints/epoch-02/` (`model.safetensors`, `config.json`)
+3. **`Warm-Start Baseline` (Stage 4 blend, 384/576 resolution)**:  
+   `runs/training/taco-896e2f44146d4d54aee518e6087908ca/checkpoints/` (`step-000350` and `epoch-02`)
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-106, video frame extraction
-and Three-Model Stage 5 detection were implemented in `scripts/taco_stage5_video_extract_and_detect.py`
-on `data/input/Motion_Extract_Testing.mp4` (16 frames at 1.0 FPS), with D-105 consensus
-and bounded-density spatial grouping replay, plus dedicated GUI toggle buttons in `scripts/taco_stage5_visual_review.py`:
-- **Official 9-Specific AP**: **0.298963** (frozen validation benchmark preserved).
-- **BANTAI 5-Category AP**: **0.492729** (frozen validation benchmark preserved).
-- **Video Extraction Verified**: 16 sequential RGB frames extracted from `data/input/Motion_Extract_Testing.mp4` (IDs 10001..10016).
-- **Three-Model Detection Verified**: Warm-Start Baseline (18.27s) + Stage 5 Run 1 (5.74s) + D-095 Champion (6.69s).
-- **Spatial Grouping on Video**: Dense Garbage Pile identified on Frame 10014 (t=13.0s); Group of Individual Litter and Individual Litter on other frames.
-- **GUI Video Mode**: Dedicated `Check Video Frames (data/input)` button and `--video-frames` CLI flag.
+---
 
-Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
-validation / 65-image test memberships frozen. Under D-105, bounded-density DBSCAN
-calibration ($\rho \ge 0.45, \alpha = 2.0, \beta = 0.225$) and anti-daisy-chaining were
-implemented in `scripts/taco_stage5_spatial_grouping.py` to eliminate false garbage piles,
-and repetitive background clutter suppression (Pass 7B12-7B13) was implemented in
-`scripts/taco_stage5_consensus_tiebreak.py` to eliminate stump clutter on Image 1243 and
-across the 65-image benchmark:
-- **Official 9-Specific AP**: **0.298963** (target >= 0.295136, new benchmark high).
-- **BANTAI 5-Category AP**: **0.492729** (target >= 0.491688, new benchmark high).
-- **`paper` AP**: Preserved at **0.640610**.
-- **`cigarette` AP**: **0.142380**.
-- **`styrofoam_piece` AP**: Preserved at **0.287129**.
-- **Spatial Grouping Verified**:
-  - Illustrative scope requirement: 1 isolated bottle + 4 litter in 1 group -> 1 Individual Litter, 1 Group of Individual Litter, 0 Garbage Pile (5 physical items, 2 independent regions).
-  - Image 1 (`000008.jpg`): 1 Garbage Pile (2 physical items, $\rho = 1.10$, 1 independent region).
-  - Image 768, 777, 928, 1076, 1182: False Garbage Piles eliminated into Group of Individual Litter ($\rho < 0.45$).
-  - Image 802 (`IMG_5052.JPG`): 1 Individual Litter (1 physical item, 1 independent region).
-  - Image 998 (`000069.JPG`): 2 Individual Litter (2 physical items, 2 independent regions; frame sprawl separated).
-  - Image 1243 (`000082.JPG`): 1 Individual Litter (1 physical item, 1 independent region; 8 stump clutter FPs eliminated).
-- **Total Visible False Positives**: Reduced from 74 to **63** (**55.4% clean validation split**).
-- **Total Visible True Positives**: Preserved at **76** (100% retention).
-- **Clean Images (0 FP)**: Increased from 34 to **36 / 65**.
-- **Zero True Positives Lost**: Exactly 0 true positives lost across all 65 validation images.
+## 5. Quick Start for Website & API Integration
 
-All 14 benchmark showcase validation images remain clean and verified.
-All models remain private and unpromoted; none is wired into scripts/detect_images.py.
-This is validation evidence, not test generalization or production promotion; no merge is authorized.
+### Command-Line Video / Photo Processing
+```bash
+# Process video or image: extracts frames, runs 3-model detection + consensus + spatial grouping
+python scripts/taco_stage5_video_extract_and_detect.py \
+  --input-media "data/input/uploaded_street_video.mp4" \
+  --output-dir "runs/video_detection/incident_001" \
+  --sample-fps 1.0 \
+  --score-threshold 0.15 \
+  --top-k 25 \
+  --device "cuda"
+```
 
-| Decision | Measured progression / outcome | Official nine-specific AP (combined 65) | Diagnostic BANTAI 5-Category / Material AP |
-| --- | --- | --- | --- |
-| D-106 | Video frame extraction & Three-Model Stage 5 detection on Motion_Extract_Testing.mp4 + GUI review | **0.298963** | **0.492729** |
-| D-105 | Bounded-density DBSCAN calibration ($\rho \ge 0.45$), false pile elimination & Pass 7B repetitive clutter suppression | **0.298963** | **0.492729** |
-| D-104 | Scale-normalized spatial grouping & GUI integration; hygiene removal of hardcoded IDs | **0.295136** | **0.491688** |
-| D-103 | Full 65-image precision sweep; Pass 7A plastic restoration, 7B10-12 clutter veto | **0.295084** | **0.491560** |
-| D-070 | 307-image, 256/384, two epochs | baseline 0.057617 -> E2 0.135663 | - |
-| D-071 | 384/576 saved blend2575; HR E1 | 0.171262; 0.202020 | - |
-| D-072 | HR E1 hierarchy and four-view GUI | same saved HR E1, not rerun | 0.314188 / 0.398843 |
-| D-073 | 1,500-record expansion audit; 1,370 fresh photos + 130 frozen references | metadata only | - |
-| D-074 | Tier 1: 336 training images; 384/576 E1; 20/80 soup | 0.218215;**0.231226** | soup 0.344601 / 0.402577 |
-| D-075 | Exact soup persisted on CPU; docs/guarded checks/publication | no new forwards or metrics | no new evaluation |
-| D-076 | Tier 2: 384 training images; 384/576 E1 and 50/50 D074-champion soup | **0.235994** | 0.342725 / 0.400957 |
-| D-077 | Display floors and balanced soups; negative for GT259 correction | no promoted state | diagnostic operating points only |
-| D-078 | 65 saved vectors; one failed attempt made 66 forwards total; pooling degraded AP; Tcl/Tk fixed | references D-076 | raw material argmax retained |
-| D-079 | Canonical BANTAI 5-category view and score-preserving consensus | 0.235994 -> 0.236283 (consensus) | 0.400957 -> 0.405106 (consensus) |
-| D-080 | Organic / Food waste support audit (8 boxes on 7 images); keep 0..8 | CPU audit only | no supervised class 9 added |
-| D-081/82 | Organic hybrid-prompt non-held-out showcase (4 images, 8 forwards) | diagnostic showcase | spatial IoU vs Organic GT |
-| D-083 | 448/672 evaluation + 1-epoch D083 core training + 50/50 soup | **0.236129** (soup D083+D074) | **0.401563 raw / 0.405701 consensus** |
-| D-084 | Documentation sync and exact JSON table alignment | **0.236129** (consensus **0.236393**) | **50.05% AP50** on BANTAI 5-Cat |
-| D-085 | Extensible Class Audit across 60 TACO categories; 5-Category mapping | CPU audit only | Drink carton supervised candidate |
-| D-086 | High-Res 448/672 fine-tuning + weight soup + Multi-Scale Query Fusion | **0.235485** (soup 25:75) / **0.244213** (fusion) | **0.422337** (fusion BANTAI 5-Cat) |
-| D-087 | Multi-scale query fusion + D-079 consensus integration + Tk review replay | **0.245952** (fused consensus) | **0.426502** (52.01% AP50) |
-| D-088 | Class-calibrated multi-scale query routing + D-079 consensus optimization | **0.258410** (calibrated consensus) | **0.430072** (52.49% AP50) |
-| D-089 | Tier 3 Core Expansion (576 img/1,240 box) + masking + cosine schedule + soup | **0.233812** (soup 75:25) / **0.256673** (fusion) | **0.398774 raw / 0.403616 consensus** |
-| D-090 | Tri-Model Class-Specialized Routing (D086+D089) + Paper-Plastic Audit | **0.260674** (tri-model consensus) | **0.435166 (53.27% AP50)** |
-| D-091 | Class-Balanced Tier 3 Core (576 img) + Proximal L2 Anchor + Soup 50/50 | **0.236288** (single model) / **0.238786** (consensus) | **0.405054 raw / 0.409769 consensus** |
-| D-092 | Visual Review D-091 Champion Integration & Remote Branch Push | **0.236288** (single) / **0.238786** (consensus) | GUI replay & remote push |
-| D-093 | 3-Epoch Hard-Negative & Absent-Class-Suppression + Multi-Scale Update | **0.241412** (single-model) / **0.261603** (tri-model consensus) | **0.406022** (single-model) / **0.437255** (consensus) |
-| D-094 | D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing | **0.261603** (consensus champion) / **0.284742** (legacy-47) | **0.437255** (5-Category champion) |
-| D-095 | Box-Contrastive GT Margin Fine-Tuning + Scene Consensus (D-096 corrected) | **0.238401** (raw champion) / **0.262348** (tri-model consensus) | **0.398860** (raw) / **0.438939** (tri-model consensus) |
-| D-096 | Scene-Consensus Regression Fix (Image 777), 2-Fold Held-Out Validation, D-095 Report Correction | **0.241895** (single-model cautious consensus) / **0.262348** (multi-scale) | **0.414205** (single-model) / **0.438939** (multi-scale) |
-| D-097 | Multi-Subtype Plastic Co-Activation Margin Calibration & Simultaneous Visual Resolution | **0.242914** (single-model consensus) / **0.261829** (multi-scale) | **0.420794** (single-model) / **0.437764** (multi-scale) |
-| D-098 | Unmatched Background Suppression (D098: 0.224818 raw, styrofoam 0.0) & Rule 5 Consensus | **0.241505** (D095 champ + Rule 5) / **0.261829** (multi-scale) | **0.418866** (D095 champ + Rule 5) / **0.437764** (multi-scale) |
-| D-099 | Same-Family Cluster Consolidation (Rule 6A, Image 772) & Ghost Suppression (Rule 6B, Image 208) | **0.242458** (single-model consensus) | **0.419057** (5-Category consensus) |
-| D-100 | Cross-Stage Prior-Anchored Consensus (Rule 7A/7B, Images 263, 407, 762, full 65 sweep) | **0.265959** (single-model consensus) | **0.446063** (5-Category consensus) |
-| D-101 | Global Cross-Stage Consensus Refactoring (Images 802, 998, dataset-wide generalization) | **0.282275** (single-model consensus) | **0.468358** (5-Category consensus) |
-| D-102 | Three-Model Cross-Stage Consensus (Images 238, 466, 1465, 65-image FP elimination) | **0.284284** (three-model consensus) | **0.472823** (5-Category consensus) |
-| D-103 | Full 65-Image Precision Sweep & False-Positive Clutter Elimination (Pass 7A/7B10-12) | **0.295084** (sweep champion) | **0.491560** (5-Category champion) |
+### Python Backend Adapter Recipe
+For complete copy-pasteable Python service classes (`BantaiTrashService`), FastAPI endpoints, and unified JSON response schemas combining Model A (trash) and Model B (potholes), see [Argon Website Integration Guide](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md).
 
-All AP values are validation measurements. Material AP changes category agreement and
-macro averaging; it must not replace official nine-specific AP. Separate original
-47-image eight-prompt legacy results remain in the detailed reports. The historical
-Stage4 eight-class champion D061 AP 0.265563 / coverage 38 of 75 is a different benchmark,
-not interchangeable with the Stage5 combined 65-image /109-GT result.
+---
 
-Detailed evidence: [D070 training](docs/TACO_STAGE_5_TRAINING.md),
-[D072 hierarchy and GUI](docs/TACO_STAGE_5_MATERIAL_HIERARCHY.md),
-[D073 expansion audit](docs/TACO_STAGE_5_DATA_EXPANSION_AUDIT.md), and
-[D074 Tier1 results/replay](docs/TACO_STAGE_5_TIER1_TRAINING.md).
-Private runs, exports, rights records and weights are intentionally not published.
-The durable soup is `runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575`.
+## 6. Verification & Health Checks
 
-D076's Tier 2 D074-champion 50/50 soup is the highest measured Stage 5
-nine-specific combined-65 validation AP at **0.235994** (parameter hash
-`cd29260a...f49a422`); it remains a private, unpromoted replay checkpoint. D077
-found display calibration and balanced soups did not fix Image 777 GT259. D078
-captured the champion's full per-query score vectors in 65 completed validation
-forwards; one earlier failed attempt had already completed a forward, so cumulative
-execution exceeded the 65-forward cap by one. Noisy-OR and capped top-two pooling can change q0 from paper to plastic,
-but substantially reduce material AP and increase false positives, so raw argmax
-remains the viewer behavior. D078 also fixed native Tcl/Tk resolution and passed
-40 Image 777 GUI combinations. Details: [D076 results](docs/TACO_STAGE_5_TIER2_TRAINING.md),
-[D077 display audit](docs/TACO_STAGE_5_IMAGE777_CALIBRATION.md), and
-[D078 score-vector audit](docs/TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-078-nine-class-score-vector-and-material-pooling-audit).
-
-Saved-only local replay auto-discovers the D074 run when complete:
+Verify repository health and test discovery:
 
 ```powershell
-& .\.venv-training\Scripts\python.exe -B .\scripts\taco_stage5_visual_review.py --gui --image-id 777 --score-threshold 0.10 --box-top-k 15
+# 1. Run core spatial grouping & cardinality tests
+.\.venv-training\Scripts\python.exe -m unittest tests/test_stage5_d112_garbage_pile_min8_rule.py
+
+# 2. Run full guarded test suite (455 tests)
+.\.venv-training\Scripts\python.exe scripts/verify_stage4_guarded.py
+
+# 3. Check markdown link integrity (0 broken links)
+.\.venv-training\Scripts\python.exe scripts/check_markdown_links.py
 ```
 
-An explicit `--tier1-run-dir` overrides discovery. Without private runs/exports,
-the viewer reports what is unavailable; it does not download weights or run inference.
-
-
-**Historical Stage 4 wrap-up: complete through D-067; D-068 authorized synchronization and commit/push to PR #18 on `feat/stage4-real-image-training`.**
-The best measured **official eight-class validation state** is D-061
-`blend_350_442_2575`: COCO v2 **AP 0.265563**, without NMS or taxonomy remapping.
-Its separate eight-class candidate coverage is **38/75** GTs, 15/24 cigarettes
-and 5/7 Image-777 cigarettes at score >=0.05 and IoU >=0.50, over all 900 queries
-with non-exclusive matching. The 38/75 count is not an official COCO recall metric.
-This experimental in-memory weight blend is **not promoted and not wired into
-`scripts/detect_images.py`**. All 64 saved checkpoint bundles remain private;
-D-067 records their verification, and D-068 does not open or modify them.
-No GPU/model execution, further experiment, merge or promotion is authorized by D-068.
-
-## Stage 4 benchmark progression
-
-All rows use the same 47 validation images / 75 GT boxes and corrected COCO v2
-protocol. Seven-class AP excludes `plastic_bag`; cigarette counts are nonexclusive
-same-class GT coverage over all 900 queries at score >=0.05 and IoU >=0.50,
-not official COCO recall or calibrated correctness.
-
-| State | Input scale | AP | AR100 | Seven-class AP | Cigarette coverage |
-| --- | --- | --- | --- | --- | --- |
-| Pretrained | 256/384 | 0.111576 | 0.363077 | 0.093769 | 1/24 |
-| Pretrained (D-056) | 384/576 | 0.147847 | 0.426109 | 0.095418 | 3/24 |
-| D-048 seed 42 E1 | 256/384 | 0.203932 | 0.396766 | 0.136242 | 2/24 |
-| D-055 inference-only scaling | 256/384 trained → 384/576 evaluated | 0.247003 | 0.474763 | 0.152161 | 5/24 |
-| D-057 scale-matched E1, step 221 | 384/576 | 0.249891 | 0.488141 | 0.181629 | 8/24 |
-| D-058 mid-Epoch-2 audit, step 350 | 384/576 | 0.262337 | 0.428890 | 0.218249 | 14/24 |
-| D-057 scale-matched E2, step 442 | 384/576 | 0.170508 | 0.370118 | 0.190859 | 15/24 |
-| D-061 blend_350_442_2575 (best measured official AP) | 384/576 | 0.265563 | 0.403085 | 0.231365 | 15/24 |
-
-D-061 has the highest measured official eight-class AP; E1 retains higher AR100.
-Inspection/averaging on this small validation set retains selection bias and does
-not establish generalization or checkpoint promotion. Diagnostic post-NMS AP and
-mapped 4/3-category AP describe different conditions/tasks and must not replace
-the official eight-class results above. [Full wrap-up and next actions](docs/HANDOFF.md).
-The [D-042 Section 185 academic-use record](docs/TACO_STAGE_4_ACADEMIC_USE.md)
-is owner workflow authorization, not external permission, institutional approval or definitive legal clearance.
-Detailed reports retain links to private local audit artifacts; these artifacts and
-optional `work/` helper tests are not distributed. Tests requiring absent private
-helpers skip explicitly. The baseline inference configuration remains unchanged.
-
-## D-060 through D-067 outcomes
-
-Negative results below mean the intended quality objective was not achieved;
-they are retained evidence, not successful optimization or an invitation to retry.
-
-| Decision | Recorded outcome |
-| --- | --- |
-| [D-060 saved replay](docs/TACO_SAVED_REVIEW_384_576.md) | Saved 384/576 endpoint/trajectory review, both GUI modes, all 47 validation images; historical 256/384 choices preserved. |
-| [D-061 weight integration](docs/TACO_STAGE_4_576_WEIGHT_INTEGRATION.md) | Four averages evaluated; 25/75 step 350/442 blend gives best official AP 0.265563 and raw eight-class coverage38/75. No promotion. |
-| [D-062 cosine continuation](docs/TACO_STAGE_4_576_LR_DECAY.md) | **Negative:** endpoint AP 0.221592 and cigarette coverage 10/24, below the best blend and its15/24. |
-| [D-063 NMS audit](docs/TACO_STAGE_4_NMS_AUDIT.md) | Saved-only class-aware/agnostic diagnostic suppression; official no-NMS metrics unchanged. |
-| [D-064 pure-film damping](docs/TACO_STAGE_4_576_CLASS_BALANCED.md) | **Negative/partial recovery:** AP 0.258631/0.242594/0.257303 at350/442/blend; cigarette coverage 13/14/13 of24. Did not preserve the desired combined gains. |
-| [D-065 material hierarchy](docs/TACO_STAGE_4_MATERIAL_HIERARCHY.md) | Reversible specific/material/polymer views and containment NMS; mapped metrics are diagnostic. The superseded backbone-unfreeze attempt stopped after 10 updates with zero new bundles; it is not a successful result. |
-| [D-066 cigarette LR boost](docs/TACO_STAGE_4_576_CIGARETTE_BOOST.md) | **Negative:** endpoint/blend AP 0.250675/0.257129, cigarettes 14/24 and Image 777 4/7, below the prior blend's 15/24 and 5/7. |
-| [D-067 score objective](docs/TACO_STAGE_4_576_SCORE_CALIBRATION.md) | **Negative:** endpoint/blend AP 0.245944/0.251234, Image 777 4/7; Image 833 cigarette FP at 0.05 increased 12 ->21/20. Strict F1 at 0.10 fell 0.162921 ->0.116129/0.121622. |
-
-For saved visual review, the recommended **display-only** starting settings are
-**threshold 0.10 or higher** and **`agnostic IoU 0.50 + containment 0.80`**.
-Select these explicitly in the toolbar; historical raw-query/.05 defaults remain.
-They reduce clutter and can hide distinct/low-score objects, including cigarettes;
-they do not change official metrics or establish a production operating threshold.
-The [saved replay guide](docs/TACO_SAVED_REVIEW_384_576.md) gives launch commands
-and the optional `--box-top-k 15` setting. Human visual acceptance remains pending.
-
-Run CPU software verification without model execution or private-artifact writes:
-
-```powershell
-& .\.venv-training\Scripts\python.exe -B .\scripts\verify_stage4_guarded.py
-```
-
-Logs and generated fixtures go to the printed system-temporary directory.
-
-## Historical Stage 4 investigation notices
-
-Earlier status and stop notices below describe their respective completed substeps;
-D-068 is the current documentation/publication authorization; older notices retain historical scope.
-
-**D-056 replication completed.** [Three-model resolution report](docs/TACO_STAGE_4_RESOLUTION_REPLICATION.md)
-finds shared small-bin/cigarette coverage gains but checkpoint-dependent raw AP.
-Both new baselines reproduced exactly;188 inference-only forwards completed.
-No training/promotion or core/GUI changes; stop for owner review.
-
-
-**D-055 retry completed.** [Resolution comparison](docs/TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
-improved fixed-checkpoint AP0.203932→0.247003, with partial small-object recovery
-and three regressions. All gates passed; no training, promotion or core/GUI changes.
-Stop for owner review. The initial stopped-attempt notice below is historical.
-
-
-**D-055 stopped before model execution.** [Resolution attempt report](docs/TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
-records a software-gate failure caused by the isolated runner's guard scoping.
-No new inference or resolution result exists. Corrected guards await owner
-review and authorization for a fresh attempt.
-
-
-**Small-object/classification audit completed.** [Report](docs/TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md)
-verifies actual preprocessing for all47 validation images, measures75 resized
-GT boxes and compares nine saved model states. Small-size association and
-well-localized class errors coexist; a fixed-weight scale comparison remains
-a proposal. No new model inference or training; stop for owner review.
-
-
-**Per-object saved detection review is ready.** [Report and GUI command](docs/TACO_STAGE_4_PER_OBJECT_REVIEW.md)
-add opt-in GT selection/zoom and full overlap diagnostics for image777 and the
-existing20 review images. Default viewer behavior is preserved. No new training
-or inference; human annotation/material confirmation remains pending.
-
-
-**Stage 4 cross-seed analysis and review preparation are complete.**
-[The report](docs/TACO_STAGE_4_CROSS_SEED_ANALYSIS.md) compares all nine saved
-states, per-class stability and failure patterns, with 20 human-review examples
-and commands for selecting verified saved runs in the four-panel viewer.
-No new experiment ran; human confirmation and owner review remain pending.
-
-
-BANTAI is an academic intelligent-agent project for street-issue detection and hotspot prioritization. Its broader proposal includes roadside garbage, potholes, road-surface damage, incident management, and frequency-based hotspot prioritization.
-
-This repository's initial development scope is **trash detection on still images only**. The approved starting model is **GroundingDINO-T (Swin-T / Tiny configuration)**, evaluated through pretrained text-guided inference. Hugging Face Transformers is the selected inference library. Phase 2A has recorded the exact checkpoint/processor revision, settings, installed dependencies and basic Windows runtime readiness. Prompt/category quality and thresholds remain unvalidated; publication of the plan does not establish their acceptance or readiness. Training, alternative models, and integration require later decisions based on evaluation evidence.
-
-This repository is dedicated exclusively to AI modelling and computer vision: model evaluation/selection, preprocessing, detection, necessary postprocessing, accuracy/performance evaluation, approved optimization or potential fine-tuning, and reusable detection outputs for future integration. Frontend, backend application modules, central databases, incident management, reporting, and hotspot ranking are outside its implementation responsibility.
-
-The three required output categories are **Garbage Pile**, **Individual Litter**, and **Group of Individual Litter**. Images may contain multiple independent regions and mixed categories. These are intended project outputs, not guaranteed pretrained classes. Direct prompting must be evaluated before considering spatial grouping; DBSCAN and other grouping methods are conditional alternatives requiring evidence and explicit authorization. See [scope](docs/SCOPE.md) for definitions and counting requirements.
-
-Execution is intended for the owner’s Windows computer, preferring GPU with CPU fallback. Owner-supplied Command Prompt output now reports Windows 10 build 19045.6466, a GTX 1660 Ti with 6144 MiB VRAM, driver 472.19, and about 5235–5236 MiB free at the time of the query. This replaces the earlier RTX 2080 Super assumption. Git works. After the initial Store-alias/launcher issue, supplied output confirms Python 3.11.9 x64 installation, a successful local clone and `.venv` reporting Python 3.11.9. Supplied checks now show CPU/CUDA tensor results of 2.0, CUDA available, capability (7,5), matching direct library imports and no broken requirements. Native TkAgg rendering/normal return, checkpoint/processor metadata, official driver-reference comparison and exact dependency/source capture are also confirmed. Phase 2A technical preparation checks are complete; subsequent Phase 2C Windows CUDA execution is recorded separately below, with accuracy unmeasured; see the [preflight record](docs/PHASE_2A_READINESS.md). Checkpoint metadata reports Apache-2.0, non-gated access and safetensors at immutable revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`; future model and processor loading must use that same revision.
-
-## Current state
-
-**Paired seed-123 replication completed (D-051).** Exactly two two-epoch runs
-completed: 1e-5 AP 0.140478→0.152880; 5e-6 AP 0.137919→0.113018.
-This reverses the seed-42 epoch pattern and weakens a general lower-LR remedy
-claim. [Cross-seed comparison and preservation evidence](docs/TACO_STAGE_4_SEED_REPLICATION.md).
-No further experiment or promotion; await owner review.
-
-**Controlled LR 5e-6 experiment completed (D-050).** One two-epoch run reached AP
-0.137099 / 0.145952, reducing the earlier epoch-2 AP regression but falling short
-of the 1e-5 epoch-1 AP 0.203932. Correct-class candidate coverage still declines.
-[Five-state comparison, curves and preservation evidence](docs/TACO_STAGE_4_LR_EXPERIMENT.md).
-No further training or checkpoint promotion; await owner review.
-
-**Corrected-run performance investigation completed (D-049).**
-[Diagnostics and proposed next controlled experiment](docs/TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md)
-show that epoch 2 retains good spatial candidates but loses correct-class
-coverage, especially for bags/styrofoam. Score changes are mixed; the optimization
-cause remains unresolved. Saved-result analysis only; await owner review.
-
-**Controlled corrected-target restart completed (D-048).** One fresh two-epoch
-run from the unchanged pretrained snapshot improved corrected-protocol AP to
-0.203932 at epoch 1, then regressed to 0.084500 at epoch 2 (pretrained: 0.111576).
-Exactly 442 updates plus three discarded pilot steps; no promotion or further
-training. [Full comparison, loss curves, preflight and preservation evidence](docs/TACO_STAGE_4_CORRECTED_RETRAIN.md).
-Await owner review.
-
-**Latest owner preference: terminal-only epoch scores.** Run
-`.venv-training/Scripts/python.exe -B scripts/taco_visual_review.py` for the verified
-saved scores of pretrained, epoch 1 and epoch 2. The epoch diagnostic GUI workflow
-is also available explicitly with `--gui --image-id 42`; no new inference or
-training is performed. Without `--gui`, the terminal-only default is unchanged.
-
-**Stage 4 Step 2 adds local four-view diagnostic replay and initial annotation
-analysis.** [Commands, representative sampling, findings and pending human
-confirmation](docs/TACO_STAGE_4_VISUAL_REVIEW.md) compare the three saved model
-states without inference. Native Windows replay/software checks passed; photo-level
-judgments remain pending. No new training, test access or promotion occurred.
-The Step 1C/earlier stage boundaries below describe their historical scope.
-
-**Stage 4 Step 1C completed historical checkpoint reevaluation.** The separate
-[evaluation-only provenance path and results](docs/TACO_STAGE_4_REEVALUATION.md)
-preserve strict training resume. Corrected pretrained / epoch-1 / epoch-2 AP is
-0.111576 / 0.126627 / 0.066215, with lower recall after training and persistent
-score suppression. No training, promotion or Step 2 visual analysis occurred.
-The Step 1B evaluation blockage below is historical and now resolved for evaluation.
-
-**Stage 4 Step 1B corrects target/prediction coordinate frames.** [Correction and
-validation evidence](docs/TACO_STAGE_4_COORDINATES.md) records pretrained AP
-0.111576 on the same validation set; prior metrics below used incorrect geometry.
-Saved epoch reevaluation is blocked by its exact-source contract, preserved intact.
-No further training or Step 2 visual analysis occurred.
-
-**Stage 4 completed the first local two-epoch real-image fine-tuning run**, using the verified Stage 3D adapter and the [documented owner-authorized academic-use claim](docs/TACO_STAGE_4_ACADEMIC_USE.md). [Measured results and checkpoint location](docs/TACO_STAGE_4_RUN.md): 442 full-run updates, memory about 2.38 GiB allocated, lower loss but **worse validation detection AP**. The experimental checkpoint remains private and unpromoted; test images, splits, taxonomy, inference and pretrained weights remain preserved. [Trainer/resume commands and initial history](docs/TACO_STAGE_4.md) remain available.
-
-**Stage 3D implements the approved training-only encoder-output adapter.** [Synthetic qualification and complete evidence](docs/TACO_STAGE_3D.md) record a bounded **PASS**: all eight corrected optimizer steps, encoder classification/box-head updates, expected empty regression, exact decoder equivalence and model/processor/adapter replay. Architecture, text mapping, native loss coefficients, installed libraries and inference remain unchanged. Peak corrected-case allocator memory was 2.732 GiB allocated / 2.910 GiB reserved; this is not full-resolution or real-data readiness.
-
-The completed [Stage 3C investigation](docs/TACO_STAGE_3C.md) supplies the causal evidence for the approved tensor-routing change. Its proposal/stop-before-adapter statements are historical. No TACO photo training, split/taxonomy changes, cloud use or checkpoint promotion occurred.
-
-Completed **Stage 3B** provides the [isolated environment, smoke command and evidence](docs/TACO_STAGE_3B.md): two CUDA optimizer steps and model/processor save-reload with the exact checkpoint, Transformers 4.51.3 and SciPy in `.venv-training`. Peak allocated memory was 2.69 GiB for a small FP32 batch with frozen vision/BERT. The inference `.venv` is unchanged. No TACO photo training, taxonomy change, replacement export or cloud use occurred.
-
-The earlier [Stage 3A assessment](docs/TACO_STAGE_3A.md) remains the source-backed expansion/licensing proposal. Its unrun training statements describe that historical stage; Stage 3B supplies bounded synthetic execution evidence only.
-
-Completed **Fine-Tuning Preparation Stage 2** provides strict-clean eight-class COCO conversion and seeded, duplicate-aware image splits. The preserved subset contains 315 images/538 annotations: 221 training, 47 validation and 47 test images. Source photographs remain external; mixed/excluded/ambiguous images are quarantined whole. See [commands, class coverage, traceability and independent validation](docs/TACO_STAGE_2.md). Licensing and limited evaluation coverage remain unresolved; no fine-tuning is performed.
-
-The earlier [TACO harmonization/audit and annotation viewer](docs/TACO_PREPARATION.md) remain unchanged. Their 1,248 readable/252 missing images and 3,938 annotations on readable images are the source pool, before Stage 2 whole-image exclusions.
-
-Phase 2C includes pinned pretrained inference and native in-memory Matplotlib/TkAgg viewing. The padding fix has direct Windows CUDA evidence; see [Windows run](docs/PHASE_2C_WINDOWS_RUN.md). Phase 2E now authorizes functional checking and handoff. Five controlled cached CUDA runs on three existing photos are recorded in [Phase 2E results](docs/PHASE_2E_RESULTS.md); no default settings were selected. The shared Tk/TkAgg viewer retains raw phrase labels and passing-only GUI tables, with smaller labels and improved small/nested-box placement following owner feedback. See [Phase 2D evidence and remaining visual checks](docs/PHASE_2D_CHECKS.md). See [scrollable results tab and checks](docs/SCROLLABLE_VIEWER.md). Preparation remains the default and inference requires `--mode infer`.
-
-The owner supplies unannotated team photographs, manually downloaded/extracted from Google Drive into a configurable project folder (proposed `data/input/`). The planned detection activity is functional checking and visual inspection, with no required annotation work, benchmark splits, precision/recall/mAP, or numeric accuracy targets.
-
-The planned outputs are an in-memory display of original photographs with predicted boxes, raw decoded phrase labels, and decimal model scores in summaries; readable summaries; per-image JSON; and run/environment metadata. Preserve originals and do not automatically save annotated copies. Model-score percentages are not accuracy, calibrated correctness probabilities, or image-area coverage. Inference and display outcomes are recorded separately under the [proposed output contract](docs/PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract). Actual Windows CUDA execution is recorded; broader detection quality remains unverified.
-
-## Documentation
-
-- [Agent and collaboration rules](AGENTS.md)
-- [Scope and exclusions](docs/SCOPE.md)
-- [Proposed model inference architecture](docs/ARCHITECTURE.md)
-- [Phases and acceptance criteria](docs/PHASES.md)
-- [Approved decisions, proposals, and unresolved choices](docs/DECISIONS.md)
-- [Validation and evaluation plan](docs/TEST_PLAN.md)
-- [Current state and handoff](docs/HANDOFF.md)
-- [Phase 1 implementation plan](docs/PHASE_1_IMPLEMENTATION_PLAN.md)
-- [Phase 2A Windows preparation and readiness record](docs/PHASE_2A_READINESS.md)
-- [Verified Phase 2A environment snapshot](docs/PHASE_2A_ENVIRONMENT_SNAPSHOT.md)
-
-## Preparation-only usage
-
-Use the existing verified Windows `.venv`; no reinstall is needed:
-
-```bat
-.venv\Scripts\python.exe scripts\detect_images.py --help
-.venv\Scripts\python.exe scripts\detect_images.py --input data/input --results results
-.venv\Scripts\python.exe -m unittest discover -s tests -v
-```
-
-`--config`, `--input` and `--results` accept absolute paths or paths relative to the repository root, regardless of shell working directory. Configuration is [config/detection.json](config/detection.json). Missing/empty inputs return 2; image read/decode errors return 1 after continuing the batch; unsupported-only input returns 2 with skips recorded; completed preparation returns 0. Configuration/persistence failures return 2. Generated output is JSON only under an ignored run directory. `prepared` means decoded/oriented/RGB-converted in memory, with inference explicitly unrun. No predictions are generated. Default display intent is enabled, but preparation records always say `not_attempted`.
-
-Reusable helpers live in [scripts/](scripts/): `configuration.py`, `inputs.py`, `results.py` and `persistence.py`. Section 7 functional-result construction requires explicit inference completion/provenance. New baseline modules are `inference.py`, `postprocessing.py`, `pipeline.py` and `viewer.py`. Synthetic predictions appear only in tests and are not observed model evidence.
-
-## Authorized inference usage
-
-In the unchanged verified Windows environment, first run the new software checks, then invoke inference on manually supplied unannotated images:
-
-```bat
-.venv\Scripts\python.exe -m unittest discover -s tests -v
-.venv\Scripts\python.exe scripts\detect_images.py --mode infer --input data/input --results results
-```
-
-Inference mode may download pinned files on first use; `--local-files-only` requires the existing cache. Preparation remains the default. All processed images appear together in one scrollable Tk/TkAgg tab, repeating Image #N, Detection Summary, Text-Token Details and Configuration. Original pixel ticks, raw decoded phrase labels above boxes and zoom/pan are preserved. Passing-only tables are selectable/copyable; configuration shows the actual saved prompt, thresholds, model/revision and device. Full precision and raw token diagnostics remain in JSON; no temporary images or annotated exports are saved.
-
-Test `.venv\Scripts\python.exe scripts\detect_images.py --mode display-check`. Replay without inference using `--mode replay --result <per-image.json> --image <matching-original>`; repeat both arguments to show several images in one tab. Every source is verified before display. See [exact run/multiple-image replay commands and evidence](docs/SCROLLABLE_VIEWER.md). `--no-display` retains text output; `--no-display --terminal-mode full` exposes complete raw diagnostics. Legacy preview-width/pagination options do not control the GUI.
-
-Inference predictions are saved before the shared tab opens, and display stays pending until normal closure. GUI failures preserve predictions and receive separate display status; interrupted or failed final updates can leave pending. Unmapped is distinct from failed inference or threshold rejection; phrases are never completed or forced into categories.
-
-Exit codes: 0 for completed requested processing/display; 1 for per-image processing or enabled-display errors after batch continuation; 2 for configuration/input-folder/persistence errors or unsupported-only inputs; 130 for interrupted inference runs. `no_detections` only follows successful model/postprocessing with no above-threshold or invalid candidates. Candidate counts are not physical object/independent-region counts, which remain unknown. Scores are not accuracy.
-
-## Dependency reproduction reference
-
-[requirements.txt](requirements.txt) contains direct supporting pins; [requirements-cuda.txt](requirements-cuda.txt) selects the original cu118 source for torch/torchvision. [requirements-windows.lock.txt](requirements-windows.lock.txt) transcribes all 36 observed packages, including bootstrap tools, with the cu118 supplementary index. It is a version snapshot without artifact hashes. No package reinstall or fresh installation was tested in 2B/2C. For a future clean Windows Python 3.11 x64 environment only, the complete snapshot can be applied with `python -m pip install -r requirements-windows.lock.txt`; the original two-source route uses `requirements-cuda.txt` followed by `requirements.txt`. Revalidate affected readiness on a rebuilt environment. Preserve the existing target environment.
-
-## Next step
-
-Review [the completed first real-image experiment](docs/TACO_STAGE_4_RUN.md) locally before any further training or promotion: detection AP deteriorated despite lower loss. No additional preparation phase or optimization is started automatically. Earlier preparation and inference follow-ups below are historical context.
-
-Review [TACO audit counts, commands and pending decisions](docs/TACO_PREPARATION.md), particularly excluded/unlabeled objects in mixed images, EXIF coordinate alignment, duplicate IDs and negative boxes. Human annotation-viewer acceptance and a handling policy are needed before any later training-data export. The inference functional-check history follows below.
-
-Review [Phase 2E comparisons and limitations](docs/PHASE_2E_RESULTS.md) and [handoff](docs/HANDOFF.md). Corrected small/nested-box label placement has automated Windows replay and agent overlay evidence; final human confirmation remains pending. Clear piles and no-trash scenes are unavailable. Stop before Phase 3 decisions or optimization; no merge, grouping or training is authorized.
+---
+
+## 7. Reference Documentation
+- [Master Integration Guide for Argon](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md)
+- [Agent Collaboration Rules](AGENTS.md)

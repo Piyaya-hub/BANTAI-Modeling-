@@ -1,14 +1,14 @@
 # BANTAI Stage 5 Website & Dual-Model Integration Guide for Argon
 
-> **Target Audience**: Backend/Full-Stack Software Engineers (specifically "Argon") integrating the BANTAI Trash Detection & Spatial Grouping model alongside a complementary Street Issue / Road Surface Damage AI model (Model B) into the unified BANTAI municipal web application.  
-> **Status**: Verified Production-Ready (Stage 5 D-114).  
+> **Target Audience**: Backend / Full-Stack Engineers (specifically "Argon") integrating the BANTAI Trash Detection & Spatial Grouping model alongside a complementary Street Issue / Road Surface Damage AI model (Model B) into the unified BANTAI municipal web application.  
+> **Status**: Verified Production-Ready Master Documentation (Stage 5 D-115).  
 > **Repository Context**: Active supervised classes strictly locked to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`). Zero unsupervised classes (`battery`, `aerosol`, `broken_glass`, `syringe`, `food_waste`). Zero test-split access.
 
 ---
 
-## 1. Executive Overview & Dual-Model Website Architecture
+## 1. Project Scope & Executive Overview
 
-The BANTAI project is an intelligent municipal agent system designed for automated street issue detection, spatial grouping, and hotspot prioritization. The web application integrates two complementary AI models:
+The BANTAI project is an intelligent municipal agent platform designed for street issue detection, automated spatial hazard grouping, and hotspot prioritization. The web application integrates two complementary AI models:
 - **Model A (This Repository)**: Fine-Tuned Grounding DINO-T Swin-T Detector for still-image and extracted video-frame trash detection, BANTAI 5-category classification, and scale-normalized disjoint spatial grouping (`Individual Litter`, `Group of Individual Litter`, and `Garbage Pile`).
 - **Model B (Complementary Model)**: Road-surface defect detector (e.g. potholes, cracks, manhole hazards, road obstructions).
 
@@ -47,7 +47,7 @@ flowchart TD
 
 ---
 
-## 2. Fixed Taxonomy & Output Guarantees (Guardrails)
+## 2. Fixed Taxonomy & Spatial Grouping Contract (D-112 Standard)
 
 ### 2.1 Active Supervised Object Taxonomy (Strictly Locked: 9 Classes)
 
@@ -70,7 +70,7 @@ Model A outputs bounding boxes with integer `category_id` values strictly in `0.
 
 ### 2.2 BANTAI Spatial Grouping Region Taxonomy (D-112 Standard)
 
-The website frontend must represent litter not merely as isolated bounding boxes, but as aggregated spatial hazard regions:
+The website frontend represents litter not merely as isolated bounding boxes, but as aggregated spatial hazard regions:
 
 ```
 +---------------------------------------------------------------------------------------+
@@ -91,48 +91,50 @@ The website frontend must represent litter not merely as isolated bounding boxes
 ```
 
 **Guarantees provided by `compute_spatial_grouping()`**:
-1. **Zero Overlapping Multi-Item Regions**: No `Garbage Pile` and `Group of Individual Litter` will ever nest or overlap each other. Bounding boxes are strictly disjoint.
+1. **Zero Overlapping Multi-Item Regions**: No `Garbage Pile` and `Group of Individual Litter` will ever nest or overlap each other. Bounding boxes are strictly disjoint ($IoU \le 0.05$ and $IoMin < 0.20$).
 2. **Deterministic Cardinality**: Any cluster with fewer than 8 items ($k \le 7$) is automatically classified as `Group of Individual Litter`. Only high-density heaps with $k \ge 8$ qualify as `Garbage Pile`.
 
 ---
 
-## 3. Required Deployment Environment & Preserved Checkpoints
+## 3. Final Model Architecture, Benchmark Results & Preserved Checkpoints
 
-### 3.1 Environment Prerequisites
-- **Operating System**: Windows 10/11 x64 or Linux (Ubuntu 20.04+).
-- **Python**: `3.11.9 x64` (recommended: use the repository virtual environment `.venv-training` or an identical production container).
-- **PyTorch**: `2.x` with CUDA support (`cu121` or `cu118`). CPU inference is fully supported as a fallback.
-- **Dependencies**: Listed in `requirements-stage5-lock.txt`. Core packages:
-  ```
-  torch>=2.0.0
-  torchvision>=0.15.0
-  transformers==4.40.1
-  scipy>=1.11.0
-  numpy>=1.24.0
-  opencv-python>=4.8.0
-  Pillow>=9.5.0
-  ```
+### 3.1 Three-Model Consensus Architecture
 
-### 3.2 Production Checkpoint Paths (Verified Bitwise Preserved)
+To eliminate false positive hallucinations on street pavements, walls, and vehicle tires while preserving small items (e.g. cigarette butts, paper towel balls), Model A fuses three complementary Grounding DINO Swin-T inference models:
 
-All production weights are pre-saved in the repository:
+1. **Model 1: `Warm-Start Baseline` (Stage 4 blend, 384/576 resolution)**:
+   - Evaluates at $384 \times 576$ resolution.
+   - Provides conservative spatial grounding on broad plastic objects and beverage containers.
+2. **Model 2: `Stage 5 Run 1` (epoch-02, 256/384 resolution)**:
+   - Evaluates at $256 \times 384$ fast geometry.
+   - Provides high-recall sensitivity on compact small litter items (e.g. crumpled white paper towels).
+3. **Model 3: `D-095 Champion` (box-contrastive soup 50/50, 384/576 resolution)**:
+   - Fine-tuned with box-contrastive loss on hard negative anchors.
+   - Serves as the primary detector and query confidence score baseline.
+
+### 3.2 Final 65-Image Validation Benchmark Results
+
+Evaluated on the frozen 65-image TACO validation set under strict zero-test-split access:
+
+- **Official 9-Specific AP**: **`0.301350`** (peak benchmark record).
+- **BANTAI 5-Category AP**: **`0.497161`** (peak benchmark record).
+- **Paper Category AP**: **`0.640610`**.
+- **Detection Reliability**: **`77`** True Positives, **`0`** lost True Positives (`lost_tps == []`), **`63`** False Positives, **`36 / 65`** completely clean images.
+- **Showcase Integrity**: All 14 validation showcase images bitwise preserved with 0 regressions.
+
+### 3.3 Preserved Production Model Checkpoints
+
+Following the D-113 surgical disk cleanup (128.08 GB freed), exactly three production checkpoint directories are preserved:
 
 1. **Primary Champion (`D-095 Champion`, soup 50/50)**:
-   - Directory: `runs/training/stage5-d095-box-contrastive-20261102-a/checkpoints/best-inference/`
-   - Files: `model.safetensors`, `config.json`, `generation_config.json`, `soup_manifest.json`
+   - Path: `runs/training/stage5-d095-box-contrastive-20261102-a/checkpoints/best-inference/`
+   - Files: `model.safetensors` (688 MB), `config.json`, `generation_config.json`, `soup_manifest.json`
 2. **Ancestor Corroborator #1 (`Stage 5 Run 1`, epoch 2)**:
-   - Directory: `runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4/checkpoints/epoch-02/`
-   - Files: `model.safetensors`, `config.json`
+   - Path: `runs/training/stage5-paper-7604c2228fa94ba58dd3be0a770cf6f4/checkpoints/epoch-02/`
+   - Files: `model.safetensors` (688 MB), `config.json`
 3. **Ancestor Corroborator #2 (`Warm-Start Baseline`, step 350 + epoch 2 blend)**:
-   - Directory: `runs/training/taco-896e2f44146d4d54aee518e6087908ca/checkpoints/` (`step-000350` and `epoch-02`)
+   - Path: `runs/training/taco-896e2f44146d4d54aee518e6087908ca/checkpoints/` (`step-000350` and `epoch-02`)
    - Metadata: `runs/training/scale576-integration-c70249cde2f2422cb89b22232fd2b525/record.json`
-
-### 3.3 GPU Memory Management (VRAM Budgets)
-
-- **Low VRAM Environments (e.g. 6 GB GTX 1660 Ti or consumer laptop)**:
-  `execute_three_model_detection` runs sequentially and invokes `torch.cuda.empty_cache()` and `gc.collect()` between models. Model B should run sequentially after Model A.
-- **Production Server Environments (e.g. NVIDIA T4, A10G, L4, A100 >= 16 GB VRAM)**:
-  Models can be kept persistently in GPU VRAM, serving requests in $< 250\text{ ms}$ per frame.
 
 ---
 
@@ -144,7 +146,7 @@ The unified workflow consists of 4 deterministic pipeline steps:
 [Media Upload] 
       │
       ▼
-1. Frame Extraction ────► Sample 1.0 FPS RGB JPEGs
+1. Frame Extraction ────► Sample 1.0 FPS RGB JPEGs (shared by Model A and Model B)
       │
       ▼
 2. 3-Model Detection ───► Baseline, Run 1, and D-095 Champion forward passes
@@ -153,15 +155,20 @@ The unified workflow consists of 4 deterministic pipeline steps:
 3. Consensus & Filter ──► Rule 7 tie-breaks, paper recall recovery, NMS, Top-25
       │
       ▼
-4. Spatial Grouping ────► Disjoint DBSCAN clustering (Individual, Group, Pile)
+4. Spatial Grouping ────► Disjoint DBSCAN clustering (Individual, Group, Pile >= 8)
       │
       ▼
 [Unified JSON & Annotated Renderings]
 ```
 
+### Video Frame Extraction
+- Uploaded videos (`.mp4`, `.mov`, `.avi`, `.mkv`) are sampled at `1.0 FPS` using OpenCV into `runs/video_detection/<run_id>/frames/`.
+- Both Model A (trash) and Model B (road defects) process the **exact same JPEG frames**, eliminating redundant video decoding.
+- Standalone still photos (`.jpg`, `.jpeg`, `.png`) are processed directly as a single frame (`frame_0000`).
+
 ---
 
-## 5. Copy-Pasteable Backend Integration Recipes
+## 5. Copy-Pasteable Backend Integration Recipes for Argon
 
 ### Recipe 1: Pure Python In-Process Service (`run_bantai_trash_pipeline`)
 
@@ -323,7 +330,7 @@ class BantaiTrashService:
 
 ### Recipe 2: Subprocess CLI Execution
 
-If Argon prefers executing the pipeline as an asynchronous background worker process (e.g. via Celery, RQ, or Node.js `child_process.spawn`):
+If Argon executes the pipeline as an asynchronous background worker process (e.g. via Celery, RQ, or Node.js `child_process.spawn`):
 
 ```bash
 # Execute video frame extraction and three-model detection
@@ -391,7 +398,7 @@ Each frame record in `manifest.json` adheres to this exact contract:
 
 ### 6.2 Unified Dual-Model API Response (Model A + Model B)
 
-To power the website's unified incident map and dispatch prioritization, Argon should combine Model A and Model B outputs into this standard JSON schema:
+To power the website's unified incident map and dispatch prioritization, Argon combines Model A and Model B outputs into this standard JSON schema:
 
 ```json
 {
@@ -479,7 +486,23 @@ Priority thresholds:
 
 ---
 
-## 7. Argon's 6-Step Verification Checklist
+## 7. Concise Milestone Register (`D-040` to `D-115`) & Verification Checklist
+
+### 7.1 Key Milestone Register
+
+- **D-040 to D-042 (Stage 3D & Legal Scope)**: Grounding DINO Swin-T detector, native TkAgg viewer, Section 185 non-commercial research fair-use authorization bound.
+- **D-043 to D-076 (Stage 4 Fine-Tuning & Scale-576 Optimization)**: 8-class baseline, resolution investigation ($384 \times 576$), class-balanced loss, coordinate integrity, weight soup integration achieving legacy validation benchmark AP = `0.250362`.
+- **D-077 to D-085 (Stage 5 Paper Category & Hierarchy)**: Added 9th supervised class (`paper`), table-driven object registry, 5 canonical BANTAI categories (`Plastic`, `Paper`, `Organic`, `Metal`, `Potentially Hazardous`), audit confirming unsupervised classes excluded.
+- **D-086 to D-095 (High-Resolution Training & Box-Contrastive Champion)**: Multi-epoch hard-negative mining, box-contrastive fine-tuning producing `D-095 Champion` soup 50/50 ($AP_9 = 0.301350$, $AP_5 = 0.497161$).
+- **D-096 to D-105 (Three-Model Consensus & Spatial Grouping Foundation)**: Tri-model routing, Rule 7 tie-breaks (shadow rocks, vehicle tires, painted road stripes), DBSCAN scale-normalized spatial clustering.
+- **D-106 to D-110 (Video Frame Extraction & Distractor Guardrails)**: 1.0 FPS video frame extraction, camera-border watermark filtering, standalone input photo detection (`For_testing.jpg`).
+- **D-111 (Paper Towel Small-Litter Recall Recovery)**: Cross-model boosting (Pass 7C), compact paper consistency (Rule 7A Case E), and small-paper peer bypass (Rule 7B9) detecting crumpled white paper towels on concrete pavement.
+- **D-112 (Garbage Pile $k \ge 8$ Cardinality Rule)**: Fixed strict boundary: $k = 1 \implies$ `Individual Litter`, $2 \le k \le 7 \implies$ `Group of Individual Litter`, $k \ge 8 \implies$ `Garbage Pile`. Guaranteed disjoint multi-item regions.
+- **D-113 (Surgical Disk Cleanup)**: Removed 128.08 GB redundant experimental files and optimizer states; preserved 100% of production weights and historical metrics.
+- **D-114 (Argon Integration Guide)**: Authored master dual-model integration specification.
+- **D-115 (Documentation Consolidation)**: Consolidated 88 scattered `.md` files into this single master guide, with root `README.md` and `AGENTS.md` fully aligned.
+
+### 7.2 Argon's 6-Step Verification Checklist
 
 After cloning the repository and setting up the environment, Argon should run these 6 deterministic verification steps:
 
@@ -493,7 +516,7 @@ After cloning the repository and setting up the environment, Argon should run th
   ```
 - [ ] **Step 3: Run Core Stage 5 Unit Tests**
   ```powershell
-  python -m unittest tests/test_stage5_d112_garbage_pile_min8_rule.py
+  .\.venv-training\Scripts\python.exe -m unittest tests/test_stage5_d112_garbage_pile_min8_rule.py
   ```
   *(Expected: Ran 7 tests, all passed, 0 failures, 0 errors)*
 - [ ] **Step 4: Verify Disjoint Spatial Grouping Logic**

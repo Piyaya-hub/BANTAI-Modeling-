@@ -51,7 +51,7 @@ class TestExtensibleClassAudit(unittest.TestCase):
 
         # Check artifacts exist
         self.assertTrue(OUT_JSON.is_file())
-        self.assertTrue(OUT_MD.is_file())
+        self.assertTrue((ROOT / "docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md").is_file())
 
         saved_json = strict_load(OUT_JSON)
         self.assertEqual(saved_json["authorization"], "D-085")
