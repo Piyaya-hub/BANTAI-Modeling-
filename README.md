@@ -92,6 +92,22 @@ Verify repository health and test discovery:
 
 ---
 
-## 7. Reference Documentation
-- [Master Integration Guide for Argon](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md)
-- [Agent Collaboration Rules](AGENTS.md)
+## 7. Complete Documentation Directory
+
+### Core Architecture & Governance
+- **[Master Integration Guide for Argon](docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md)**: Master engineering guide for full-stack engineer Argon, detailing video frame extraction, dual-model integration recipes, and municipal hotspot scoring.
+- **[System Scope & Boundaries](docs/SCOPE.md)**: Official project boundaries, Model A vs Model B demarcation, non-commercial academic research basis, and taxonomy guardrails.
+- **[System Architecture](docs/ARCHITECTURE.md)**: Detailed neural network architecture, Swin-T backbone, Three-Model Consensus engine, and scale-normalized DBSCAN spatial grouping.
+- **[JSON Schemas & Contracts](docs/SCHEMA.md)**: Formal JSON contracts for object detections, regional spatial hazard groupings, diagnostic telemetry, and unified dual-model API responses.
+- **[Evaluation Methodology](docs/EVALUATION.md)**: Standardized validation protocol, COCO AP metrics, 5-category aggregation rules, visual review protocols, and split hygiene.
+- **[Phases Directory](docs/PHASES.md)**: Master roadmap linking all 5 research and development phases.
+- **[Decision Register](docs/DECISIONS.md)**: Complete chronological register of all architectural decisions and milestones (`D-001` through `D-116`).
+- **[Handoff Report](docs/HANDOFF.md)**: Operational handoff report and deployment guide for Argon, backend engineers, and municipal stakeholders.
+- **[Agent Collaboration Rules](AGENTS.md)**: Multi-agent coordination protocols and repository operating standards.
+
+### Consolidated Phase Progress Documents
+- **[Phase 1: Planning, Environment Readiness & Data Preparation](docs/PHASE_1_PLANNING_AND_READINESS.md)**: Concept proposal, hardware readiness verification, and initial dataset analysis (`D-001` through `D-020`).
+- **[Phase 2: Baseline Zero-Shot Evaluation & Visual Review](docs/PHASE_2_BASELINE_AND_VISUAL_REVIEW.md)**: Zero-shot prompt evaluation, interactive TkAgg review viewer, and unannotated photo inspection (`D-021` through `D-039`).
+- **[Phase 3: Adapter Synthesis & Synthetic Qualification](docs/PHASE_3_ADAPTER_AND_SYNTHETIC_QUALIFICATION.md)**: Swin-T text/vision adapter design, encoder freezing, and synthetic gradient qualification (`D-040`).
+- **[Phase 4: 8-Class Bounded Real-Image Fine-Tuning](docs/PHASE_4_EIGHT_CLASS_FINE_TUNING.md)**: Section 185 academic claim, coordinate bugfix, learning rate schedules, and high-resolution $384 \times 576$ training (`D-041` through `D-069`).
+- **[Phase 5: 9-Class Consensus, Spatial Grouping & Integration](docs/PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md)**: 9th class (`paper`) expansion, D-095 Champion soup, three-model consensus, video extraction, and scale-normalized disjoint spatial grouping (`D-070` through `D-116`).
