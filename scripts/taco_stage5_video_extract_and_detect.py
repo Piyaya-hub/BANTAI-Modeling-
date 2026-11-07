@@ -407,7 +407,7 @@ def main() -> int:
     # Save video-showcase.json
     showcase_data = {
         "schema_version": "bantai.stage5-video-showcase.v1",
-        "authorization": "D-110",
+        "authorization": "D-112",
         "video_source": video_meta,
         "dataset_root": str(frames_dir.relative_to(ROOT)).replace("\\", "/"),
         "image_ids": [e["id"] for e in frame_entries],
@@ -437,7 +437,7 @@ def main() -> int:
     # Save manifest.json
     manifest_data = {
         "schema_version": "bantai.stage5-video-manifest.v1",
-        "authorization": "D-110",
+        "authorization": "D-112",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
         "video_source": video_meta,
         "extracted_frames_count": len(frame_entries),

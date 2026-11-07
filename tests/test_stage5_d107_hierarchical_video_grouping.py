@@ -131,35 +131,38 @@ class TestStage5D107HierarchicalVideoGrouping(unittest.TestCase):
         self.assertEqual(res_single["regions"][0]["category"], "individual_litter")
         self.assertEqual(res_single["regions"][0]["model_score"], 0.88)
 
-        # 2. Dense 3-item pile in Tier 1
+        # 2. Dense 8-item pile in Tier 1 (qualifies as Garbage Pile under D-112 k >= 8)
         dense_pile = [
-            {"bbox": [200.0, 200.0, 80.0, 80.0], "score": 0.60, "category_id": 3, "query_id": 0},
-            {"bbox": [220.0, 210.0, 75.0, 75.0], "score": 0.55, "category_id": 4, "query_id": 1},
-            {"bbox": [240.0, 205.0, 70.0, 70.0], "score": 0.50, "category_id": 8, "query_id": 2},
+            {"bbox": [200.0 + i * 8.0, 200.0, 80.0, 80.0], "score": 0.60, "category_id": 8, "query_id": i}
+            for i in range(8)
         ]
         res_pile = compute_spatial_grouping(dense_pile, 1000.0, 1000.0)
         self.assertEqual(res_pile["summary"]["garbage_pile_count"], 1)
         self.assertEqual(res_pile["regions"][0]["category"], "garbage_pile")
         self.assertIsNone(res_pile["regions"][0]["model_score"])
-        self.assertGreaterEqual(res_pile["regions"][0]["packing_density"], 0.40)
+        self.assertEqual(res_pile["regions"][0]["item_count"], 8)
 
         # 3. Dense pile + distant foreground item: separated into 1 Garbage Pile and 1 Individual Litter
         mixed_items = dense_pile + [
-            {"bbox": [800.0, 800.0, 40.0, 40.0], "score": 0.75, "category_id": 1, "query_id": 3}
+            {"bbox": [800.0, 800.0, 40.0, 40.0], "score": 0.75, "category_id": 1, "query_id": 8}
         ]
         res_mixed = compute_spatial_grouping(mixed_items, 1000.0, 1000.0)
         self.assertEqual(res_mixed["summary"]["total_regions"], 2)
         self.assertEqual(res_mixed["summary"]["garbage_pile_count"], 1)
         self.assertEqual(res_mixed["summary"]["individual_litter_count"], 1)
         self.assertEqual(res_mixed["regions"][0]["category"], "garbage_pile")
-        self.assertEqual(res_mixed["regions"][0]["item_count"], 3)
+        self.assertEqual(res_mixed["regions"][0]["item_count"], 8)
         self.assertEqual(res_mixed["regions"][1]["category"], "individual_litter")
         self.assertEqual(res_mixed["regions"][1]["item_count"], 1)
+
+        # 3-item dense cluster classifies as group_of_individual_litter under D-112 default
+        res_p3 = compute_spatial_grouping(dense_pile[:3], 1000.0, 1000.0)
+        self.assertEqual(res_p3["regions"][0]["category"], "group_of_individual_litter")
 
     def test_03_all_14_validation_showcase_invariants(self):
         """All 14 validation showcase images preserved under D-107 Two-Tier grouping."""
         expected_results = {
-            1: {"n_dets": 2, "n_regs": 1, "cats": ["garbage_pile"], "items": [2]},
+            1: {"n_dets": 2, "n_regs": 1, "cats": ["group_of_individual_litter"], "items": [2]},
             165: {"n_dets": 1, "n_regs": 1, "cats": ["individual_litter"], "items": [1]},
             208: {"n_dets": 1, "n_regs": 1, "cats": ["individual_litter"], "items": [1]},
             238: {"n_dets": 1, "n_regs": 1, "cats": ["individual_litter"], "items": [1]},

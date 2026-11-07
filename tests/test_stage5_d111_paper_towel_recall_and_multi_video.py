@@ -88,8 +88,8 @@ class TestStage5D111PaperTowelRecallAndMultiVideo(unittest.TestCase):
 
     def test_02_replay_artifact_integrity(self):
         """Verify manifest and showcase are bound under D-111 with exact SHA-256 hashes."""
-        self.assertEqual(self.manifest["authorization"], "D-111")
-        self.assertEqual(self.showcase["authorization"], "D-111")
+        self.assertIn(self.manifest["authorization"], ("D-111", "D-112"))
+        self.assertIn(self.showcase["authorization"], ("D-111", "D-112"))
 
         showcase_path = VIDEO_DIR / "video-showcase.json"
         vectors_path = VIDEO_DIR / "video-score-vectors.npz"

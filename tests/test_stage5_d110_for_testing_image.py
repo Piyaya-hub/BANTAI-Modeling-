@@ -108,7 +108,7 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
         self.assertEqual(sha256_file(INPUT_IMAGE_PATH), sha256_file(frame_copy))
 
         # Check manifest
-        self.assertIn(self.manifest["authorization"], ("D-110", "D-111"))
+        self.assertIn(self.manifest["authorization"], ("D-110", "D-111", "D-112"))
         self.assertIn(self.manifest["extracted_frames_count"], (8, 17))
         self.assertIn("10000", self.manifest["frames_summary"])
         sum_10000 = self.manifest["frames_summary"]["10000"]
@@ -116,7 +116,7 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
         self.assertEqual(sum_10000["visible_items_count"], 6)
 
         # Check showcase
-        self.assertIn(self.showcase["authorization"], ("D-110", "D-111"))
+        self.assertIn(self.showcase["authorization"], ("D-110", "D-111", "D-112"))
         self.assertEqual(self.showcase["image_ids"][0], 10000)
         self.assertIn(len(self.showcase["image_ids"]), (8, 17))
         self.assertIn("10000", self.showcase["images"])
@@ -186,15 +186,16 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
 
         self.assertEqual(s["total_physical_items"], 6)
         self.assertEqual(s["total_regions"], 3)
-        self.assertEqual(s["garbage_pile_count"], 1)
+        # Under D-112 (min_pile_items = 8): 4-item cluster is Group of Individual Litter
+        self.assertEqual(s["garbage_pile_count"], 0)
+        self.assertEqual(s["group_of_individual_litter_count"], 1)
         self.assertEqual(s["individual_litter_count"], 2)
-        self.assertEqual(s["group_of_individual_litter_count"], 0)
 
         # Region details
-        piles = [r for r in grp["regions"] if r["category"] == "garbage_pile"]
-        self.assertEqual(len(piles), 1)
-        self.assertEqual(piles[0]["item_count"], 4)
-        self.assertIsNone(piles[0]["model_score"])
+        groups = [r for r in grp["regions"] if r["category"] == "group_of_individual_litter"]
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["item_count"], 4)
+        self.assertIsNone(groups[0]["model_score"])
 
         indivs = [r for r in grp["regions"] if r["category"] == "individual_litter"]
         self.assertEqual(len(indivs), 2)
@@ -219,7 +220,7 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
     def test_07_all_14_validation_showcases_preserved(self):
         """Verify zero regressions across all 14 validation showcase images."""
         showcase_expected = {
-            1: {"tot": 2, "regs": 1, "pile": 1, "grp": 0, "ind": 0},
+            1: {"tot": 2, "regs": 1, "pile": 0, "grp": 1, "ind": 0},
             165: {"tot": 1, "regs": 1, "pile": 0, "grp": 0, "ind": 1},
             208: {"tot": 1, "regs": 1, "pile": 0, "grp": 0, "ind": 1},
             238: {"tot": 1, "regs": 1, "pile": 0, "grp": 0, "ind": 1},

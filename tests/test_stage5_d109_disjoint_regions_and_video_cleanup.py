@@ -15,7 +15,7 @@ Verifies:
      - 0 false Potentially Hazardous pavement crack/wrapper corner detections.
      - Forms exactly 1 clean unified Garbage Pile on the main heap (with 0 nested piles).
   4. All 14 Validation Showcase Invariants Preserved:
-     - Image 1: 1 Garbage Pile (n=2)
+     - Image 1: 1 Group of Individual Litter (n=2)
      - Image 165: 1 Individual Litter (n=1)
      - Image 208: 1 Individual Litter (n=1)
      - Image 238: 1 Individual Litter (n=1)

@@ -141,11 +141,17 @@ class TestStage5D104SpatialGrouping(unittest.TestCase):
 
         self.assertEqual(s["total_physical_items"], 2)
         self.assertEqual(s["total_regions"], 1)
-        self.assertEqual(s["garbage_pile_count"], 1)
-        self.assertEqual(s["group_of_individual_litter_count"], 0)
+        # Under D-112: k=2 < 8 classifies as group_of_individual_litter
+        self.assertEqual(s["garbage_pile_count"], 0)
+        self.assertEqual(s["group_of_individual_litter_count"], 1)
         self.assertEqual(s["individual_litter_count"], 0)
         self.assertIsNone(res["regions"][0]["model_score"])
         self.assertEqual(res["regions"][0]["item_count"], 2)
+        self.assertEqual(res["regions"][0]["category"], "group_of_individual_litter")
+
+        # When min_pile_items=2 is passed, it qualifies as garbage_pile
+        res_p2 = compute_spatial_grouping(vis, image_width=w, image_height=h, min_pile_items=2)
+        self.assertEqual(res_p2["summary"]["garbage_pile_count"], 1)
 
     def test_04_image_777_group_of_individual_litter(self):
         """Image 777 (000084.JPG): 5 scattered items -> 1 Group of Individual Litter (5 items, 1 region)."""

@@ -150,7 +150,7 @@ class TestStage5D105FalseGroupElimination(unittest.TestCase):
     def test_03_all_14_showcase_images(self):
         """All 14 showcase images verified for detections and spatial regions."""
         expected_results = {
-            1: {"n_dets": 2, "n_regs": 1, "cats": ["garbage_pile"], "items": [2]},
+            1: {"n_dets": 2, "n_regs": 1, "cats": ["group_of_individual_litter"], "items": [2]},
             165: {"n_dets": 1, "n_regs": 1, "cats": ["individual_litter"], "items": [1]},
             208: {"n_dets": 1, "n_regs": 1, "cats": ["individual_litter"], "items": [1]},
             238: {"n_dets": 1, "n_regs": 1, "cats": ["individual_litter"], "items": [1]},
@@ -203,14 +203,19 @@ class TestStage5D105FalseGroupElimination(unittest.TestCase):
             if reg["item_count"] >= 2:
                 self.assertEqual(reg["category"], "group_of_individual_litter", "Low density cluster must not be Garbage Pile")
 
-        # 2. Dense overlapping cluster must be Garbage Pile
+        # 2. Dense overlapping cluster must be Garbage Pile (k >= 8 items under D-112)
         dense_pile_rows = [
-            {"bbox": [100.0, 100.0, 150.0, 150.0], "score": 0.70, "category_id": 8, "query_id": 0},
-            {"bbox": [120.0, 110.0, 140.0, 160.0], "score": 0.65, "category_id": 8, "query_id": 1},
+            {"bbox": [100.0 + i * 10.0, 100.0, 150.0, 150.0], "score": 0.70, "category_id": 8, "query_id": i}
+            for i in range(8)
         ]
         res_pile = compute_spatial_grouping(dense_pile_rows, image_width=2000.0, image_height=2000.0)
         self.assertEqual(len(res_pile["regions"]), 1)
         self.assertEqual(res_pile["regions"][0]["category"], "garbage_pile")
+        self.assertEqual(res_pile["regions"][0]["item_count"], 8)
+
+        # 2-item dense cluster classifies as group_of_individual_litter under D-112 default
+        res_pile_2 = compute_spatial_grouping(dense_pile_rows[:2], image_width=2000.0, image_height=2000.0)
+        self.assertEqual(res_pile_2["regions"][0]["category"], "group_of_individual_litter")
         self.assertGreaterEqual(res_pile["regions"][0]["packing_density"], 0.45)
         self.assertGreaterEqual(res_pile["regions"][0]["max_iou"], 0.15)
 

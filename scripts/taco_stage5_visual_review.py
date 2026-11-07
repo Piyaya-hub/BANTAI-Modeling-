@@ -283,7 +283,7 @@ def load_video_showcase(root=ROOT):
         return None
 
     manifest = strict_load(manifest_path)
-    if manifest.get("authorization") not in ("D-106", "D-107", "D-108", "D-109", "D-110", "D-111"):
+    if manifest.get("authorization") not in ("D-106", "D-107", "D-108", "D-109", "D-110", "D-111", "D-112"):
         return None
 
     showcase_sha = hashlib.sha256(showcase_path.read_bytes()).hexdigest()

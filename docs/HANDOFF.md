@@ -1,5 +1,31 @@
 # BANTAI Stage 4 handoff
 
+## D-112: Rework Garbage Pile Minimum Cardinality Rule to k >= 8 Bounding Boxes (min_pile_items = 8) - 2026-11-07
+
+Owner authorization D-112 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
+
+1. **Strict Cardinality Boundary (`scripts/taco_stage5_spatial_grouping.py`)**:
+   - Added `DEFAULT_MIN_PILE_ITEMS = 8` and parameter `min_pile_items: int = DEFAULT_MIN_PILE_ITEMS` to `compute_spatial_grouping`.
+   - Enforced the exact cardinality rule:
+     * `Individual Litter` (`individual_litter`): $k = 1$ isolated bounding box (`model_score = float(score)`).
+     * `Group of Individual Litter` (`group_of_individual_litter`): $2 \le k < 8$ spatially associated bounding boxes ($k \in \{2, 3, 4, 5, 6, 7\}$, `model_score = None`), or any cluster of $k \ge 2$ items not meeting pile criteria.
+     * `Garbage Pile` (`garbage_pile`): strictly requires $k \ge 8$ bounding boxes in a consolidated spatial heap (`model_score = None`) with contact/density criteria (`touching_pairs >= 1 or packing_density >= 0.25`).
+   - Any Tier 1 candidate heap core with $< 8$ items after Step 1A/1B/1C consolidation is demoted to `group_of_individual_litter`.
+2. **Replay Artifact & Video Verification**:
+   - `For_testing.jpg` (`Image 10000`): Center Curb Cluster ($k = 4 < 8$) classifies as `Group of Individual Litter (4 items)`. Image totals: 0 piles, 1 group, 2 individual litter items.
+   - `Motion_Extract_Testing_2.mp4` (`Frames 10005..10007`): 4 crumpled paper towels ($k = 4 < 8$) classify as `Group of Individual Litter (4 items)`.
+   - Roadside dense heaps with $k \ge 8$ (e.g. Frame 10001 with 16 items) classify as `Garbage Pile (k items)`.
+   - Replay artifacts (`video-showcase.json`, `manifest.json`) bound under authorization `"D-112"` with exact SHA-256 hashes.
+3. **Zero Overlapping Multi-Item Regions**:
+   - Non-overlapping region guarantee enforced across all video frames and all 65 validation images (0 overlapping pairs with $IoU > 0.05$ or $IoMin \ge 0.20$).
+4. **Verified Evidence**:
+   - Full 65 validation benchmark bitwise preserved: AP9 = $0.301350$, AP5 = **$0.497161$**, `paper` AP = $0.640610$, total TPs = $77$, lost TPs = $0$ (`lost_tps == []`), total FPs = $63$, clean images = $36 / 65$.
+   - All 14 validation showcase images preserved with 0 regressions.
+   - Unit tests: 7 passed in `tests/test_stage5_d112_garbage_pile_min8_rule.py`; 120 passed in `tests/test_stage5_d*.py`.
+   - 433 guarded Stage 4 tests passed (22 skipped, 0 failures, 0 errors).
+   - See [TACO Stage 5 D-112 Garbage Pile Min-8 Rule Report](TACO_STAGE_5_D112_GARBAGE_PILE_MIN8_RULE.md).
+
+
 ## D-111: Cross-Model Small-Litter Recall Recovery (Motion_Extract_Testing_2.mp4 Paper Towels) & Intra-Group Paper Consistency - 2026-11-07
 
 Owner authorization D-111 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.

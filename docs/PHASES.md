@@ -1,5 +1,18 @@
 # Development phases
 
+## Current Stage 5 state through D-112
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-112, the Garbage Pile minimum
+cardinality rule was reworked to strictly require $k \ge 8$ bounding boxes (`min_pile_items = 8`):
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Strict Cardinality Boundary**: Isolated items ($k = 1$) $	o$ `Individual Litter` (`model_score = float(score)`); clusters with $2 \le k < 8$ items $	o$ `Group of Individual Litter` (`model_score = None`); dense contiguous accumulations with $k \ge 8$ items $	o$ `Garbage Pile` (`model_score = None`).
+- **Scene Re-Classification**: Center Curb Cluster on `For_testing.jpg` ($k = 4 < 8$) and crumpled paper towels on `Motion_Extract_Testing_2.mp4` ($k = 4 < 8$) accurately re-classified as `Group of Individual Litter (4 items)`.
+- **Zero Overlapping Multi-Item Regions**: Guaranteed disjoint region partitioning across all video frames and all 65 validation images.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+- See [TACO Stage 5 D-112 Garbage Pile Min-8 Rule Report](TACO_STAGE_5_D112_GARBAGE_PILE_MIN8_RULE.md).
+
 ## Current Stage 5 state through D-111
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image

@@ -3,22 +3,29 @@
 Layers the three BANTAI spatial region categories from docs/SCOPE.md:
   - `individual_litter` -> "Individual Litter": An isolated discarded object not assigned to a group.
   - `group_of_individual_litter` -> "Group of Individual Litter": Multiple separately distinguishable
-    discarded objects that are spatially associated without necessarily forming a dense pile.
-  - `garbage_pile` -> "Garbage Pile": Concentrated accumulation of discarded waste, typically
-    overlapping, stacked, or densely collected.
+    discarded objects that are spatially associated without necessarily forming a dense pile (2 <= k < 8).
+  - `garbage_pile` -> "Garbage Pile": Concentrated accumulation of discarded waste, requiring k >= 8
+    items in a consolidated heap with high contact density (touching_pairs >= 1 or packing_density >= 0.25).
 
-Implements a Two-Tier Hierarchical DBSCAN Spatial Grouping Architecture:
-  - Tier 1: Dense Garbage Pile Core Extraction
+Implements a Two-Tier Hierarchical Spatial Grouping Architecture:
+  - Tier 1: Dense Core Extraction & Contiguous Heap Consolidation
     Identifies compact, high-density overlapping piles using tight heap adjacency:
-      g_ij == 0.0 or IoU_ij > 0.01 or (g_ij <= 0.35 * min(s_i, s_j) and bilateral neighborhood support)
-    Clusters qualify as Garbage Pile if:
-      (k >= 3 and (touching_pairs >= 1 or density >= 0.40)) or
-      (k == 2 and density >= density_threshold and max_iou >= iou_pile_threshold)
+      g_ij == 0.0 or IoU_ij > 0.01 or (g_ij <= 0.42 * min(s_i, s_j) and bilateral neighborhood support)
+    Consolidates contiguous heap components via Step 1A (merging adjacent/overlapping cores)
+    and Step 1B (absorbing pile-enclosed and pile-bordering items).
   - Tier 2: Local Proximity Grouping with Anti-Chaining Constraint
     Clusters remaining non-pile items using scale-normalized proximity:
       g_ij <= max(scale_factor * max(s_i, s_j), diag_fraction * L)
     bounded by an anti-chaining cluster diagonal threshold:
       cluster_diag <= max_cluster_diag_fraction * L (default 0.42 * L)
+  - Step 1C & Region Disjointness:
+    Absorbs overlapping Tier 2 clusters into adjacent heap cores, merges overlapping multi-item
+    regions, guaranteeing 0 overlapping multi-item region boxes across all images and video captures.
+  - Final Cardinality Boundary (Stage 5 D-112):
+    - k == 1: `individual_litter` ("Individual Litter", model_score = float(score))
+    - 2 <= k < min_pile_items (default min_pile_items = 8): `group_of_individual_litter` ("Group of Individual Litter", model_score = None)
+    - k >= min_pile_items (k >= 8): `garbage_pile` ("Garbage Pile", model_score = None) if touching_pairs >= 1 or density >= 0.25;
+      otherwise `group_of_individual_litter`.
 
 Invariants:
   - Preserves underlying supervised object predictions (category_id, score, bbox).
@@ -42,6 +49,7 @@ DEFAULT_DIAG_FRACTION = 0.225
 DEFAULT_DENSITY_THRESHOLD = 0.45
 DEFAULT_IOU_PILE_THRESHOLD = 0.15
 DEFAULT_MAX_CLUSTER_DIAG_FRACTION = 0.42
+DEFAULT_MIN_PILE_ITEMS = 8
 
 
 def compute_edge_gap(box_a: List[float], box_b: List[float]) -> float:
@@ -53,7 +61,7 @@ def compute_edge_gap(box_a: List[float], box_b: List[float]) -> float:
     return math.hypot(gx, gy)
 
 
-def compute_box_intersection_and_areas(box_a: Tuple[float, float, float, float], box_b: Tuple[float, float, float, float]) -> Tuple[float, float, float]:
+def compute_box_intersection_and_areas(box_a: Tuple[float, float, float, float] | List[float], box_b: Tuple[float, float, float, float] | List[float]) -> Tuple[float, float, float]:
     """Computes (intersection_area, area_a, area_b) for two xywh boxes."""
     xa, ya, wa, ha = box_a
     xb, yb, wb, hb = box_b
@@ -76,15 +84,16 @@ def compute_box_iou(box_a: List[float], box_b: List[float]) -> float:
 
 
 def compute_spatial_grouping(
-    rows,
+    rows: List[Dict[str, Any]],
     image_width: float | None = None,
     image_height: float | None = None,
-    scale_factor: float = 2.0,
-    diag_fraction: float = 0.225,
-    density_threshold: float = 0.45,
-    iou_pile_threshold: float = 0.15,
-    max_cluster_diag_fraction: float = 0.42,
-):
+    scale_factor: float = DEFAULT_SCALE_FACTOR,
+    diag_fraction: float = DEFAULT_DIAG_FRACTION,
+    density_threshold: float = DEFAULT_DENSITY_THRESHOLD,
+    iou_pile_threshold: float = DEFAULT_IOU_PILE_THRESHOLD,
+    max_cluster_diag_fraction: float = DEFAULT_MAX_CLUSTER_DIAG_FRACTION,
+    min_pile_items: int = DEFAULT_MIN_PILE_ITEMS,
+) -> Dict[str, Any]:
     if not rows:
         return {
             "annotated_rows": [],
@@ -109,8 +118,8 @@ def compute_spatial_grouping(
     boxes = [r["bbox"] for r in rows]
     scales = [math.sqrt(max(1.0, b[2] * b[3])) for b in boxes]
 
-    pairwise_gaps = {}
-    pairwise_ious = {}
+    pairwise_gaps: Dict[Tuple[int, int], float] = {}
+    pairwise_ious: Dict[Tuple[int, int], float] = {}
     for i in range(n_items):
         for j in range(i + 1, n_items):
             g = compute_edge_gap(boxes[i], boxes[j])
@@ -121,7 +130,7 @@ def compute_spatial_grouping(
             pairwise_ious[(j, i)] = u
 
     # Tier 1: Dense core extraction
-    tight_adj = {i: [] for i in range(n_items)}
+    tight_adj: Dict[int, List[int]] = {i: [] for i in range(n_items)}
     for i in range(n_items):
         for j in range(i + 1, n_items):
             g = pairwise_gaps[(i, j)]
@@ -169,15 +178,14 @@ def compute_spatial_grouping(
         touch_count = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(comp[ii], comp[jj])] == 0.0)
         max_u = max((pairwise_ious[(comp[ii], comp[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
 
-        is_pile = (
+        # Candidate core criteria for Step 1A/1B heap consolidation
+        is_candidate_core = (
             (k >= 3 and (touch_count >= 1 or density >= 0.40))
             or (k == 2 and density >= density_threshold and max_u >= iou_pile_threshold)
         )
-        if is_pile:
+        if is_candidate_core:
             pile_comps.append({
                 "members": comp,
-                "category": "garbage_pile",
-                "label": SPATIAL_CATEGORIES["garbage_pile"],
                 "bbox": [enc_x, enc_y, enc_w, enc_h],
                 "packing_density": density,
                 "touching_pairs": touch_count,
@@ -259,7 +267,7 @@ def compute_spatial_grouping(
 
     # Tier 2: Non-pile items
     rem_indices = [i for i in range(n_items) if i not in assigned_indices]
-    t2_adj = {i: [] for i in rem_indices}
+    t2_adj: Dict[int, List[int]] = {i: [] for i in rem_indices}
     for i_idx, i in enumerate(rem_indices):
         for j in rem_indices[i_idx + 1:]:
             g = pairwise_gaps[(i, j)]
@@ -299,7 +307,7 @@ def compute_spatial_grouping(
 
     t2_comps.sort(key=lambda c: c[0])
 
-    # Step 1C: Absorb any Tier 2 cluster overlapping a pile by >= 0.20 of either area
+    # Step 1C: Absorb any Tier 2 cluster overlapping a pile core by >= 0.15 of either area or IoU > 0.05
     final_t2_comps = []
     for comp in t2_comps:
         m_boxes = [boxes[idx] for idx in comp]
@@ -312,7 +320,8 @@ def compute_spatial_grouping(
         merged_pile = None
         for p in pile_comps:
             inter, a_c, a_p = compute_box_intersection_and_areas(c_box, p["bbox"])
-            if (a_c > 0 and inter / a_c >= 0.20) or (a_p > 0 and inter / a_p >= 0.20):
+            u = compute_box_iou(c_box, p["bbox"])
+            if (a_c > 0 and inter / a_c >= 0.15) or (a_p > 0 and inter / a_p >= 0.15) or u > 0.05:
                 merged_pile = p
                 break
 
@@ -332,7 +341,7 @@ def compute_spatial_grouping(
         else:
             final_t2_comps.append(comp)
 
-    # Also merge any two Tier 2 clusters that overlap each other by >= 0.20
+    # Also merge any two Tier 2 clusters that overlap each other by >= 0.15 or IoU > 0.05
     changed_t2_merge = True
     while changed_t2_merge:
         changed_t2_merge = False
@@ -347,7 +356,8 @@ def compute_spatial_grouping(
                       max(boxes[idx][0] + boxes[idx][2] for idx in comp2) - min(boxes[idx][0] for idx in comp2),
                       max(boxes[idx][1] + boxes[idx][3] for idx in comp2) - min(boxes[idx][1] for idx in comp2)]
                 inter, a1, a2 = compute_box_intersection_and_areas(b1, b2)
-                if (a1 > 0 and inter / a1 >= 0.20) or (a2 > 0 and inter / a2 >= 0.20):
+                u = compute_box_iou(b1, b2)
+                if (a1 > 0 and inter / a1 >= 0.15) or (a2 > 0 and inter / a2 >= 0.15) or u > 0.05:
                     final_t2_comps[c1_i] = sorted(list(set(comp1 + comp2)))
                     final_t2_comps.pop(c2_i)
                     changed_t2_merge = True
@@ -355,77 +365,143 @@ def compute_spatial_grouping(
             if changed_t2_merge:
                 break
 
-    # Build regions and annotated rows
+    # Consolidate candidate multi-item regions from pile_comps and final_t2_comps
+    all_multi_comps = []
+    for p in pile_comps:
+        all_multi_comps.append(p)
+
+    single_item_comps = []
+    for comp in final_t2_comps:
+        if len(comp) == 1:
+            single_item_comps.append(comp)
+        else:
+            m_boxes = [boxes[idx] for idx in comp]
+            enc_x = min(b[0] for b in m_boxes)
+            enc_y = min(b[1] for b in m_boxes)
+            enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
+            enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
+            area_sum = sum(b[2] * b[3] for b in m_boxes)
+            density = area_sum / max(1e-6, enc_w * enc_h)
+            k = len(comp)
+            touch_count = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(comp[ii], comp[jj])] == 0.0)
+            max_u = max((pairwise_ious[(comp[ii], comp[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+            all_multi_comps.append({
+                "members": comp,
+                "bbox": [enc_x, enc_y, enc_w, enc_h],
+                "packing_density": density,
+                "touching_pairs": touch_count,
+                "max_iou": max_u,
+            })
+
+    # Non-overlapping multi-item region guarantee: merge any two multi-item regions that overlap
+    changed_multi = True
+    while changed_multi:
+        changed_multi = False
+        for c1_i in range(len(all_multi_comps)):
+            for c2_i in range(c1_i + 1, len(all_multi_comps)):
+                mc1 = all_multi_comps[c1_i]
+                mc2 = all_multi_comps[c2_i]
+                b1 = mc1["bbox"]
+                b2 = mc2["bbox"]
+                inter, a1, a2 = compute_box_intersection_and_areas(b1, b2)
+                u = compute_box_iou(b1, b2)
+                iomin = inter / min(a1, a2) if min(a1, a2) > 0 else 0.0
+                if u > 0.05 or iomin >= 0.15:
+                    merged_members = sorted(list(set(mc1["members"] + mc2["members"])))
+                    m_boxes = [boxes[idx] for idx in merged_members]
+                    enc_x = min(b[0] for b in m_boxes)
+                    enc_y = min(b[1] for b in m_boxes)
+                    enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
+                    enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
+                    area_sum = sum(b[2] * b[3] for b in m_boxes)
+                    mc1["members"] = merged_members
+                    mc1["bbox"] = [enc_x, enc_y, enc_w, enc_h]
+                    mc1["packing_density"] = area_sum / max(1e-6, enc_w * enc_h)
+                    k = len(merged_members)
+                    mc1["touching_pairs"] = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(merged_members[ii], merged_members[jj])] == 0.0)
+                    mc1["max_iou"] = max((pairwise_ious[(merged_members[ii], merged_members[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+                    all_multi_comps.pop(c2_i)
+                    changed_multi = True
+                    break
+            if changed_multi:
+                break
+
+    # Sort multi-item comps for determinism
+    all_multi_comps.sort(key=lambda c: c["members"][0])
+
+    # Classify each region according to Stage 5 D-112:
+    # Garbage Pile strictly requires k >= min_pile_items (default 8) AND (touching_pairs >= 1 or packing_density >= 0.25)
+    # Multi-item clusters with 2 <= k < min_pile_items (2 <= k <= 7) are Group of Individual Litter
+    # Single items (k == 1) are Individual Litter
     regions = []
     annotated_rows = [deepcopy(r) for r in rows]
     reg_id = 0
-    pile_count = len(pile_comps)
+    pile_count = 0
     group_count = 0
     indiv_count = 0
 
-    for p in pile_comps:
-        comp = p["members"]
-        p["group_id"] = reg_id
-        p["item_count"] = len(comp)
-        p["model_score"] = None
-        p["member_indices"] = comp
-        regions.append(p)
-        for idx in comp:
-            annotated_rows[idx]["spatial_group_id"] = reg_id
-            annotated_rows[idx]["spatial_category"] = "garbage_pile"
-            annotated_rows[idx]["spatial_label"] = SPATIAL_CATEGORIES["garbage_pile"]
-        reg_id += 1
-
-    for comp in final_t2_comps:
+    for mc in all_multi_comps:
+        comp = mc["members"]
         k = len(comp)
-        m_boxes = [boxes[idx] for idx in comp]
-        enc_x = min(b[0] for b in m_boxes)
-        enc_y = min(b[1] for b in m_boxes)
-        enc_w = max(b[0] + b[2] for b in m_boxes) - enc_x
-        enc_h = max(b[1] + b[3] for b in m_boxes) - enc_y
-        area_sum = sum(b[2] * b[3] for b in m_boxes)
-        density = area_sum / max(1e-6, enc_w * enc_h)
-        touch_count = sum(1 for ii in range(k) for jj in range(ii + 1, k) if pairwise_gaps[(comp[ii], comp[jj])] == 0.0)
-        max_u = max((pairwise_ious[(comp[ii], comp[jj])] for ii in range(k) for jj in range(ii + 1, k)), default=0.0)
+        density = mc.get("packing_density", 0.0)
+        touch_count = mc.get("touching_pairs", 0)
 
-        if k == 1:
-            cat = "individual_litter"
+        is_pile = (k >= min_pile_items) and (touch_count >= 1 or density >= 0.25)
+
+        if is_pile:
+            cat = "garbage_pile"
             label = SPATIAL_CATEGORIES[cat]
-            sc_val = float(rows[comp[0]]["score"])
-            indiv_count += 1
+            pile_count += 1
         else:
-            is_pile = (
-                (density >= density_threshold and (max_u >= iou_pile_threshold or touch_count >= 1))
-                or (k >= 3 and density >= 0.55)
-            )
-            if is_pile:
-                cat = "garbage_pile"
-                label = SPATIAL_CATEGORIES[cat]
-                sc_val = None
-                pile_count += 1
-            else:
-                cat = "group_of_individual_litter"
-                label = SPATIAL_CATEGORIES[cat]
-                sc_val = None
-                group_count += 1
+            cat = "group_of_individual_litter"
+            label = SPATIAL_CATEGORIES[cat]
+            group_count += 1
 
-        regions.append({
+        reg = {
             "group_id": reg_id,
             "category": cat,
             "label": label,
-            "bbox": [enc_x, enc_y, enc_w, enc_h],
+            "bbox": mc["bbox"],
             "item_count": k,
-            "model_score": sc_val,
+            "model_score": None,
             "member_indices": comp,
             "members": comp,
             "packing_density": density,
             "touching_pairs": touch_count,
-            "max_iou": max_u,
-        })
+            "max_iou": mc.get("max_iou", 0.0),
+        }
+        regions.append(reg)
         for idx in comp:
             annotated_rows[idx]["spatial_group_id"] = reg_id
             annotated_rows[idx]["spatial_category"] = cat
             annotated_rows[idx]["spatial_label"] = label
+        reg_id += 1
+
+    for comp in single_item_comps:
+        idx = comp[0]
+        b = boxes[idx]
+        cat = "individual_litter"
+        label = SPATIAL_CATEGORIES[cat]
+        sc_val = float(rows[idx]["score"])
+        indiv_count += 1
+
+        reg = {
+            "group_id": reg_id,
+            "category": cat,
+            "label": label,
+            "bbox": b,
+            "item_count": 1,
+            "model_score": sc_val,
+            "member_indices": comp,
+            "members": comp,
+            "packing_density": 1.0,
+            "touching_pairs": 0,
+            "max_iou": 0.0,
+        }
+        regions.append(reg)
+        annotated_rows[idx]["spatial_group_id"] = reg_id
+        annotated_rows[idx]["spatial_category"] = cat
+        annotated_rows[idx]["spatial_label"] = label
         reg_id += 1
 
     summary = {
