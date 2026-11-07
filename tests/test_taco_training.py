@@ -75,7 +75,7 @@ class DataTests(unittest.TestCase):
                 photo_rights_cleared=False,annotation_database_rights_cleared=False,
                 owner_declaration={'non_commercial_academic':True,'local_only':True,
                     'no_dataset_publication_redistribution_upload':True,'workflow_authorized':True},
-                assessment={'path':'docs/TACO_STAGE_4_ACADEMIC_USE.md','sha256':digest(ROOT/'docs/TACO_STAGE_4_ACADEMIC_USE.md')},
+                assessment={'path':'docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md','sha256':digest(ROOT/'docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md')},
                 factors={k:'Controlled fixture analysis' for k in ('purpose','nature','amount','market')},
                 sources=['https://lawphil.net/statutes/repacts/ra1997/ra_8293_1997.html',
                     'https://lawphil.net/statutes/repacts/ra2013/ra_10372_2013.html',

@@ -1,8 +1,114 @@
+# BANTAI Phase 1: Planning, Environment Readiness & Data Preparation
+
+> **Scope**: Executive concept proposal, Phase 1 implementation planning, initial hardware verification (`GTX 1660 Ti`, Python `3.11.9`), and TACO dataset/split preparation (`D-001` through `D-020`).  
+> **Status**: Completed & Published (PR #5, PR #6).
+
+---
+
+## Table of Contents
+1. [Executive Overview & Scope Boundaries](#1-executive-overview--scope-boundaries)
+2. [Concept Proposal & System Context](#2-concept-proposal--system-context)
+3. [Phase 1 Implementation Plan](#3-phase-1-implementation-plan)
+4. [Environment Snapshot & Hardware Readiness](#4-environment-snapshot--hardware-readiness)
+5. [TACO Dataset Analysis & Initial Preparation](#5-taco-dataset-analysis--initial-preparation)
+6. [Phase 1 Milestone Register (D-001 through D-020)](#6-phase-1-milestone-register-d-001-through-d-020)
+
+---
+
+## 1. Executive Overview & Scope Boundaries
+
+The BANTAI project is an academic intelligent-agent research initiative for street-issue detection and hotspot prioritization. The initial development scope of this repository is **trash detection on still images and extracted video frames only**. Roadside garbage, potholes, road-surface damage, incident management, central databases, reporting, and frequency-based hotspot ranking belong to the broader municipal proposal; AI modelling and computer vision are this repository's exclusive implementation responsibility.
+
+### Taxonomy Guardrails Established in Phase 1
+- **Active Supervised Taxonomy**: Strictly locked to the 9 active classes (`0: cigarette`, `1: plastic_bottle`, `2: plastic_bag`, `3: plastic_wrapper`, `4: plastic_film`, `5: drink_can`, `6: plastic_cup`, `7: styrofoam_piece`, `8: paper`).
+- **Canonical BANTAI Categories**: Mapped to the 5 municipal categories: `Plastic`, `Paper`, `Organic`, `Metal`, and `Potentially Hazardous`.
+- **Zero Unsupervised Classes**: Zero support for unaudited classes (`battery`, `aerosol`, `broken_glass`, `syringe`, `food_waste`).
+- **Spatial Grouping Regions**: Defined the three core spatial concepts:
+  * `individual_litter` -> `"Individual Litter"` ($k = 1$)
+  * `group_of_individual_litter` -> `"Group of Individual Litter"` ($2 \le k \le 7$)
+  * `garbage_pile` -> `"Garbage Pile"` ($k \ge 8$)
+
+---
+
+## 2. Concept Proposal & System Context
+
+# BANTAI Concept Proposal
+
+**Institution:** Technological Institute of the Philippines — Quezon City  
+**Department:** College of Computer Studies, Computer Science Department  
+**Course:** CS 403 – Intelligent Agents, First Semester S.Y. 2026–2027  
+**Faculty In-Charge:** Mr. Jess N. Garcia  
+
+---
+
+## (1) Proponents and Roles
+
+| Name | Specified Role |
+| :--- | :--- |
+| **Aguila, Sophia Mae** | Integration & Quality Assurance / Integration Developer |
+| **Gumabon, Joshua Philip** | Front-End / UI/UX Developer |
+| **Lalamoro, Justine Mark** | Model Trainer / Developer |
+| **Santiago, Samuel Rei** | Project Manager / Scripting & Analytics Developer |
+| **Soriano, Jhun Deniel** | Full-Stack / Lead Web Developer |
+
+---
+
+## (2) Project Title
+**BANTAI: An Intelligent Agent for Street Issue Detection and Hotspot Prioritization**
+
+---
+
+## (3) Background of the Study
+
+Rapid urbanization, population growth, and expanding economic activity bring significant everyday challenges for local government units, particularly in keeping neighborhoods clean and maintaining safe road conditions (Reddy et al., 2025). In busy municipal areas, staying on top of waste management and identifying road degradation requires substantial workforce resources and continuous manual oversight. Even with local environmental ordinances and community sanitation guidelines in place, local personnel frequently run into practical bottlenecks when trying to identify, track, and address localized issues in a timely manner (Gamao & Caelian, 2023).
+
+For many communities, the current monitoring framework relies heavily on manual field patrols, reactive resident complaints, and routine spot checks. To begin with, relying solely on manual inspection makes covering wide road networks difficult, as staff must physically survey areas to spot roadside garbage piles, potholes, and surface damage—a process that is time-consuming, labor-intensive, and prone to human oversight (Maske, 2025). Additionally, incident reports often become fragmented and repetitive, as residents and field staff frequently report the exact same issue through separate channels, which quickly clutters local databases with duplicate entries when no central mechanism exists to merge them.
+
+Beyond reporting inefficiencies, local officials face ongoing challenges when allocating maintenance teams and equipment, as they lack an objective, data-driven way to prioritize issues based on how often or where they are being reported. Furthermore, existing operations rarely connect modern automated detection tools with a central web interface, leaving leaders without clear visual summaries or neighborhood trend data to help plan proactive cleanups and road repairs (Reddy et al., 2025). To help address these practical limitations, this study proposes an intelligent agent-based system designed to automatically detect anomalies through pretrained computer vision models, combine duplicate reports into consolidated records, and dynamically highlight high-priority hotspot locations based on report frequency across target communities.
+
+---
+
+## (4) Project Objectives
+
+The researchers aim to develop an intelligent agent-based system that identifies selected environmental and road infrastructure anomalies and prioritizes reported incidents and hotspot locations within a barangay. Through the creation of a prototype, the system aims to support barangay personnel and officials in planning cleanup, inspection, and maintenance activities through computer vision-assisted detection and frequency-based decision support.
+
+Specifically, the study aims:
+1. To implement pretrained computer vision models capable of identifying selected environmental and road infrastructure anomalies, particularly garbage piles, potholes, and road surface damage, through user-submitted photographs and prerecorded video footage simulating CCTV-based anomaly monitoring.
+2. To develop a web-based incident reporting and management system that records identified anomalies, their locations, timestamps, supporting images, detection results, and incident statuses, while providing a mechanism for consolidating multiple observations of the same incident to minimize duplicate records.
+3. To design a frequency-based intelligent agent that automatically aggregates validated incident reports and observation records to dynamically prioritize individual incidents and identify hotspot locations based on reporting frequency, using report recency as a secondary criterion when rankings are equal.
+4. To develop an accessible and user-friendly web dashboard that displays identified incidents, prioritized hotspot locations, incident statuses, and descriptive trends based on anomaly categories, locations, and reporting frequency to support barangay cleanup, inspection, and maintenance decisions.
+5. To evaluate the developed system in terms of computer vision detection performance for each supported anomaly category, incident consolidation accuracy, hotspot prioritization consistency, processing time, usability, and basic accessibility.
+
+---
+
+## (5) Expected Output
+
+The project is expected to produce a functional prototype of an intelligent agent-based environmental and road infrastructure anomaly detection and decision-support system. The system will integrate pretrained computer vision models, a web-based incident reporting and management platform, and a frequency-based intelligent agent to identify, organize, and prioritize reported anomalies. The computer vision component will utilize pretrained object detection models, such as RF-DETR Nano and Grounding DINO Tiny, to identify selected anomalies, particularly potholes, road surface damage, and roadside garbage accumulation. Anomaly identification will be demonstrated through two methods: user-submitted photographs and prerecorded video footage simulating CCTV-based monitoring, without requiring continuous live camera integration.
+
+The system will provide a centralized database that stores incident information, including identified anomaly categories, reported locations, timestamps, supporting images, detection results, and incident statuses. Submitted reports and video-based observations will undergo validation and incident consolidation to minimize duplicate records. A frequency-based intelligent agent will automatically evaluate validated incident records and generate dynamic priority rankings based primarily on the number of valid supporting reports, using report recency as a secondary criterion for resolving equal rankings. The agent will also aggregate reporting frequency according to predefined streets or monitoring areas to identify and rank reported-anomaly hotspots. These rankings will be updated as new validated reports are received or existing incident statuses change.
+
+An accessible and user-friendly web dashboard will serve as the primary interface for barangay personnel and officials. It will display identified anomalies, incident details, priority rankings, hotspot locations, and incident statuses, alongside descriptive summaries and visualizations of anomaly categories, reporting frequency, and location-based trends. Through these features, the system is expected to provide organized and data-driven information that supports the planning of cleanup, inspection, and maintenance activities. Priority rankings will represent the frequency of validated reports rather than the physical severity or actual danger of an incident, allowing barangay personnel to retain responsibility for determining appropriate actions.
+
+The completed prototype will undergo evaluation to determine its detection performance across supported anomaly categories, effectiveness of incident consolidation, consistency of frequency-based prioritization and hotspot identification, and processing time. The web interface will also be assessed for usability and basic accessibility features, including readable content, sufficient visual contrast, properly labeled controls, and keyboard navigation. The resulting system will demonstrate the feasibility of combining pretrained computer vision models with a frequency-based intelligent agent to provide practical decision support for localized environmental and road infrastructure monitoring.
+
+---
+
+## References
+
+- Gamao, R. A., & Caelian, M. V. (2023). Implementation and challenges of solid waste management in communities of a component city in the Philippines. *Technium Social Sciences Journal*, 44, 28–40. https://doi.org/10.47577/tssj.v44i1.8897
+- Maske, Y. (2025). Urban civic issues image dataset: Potholes and garbage (QR4Change) (Version 2) [Data set]. *Mendeley Data*. https://doi.org/10.17632/zndzygc3p3.2
+- Reddy, P. S., Battula, B., Pasha, M. F., Reddy, G. B. S., Bimbasri, P., & Virinchi, E. (2025). YOLO-based system for efficient garbage and pothole detection and reporting. *2025 Third International Conference on Networks, Multimedia and Information Technology (NMITCON)*, IEEE. https://doi.org/10.1109/NMITCON65824.2025.11188066
+
+
+---
+
+## 3. Phase 1 Implementation Plan
+
 # BANTAI Phase 1 implementation plan — Codex ownership
 
-Current update: Phase 2A and Phase 2B are published (PRs #5–#6). The owner instructed Codex to proceed with **Phase 2C**, superseding the previous stop-before-2C boundary. The pinned inference/mapping/native-display baseline is implemented for review. See [PHASES.md](PHASES.md) and [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md). Historical task boundaries and fictional examples below remain history, not model evidence. No automatic grouping, training, application modules or merge is authorized.
+Current update: Phase 2A and Phase 2B are published (PRs #5–#6). The owner instructed Codex to proceed with **Phase 2C**, superseding the previous stop-before-2C boundary. The pinned inference/mapping/native-display baseline is implemented for review. See [PHASES.md](PHASES.md) and [PHASE_2C_CHECKS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md). Historical task boundaries and fictional examples below remain history, not model evidence. No automatic grouping, training, application modules or merge is authorized.
 
-Originally prepared 2026-10-17; published through merged PR #3. Status: published planning deliverable with detector proposals still unvalidated; current Phase 2A preparation authorization does not accept Phase 1 or authorize detector implementation. The owner now assigns implementation to Codex and reports Antigravity made no changes. Phase 2A is authorized for Section 4 and Section 8 stages 2–3 only: local Windows setup/readiness. Detector implementation, model-weight downloads/loading and inference remain unauthorized. Phase 2A technical preparation has since completed on owner-supplied Windows outputs/screenshots/confirmation, recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md) and the [exact snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Publication/authorization alone was not its evidence; detector execution remains unauthorized.
+Originally prepared 2026-10-17; published through merged PR #3. Status: published planning deliverable with detector proposals still unvalidated; current Phase 2A preparation authorization does not accept Phase 1 or authorize detector implementation. The owner now assigns implementation to Codex and reports Antigravity made no changes. Phase 2A is authorized for Section 4 and Section 8 stages 2–3 only: local Windows setup/readiness. Detector implementation, model-weight downloads/loading and inference remain unauthorized. Phase 2A technical preparation has since completed on owner-supplied Windows outputs/screenshots/confirmation, recorded in [PHASE_2A_READINESS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md) and the [exact snapshot](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md). Publication/authorization alone was not its evidence; detector execution remains unauthorized.
 
 ## 1. Repository state and requirement precedence
 
@@ -20,7 +126,7 @@ Confirmed by owner: pretrained Grounding DINO Tiny, Hugging Face Transformers, W
 
 ### Official source findings
 
-The findings below preserve official-source checks from the original planning task. Subsequent package/wheel metadata rechecks and target-side Windows readiness evidence are recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md); see the snapshot for the limited local operations actually verified. No official example or published result is a BANTAI experiment.
+The findings below preserve official-source checks from the original planning task. Subsequent package/wheel metadata rechecks and target-side Windows readiness evidence are recorded in [PHASE_2A_READINESS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md); see the snapshot for the limited local operations actually verified. No official example or published result is a BANTAI experiment.
 
 | Finding | Evidence and verification limit |
 | --- | --- |
@@ -69,7 +175,7 @@ This correction appends missing ignore rules `/data/input/`, `/results/`, `/.cac
 
 ## 4. Windows environment verification and proposed setup
 
-Phase 2A authorizes these setup/readiness steps on the actual Windows computer once preflight is available. Commands below are not claimed executed until results are recorded in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md). This session currently has only cloud Linux access. Start at the actual repository root; do not reuse the cloud `.venv`.
+Phase 2A authorizes these setup/readiness steps on the actual Windows computer once preflight is available. Commands below are not claimed executed until results are recorded in [PHASE_2A_READINESS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md). This session currently has only cloud Linux access. Start at the actual repository root; do not reuse the cloud `.venv`.
 
 ### Read-only preflight
 
@@ -498,3 +604,349 @@ No additional user preference is needed to complete this plan. Proposed defaults
 Phase 2A setup/readiness is complete: the owner supplied local preflight/package/device/viewer outputs, checkpoint/card/config/processor metadata and the official NVIDIA driver-table excerpt. Earlier cloud source-access gaps were resolved through target-side requests; the exact evidence is in the snapshot. Before later authorized model execution, Codex must retain those pins and evidence rather than inventing model results. Those preparation checks no longer block the next phase; they do not authorize it or measure detection quality. CPU fallback can unblock GPU-specific issues, but it cannot establish GPU acceptance.
 
 Phase 2A technical preparation checks are complete based on supplied target evidence; no setup blocker remains. Only later detector/inference phases require further phase authorization. Category boundaries, exact aliases, prompts/thresholds and overlap defaults remain technical proposals; the installed package versions have only the limited preparation verification in the snapshot; apply the corrected numeric/display requirements consistently. Publication alone does not accept every proposal. Team photos may arrive later; their absence blocks actual functional checking only, not planning or non-model implementation. There are no required annotations, benchmark splits, or unresolved dataset-collection questions.
+
+
+---
+
+## 4. Environment Snapshot & Hardware Readiness
+
+# Phase 2A verified environment snapshot
+
+## Status and provenance
+
+Phase 2A technical preparation checks are complete on the Windows target based on the owner's supplied command outputs, screenshot and explicit normal-viewer-return confirmation. Codex guided the commands from a separate Linux cloud checkout and recorded the evidence; it did not directly execute Windows commands. This records preparation readiness, not owner acceptance of later implementation, model-memory fit, successful detection or accuracy.
+
+The owner selected a local `Documents/Python/Project Image-object Detection` repository folder under their user profile. Its fresh `.venv` uses Python 3.11.9 x64. No prior user environment was replaced. The initial RTX 2080 Super report was superseded by actual supplied GTX 1660 Ti output; historical decision rows remain unchanged.
+
+## Recorded target and checkpoint metadata
+
+The following values are actual supplied observations, not fictional detection examples. Free VRAM is a past query observation, not guaranteed future availability. The model/config/API/card/preprocessor requests downloaded documentation/configuration only, not model weights. Both future model and processor loads must use the recorded revision.
+
+```json
+{
+  "evidence_source": "Owner-supplied Windows command outputs, native-plot screenshot and explicit normal-return confirmation; not cloud-executed Windows checks",
+  "phase": "2A environment preparation only",
+  "os_version": "10.0.19045.6466",
+  "git_version": "2.45.1.windows.1",
+  "python_version": "3.11.9",
+  "python_bits": 64,
+  "environment_relative_path": ".venv",
+  "device": {
+    "name": "NVIDIA GeForce GTX 1660 Ti",
+    "driver": "472.19",
+    "total_memory_mib": 6144,
+    "observed_free_memory_mib": [
+      5235,
+      5236
+    ],
+    "compute_capability": [
+      7,
+      5
+    ],
+    "cuda_build": "11.8",
+    "cuda_available": true,
+    "cpu_tensor_result": 2.0,
+    "gpu_tensor_result": 2.0
+  },
+  "dependency_check": "No broken requirements found.",
+  "native_viewer": {
+    "backend": "TkAgg",
+    "synthetic_plot_rendered": true,
+    "normal_return_confirmed": true,
+    "annotated_image_export": false
+  },
+  "model": {
+    "id": "IDEA-Research/grounding-dino-tiny",
+    "revision": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+    "license_metadata": "apache-2.0",
+    "gated": false,
+    "safetensors_files": [
+      "model.safetensors"
+    ],
+    "observed_model_type": "grounding-dino",
+    "observed_backbone": {
+      "depths": [
+        2,
+        2,
+        6,
+        2
+      ],
+      "model_type": "swin",
+      "num_heads": [
+        3,
+        6,
+        12,
+        24
+      ],
+      "out_features": [
+        "stage2",
+        "stage3",
+        "stage4"
+      ],
+      "out_indices": [
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "processor": {
+    "revision": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+    "config": {
+      "do_normalize": true,
+      "do_pad": true,
+      "do_rescale": true,
+      "do_resize": true,
+      "format": "coco_detection",
+      "image_mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "image_processor_type": "GroundingDinoImageProcessor",
+      "image_std": [
+        0.229,
+        0.224,
+        0.225
+      ],
+      "processor_class": "GroundingDinoProcessor",
+      "resample": 2,
+      "rescale_factor": 0.00392156862745098,
+      "size": {
+        "longest_edge": 1333,
+        "shortest_edge": 800
+      }
+    }
+  },
+  "cuda_install_index": "https://download.pytorch.org/whl/cu118",
+  "supporting_install_command": "python -m pip install transformers==4.51.3 Pillow==11.2.1 matplotlib==3.10.3",
+  "local_artifacts": [
+    ".venv/phase2a-requirements.txt",
+    ".venv/phase2a-environment.json"
+  ],
+  "model_weights_downloaded_in_phase2a": false,
+  "model_loaded_in_phase2a": false,
+  "inference_run_in_phase2a": false
+}
+```
+
+The processor configuration's `coco_detection` format is an upstream processor setting, not a requirement to annotate team photos. The baseline remains unannotated functional checking in a later authorized phase.
+
+## Official sources and driver interpretation
+
+- [Pinned model card](https://huggingface.co/IDEA-Research/grounding-dino-tiny/blob/a2bb814dd30d776dcf7e30523b00659f4f141c71/README.md): the supplied excerpt describes zero-shot detection and lower-case period-separated prompts; it does not validate BANTAI's categories.
+- [Pinned model configuration](https://huggingface.co/IDEA-Research/grounding-dino-tiny/resolve/a2bb814dd30d776dcf7e30523b00659f4f141c71/config.json) and [processor configuration](https://huggingface.co/IDEA-Research/grounding-dino-tiny/resolve/a2bb814dd30d776dcf7e30523b00659f4f141c71/preprocessor_config.json): target HTTP responses were successful; metadata values are recorded above.
+- [NVIDIA CUDA 11.8 release notes](https://docs.nvidia.com/cuda/archive/11.8.0/cuda-toolkit-release-notes/index.html): supplied target output from Table 2 lists Windows x86_64 driver >=452.39 for CUDA 11.8.x minor-version compatibility. Reported driver 472.19 exceeds that minimum, and actual CPU/CUDA tensor checks passed. The separately listed Windows driver 522.06 is associated with the toolkit distribution; it is not the same table's minor-compatibility minimum.
+- [Official cu118 wheel index](https://download.pytorch.org/whl/cu118/torch/): cloud metadata inspection confirmed the Windows CPython 3.11 torch 2.7.1+cu118 wheel; target installation/import/device checks supplied the runtime evidence.
+
+The earlier cloud proxy 403 responses remain historical access observations. Successful target HTTP requests resolved the checkpoint and driver-reference verification gaps; they do not imply that cloud network policy changed. Minor compatibility and a basic tensor test do not guarantee every future model operation or memory requirement. No driver/toolkit update was performed or required for the checks completed here; diagnose any future authorized model-specific failure using actual evidence.
+
+The API reported Apache-2.0 license metadata and non-gated access. Preserve upstream license/notice conditions in later authorized distribution; the supplied model-card excerpt showed no additional application restriction. No weights were obtained during preparation.
+
+## Exact dependency snapshot
+
+The owner ran `pip freeze --all` in the target `.venv`. The complete supplied 36-package output is retained below. `pip check` passed and direct imports reported torch 2.7.1+cu118, torchvision 0.22.1+cu118, Transformers 4.51.3, Pillow 11.2.1 and Matplotlib 3.10.3. Pillow's initial transitive version 12.3.0 was explicitly replaced by the planned 11.2.1 before final verification.
+
+```text
+certifi==2026.7.22
+charset-normalizer==3.5.2
+colorama==0.4.6
+contourpy==1.3.3
+cycler==0.12.1
+filelock==3.32.3
+fonttools==4.67.0
+fsspec==2026.7.0
+huggingface_hub==0.36.2
+idna==3.20
+Jinja2==3.1.6
+kiwisolver==1.5.1
+MarkupSafe==3.0.3
+matplotlib==3.10.3
+mpmath==1.3.0
+networkx==3.6.1
+numpy==2.4.6
+packaging==26.3
+pillow==11.2.1
+pip==24.0
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+regex==2026.9.29
+requests==2.34.2
+safetensors==0.8.0
+setuptools==65.5.0
+six==1.17.0
+sympy==1.14.0
+tokenizers==0.21.4
+torch==2.7.1+cu118
+torchvision==0.22.1+cu118
+tqdm==4.70.1
+transformers==4.51.3
+typing_extensions==4.16.0
+urllib3==2.8.0
+
+```
+
+CUDA torch/torchvision were installed with `--index-url https://download.pytorch.org/whl/cu118`; supporting packages used the command recorded above. The target saved `.venv/phase2a-requirements.txt` and `.venv/phase2a-environment.json`, confirmed by command output. The JSON contains Python/checkpoint/processor settings and the CUDA installation source; the full freeze includes bootstrap tools. These local files remain ignored under `.venv`. This committed document preserves their supplied package/configuration values without committing an environment, photographs, caches or weights.
+
+This is a point-in-time Windows environment snapshot, not an artifact-hash lock or a claim that a fresh reinstall was tested. Keep the CUDA install source alongside versions when reproducing; a bare local-version freeze is insufficient to select the cu118 wheel source. Do not rerun passed readiness checks on the unchanged environment without a new failure or concern. If rebuilding or changing packages, revalidate the affected package/device/viewer operations. Python 3.11.9 came from the official python.org x64 installer through WinGet, whose supplied output confirmed installer-hash verification; no TLS/checksum checks were disabled.
+
+## Completed and deliberately unrun work
+
+Passed: interpreter/venv setup, exact direct package imports, dependency consistency, CPU/CUDA tensor execution, official checkpoint/configuration/license/safetensors metadata, same-revision processor settings, native TkAgg rendering/normal return, exact freeze and install-source capture. No current Phase 2A preparation blocker remains in the supplied evidence.
+
+Not run by design: pretrained weight download/loading, detector implementation, inference, team-photo processing, grouping, training/fine-tuning, model-memory-fit tests and detection-quality evaluation. Preparation completion does not authorize them, merge the branch, accept every proposed prompt/threshold/alias rule or approve a later phase. Stop here pending the owner's next phase instruction. See [PHASES.md](PHASES.md), [PHASE_2A_READINESS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md), and [HANDOFF.md](HANDOFF.md).
+
+
+---
+
+## 5. TACO Dataset Analysis & Initial Preparation
+
+# TACO harmonization and annotation visualization
+
+Stage 1 history: the owner subsequently reported representative annotation review and authorized strict-clean conversion/splitting in D-036. See [Stage 2 commands and evidence](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md). The earlier no-export/no-splits boundary below is superseded for that implementation; fine-tuning remains unauthorized. These audit/viewer utilities remain unchanged.
+
+The owner authorized this preparation stage on 2026-10-18 (D-035): audit the existing external COCO dataset and visualize its annotations under the eight approved object labels. It creates review artifacts, not training examples or splits. The current Grounding DINO model, detection configuration, inference logic, three inference categories and results viewer are independent and unchanged.
+
+## Files and requirements
+
+| File | Purpose |
+| --- | --- |
+| [config/taco_taxonomy.v1.json](../config/taco_taxonomy.v1.json) | Version 1.0.0 mapping of 11 exact TACO category names to eight BANTAI labels. Original IDs/names are retained; label IDs 0-7 identify this preparation taxonomy, not a finalized trainer encoding. |
+| [scripts/taco_dataset.py](../scripts/taco_dataset.py) | Read-only COCO validation, image hashes/readability/dimension checks, taxonomy lookup, report writing/reloading. |
+| [scripts/audit_taco.py](../scripts/audit_taco.py) | Audit CLI with JSON/CSV review output and new-directory protection. |
+| [scripts/view_taco.py](../scripts/view_taco.py) | Separate local Tk/TkAgg annotation viewer with deterministic per-class sampling, class selector, Next/Previous and zoom/pan. |
+| [tests/test_taco.py](../tests/test_taco.py) | Synthetic mapping, COCO, malformed-box, missing/corrupt image, identity, EXIF and drawing checks. |
+| [tests/windows_taco_check.py](../tests/windows_taco_check.py) | Optional native checks against a real local audit; auto-closes and checks source hashes. |
+| [.gitignore](../.gitignore) | Adds `/reports/taco/`, `/data/taco/`, `/BANTAI-Datasets/` for reports and accidental in-repository dataset copies. The actual sibling dataset already lies outside Git. |
+
+Use the existing verified Windows Python 3.11 `.venv`. The audit uses Python's standard library and already-installed Pillow; the viewer additionally uses already-installed Matplotlib and Python's Tk. No pycocotools, pandas, dataset downloader, model import, GPU, new dependency or package reinstall is needed. Existing dependency reproduction references remain in [README.md](../README.md); an installation is not performed by these tools.
+
+Default dataset: `../BANTAI-Datasets/TACO/`; default source: its `annotations.json`. Relative paths resolve from the repository root even when invoked from another shell directory. `--annotations` overrides a path relative to the repository root; it is not relative to the dataset folder. All source access is read only.
+
+## Audit commands and artifacts
+
+```powershell
+.venv/Scripts/python.exe scripts/audit_taco.py
+.venv/Scripts/python.exe scripts/audit_taco.py --dataset-root ../BANTAI-Datasets/TACO --output reports/taco/my-review
+```
+
+The default creates a new UUID folder under ignored `reports/taco/`. Explicit output directories must be new and cannot overlap the external dataset. Existing reports are never overwritten. Exit 0 means no detected image/annotation/structural issues; **exit 1 means the audit completed and wrote reports with issues**, including known missing images; exit 2 means an input/configuration/write failure. A partial report after write failure must not be treated as a completed audit.
+
+Each report folder contains:
+
+| Artifact | Contents |
+| --- | --- |
+| `audit.json` | Concise counts, per-label object/unique-image counts, all original class counts and exclusion handling, structural issues, source/taxonomy hashes. |
+| `class_counts.csv` | Eight proposed classes: totals, annotations attached to readable images, conservative usable objects, unique usable images and blocked/invalid counts. |
+| `original_classes.csv` | All source categories, source IDs/names, proposed label or explicit exclusion state, and usable counts. |
+| `image_issues.csv` | Missing, unsafe, unreadable and dimension-mismatched image records. |
+| `annotation_issues.csv` | Unusable annotation indexes/IDs, validation and image-availability/alignment issues. |
+| `images.jsonl` | Every original COCO image record plus path, image hash, status and dimensions/EXIF diagnostics. |
+| `annotation_review.jsonl` | Every original annotation, unmodified metadata/segmentation/area/iscrowd/custom fields, original category identity, proposed label and explicit handling/validity state. Source list index disambiguates duplicate annotation IDs. |
+| `taxonomy_snapshot.json` | Exact taxonomy values used for the audit. |
+| `source_metadata.json` | Other original COCO top-level metadata, all original categories, licenses and scene annotations. |
+
+These are review ledgers, not a filtered COCO training export. Excluded annotations remain in the ledgers and the viewer; absence of a mapped label never makes an object an implicit negative/background example. Image counts per class overlap and must not be summed into a dataset image total. Object counts mean annotated instances, not a claim that all real objects are annotated.
+
+Validation checks unique integer IDs, category/image references, safe local image paths, successful full image decoding, declared versus actual dimensions, and finite COCO `[x,y,width,height]` boxes with positive sizes, nonnegative origins and endpoints within declared dimensions. Boxes are never silently clipped. Duplicate IDs are held as ambiguous rather than selecting one record. A missing image blocks usability but does not by itself make its annotation geometrically invalid. Nonstandard JSON constants and duplicate JSON keys fail source loading. Segmentation, area and crowd metadata are preserved; this stage does not validate mask geometry or establish crowd/loss policy.
+
+## Viewer commands
+
+Reuse a completed audit to avoid decoding the entire dataset on every launch:
+
+```powershell
+.venv/Scripts/python.exe scripts/view_taco.py --report reports/taco/review-v1 --sample-per-class 1
+.venv/Scripts/python.exe scripts/view_taco.py --report reports/taco/review-v1 --classes cigarette plastic_bottle plastic_bag --sample-per-class 3 --seed 42
+.venv/Scripts/python.exe scripts/view_taco.py --report reports/taco/review-v1 --classes excluded unlabeled --sample-per-class 3
+.venv/Scripts/python.exe scripts/view_taco.py --report reports/taco/review-v1 --image-id 274
+.venv/Scripts/python.exe scripts/view_taco.py --report reports/taco/review-v1 --classes plastic_film --sample-per-class 2 --list
+```
+
+`--report` uses its recorded dataset/taxonomy sources, verifies their hashes and checks each displayed image's hash before decoding. Do not combine it with source overrides. Without `--report`, the viewer performs a fresh in-memory audit using the same source arguments as the audit CLI. It does not write a report or any image. Repeat `--image-id` to inspect several specific readable/aligned images, including images without annotations. Sampling is deterministic per selected class and seed, with shared images deduplicated; it provides review examples, not statistically representative sampling or a train/test split.
+
+Class selection controls which images are sampled; **all annotations on each selected image remain visible**. Labels show annotation ID, original TACO name and proposed BANTAI label/explicit exclusion state. Green solid boxes indicate selected mapped classes, blue other mapped classes, orange dashed excluded classes, purple dotted `Unlabeled litter`, red invalid annotation metadata when its geometry is drawable. Invalid boxes stay listed in the selectable, horizontally/vertically scrollable details table and are not drawn or clipped. Color is supplemented by line style and text. Crowded labels can overlap; use zoom/pan and the complete table. The toolbar omits Save; no annotated copies or temporary image files are generated. Close the window to release the figure/canvas and image resources.
+
+## Coordinate orientation requires review
+
+The default uses the **stored raster without EXIF transpose**, matching only records whose declared dimensions agree with that raster. This deliberately avoids importing the inference pipeline's automatic orientation rules into COCO annotation handling. Audit counts called `usable` use this conservative policy and require a valid annotation, readable image and no image-dimension issue.
+
+The downloaded set contains 152 dimension mismatches. All 152 declared dimensions match an EXIF-oriented preview. To inspect a specific example without changing any source bytes or annotation coordinates:
+
+```powershell
+.venv/Scripts/python.exe scripts/view_taco.py --report reports/taco/review-v1 --image-id 228 --frame exif
+```
+
+EXIF mode applies Pillow's orientation only in memory and requires the resulting dimensions to match COCO metadata. Annotation coordinates are not transformed; this is a review of the hypothesis that the annotations already describe that orientation. A dimension match, including a 180-degree rotation with unchanged dimensions, does not prove every box is aligned. The report counts remain unchanged by this viewer option. Approve and validate a coordinate policy before converting data for training.
+
+## Actual local audit — 2026-10-18
+
+Base main `5351d57`, branch `feat/taco-harmonization`. Command:
+
+```powershell
+.venv/Scripts/python.exe scripts/audit_taco.py --output reports/taco/review-v1
+```
+
+The command exited **1**, correctly indicating a completed audit with issues. Original annotation SHA-256: `ac1ec605c9e1fcda767970de3457c69b4a43b62c02aca8c4c80f51d1b5ae8449`. Taxonomy version: 1.0.0. Exact original metadata and image hashes are in the ignored report.
+
+- 1,500 source image records; **1,248 readable, 252 missing, zero unreadable/corrupted**. This reproduces the supplied image-availability observations.
+- 4,784 source annotations across 60 source classes. **3,938 annotations are attached to readable images**, reproducing the supplied total at the availability level.
+- A stricter check holds 520 otherwise-valid annotations on dimension-mismatched readable images and nine invalid annotations on readable images, leaving **3,409 usable annotations across all classes** under the stored-raster policy. Nothing is discarded from the review ledgers.
+- Eleven invalid annotations in the entire source: both occurrences of duplicated IDs 309 and 4040 (four records), plus seven negative-origin boxes. Two of these eleven are attached to missing images. No unknown category or image references were observed in this source. All 11 required original category names are present.
+- **1,653 usable mapped annotations in 735 unique images**; 1,756 usable excluded annotations. There are 49 original categories outside the mapping. **413 mapped-class images also contain usable excluded annotations**, making implicit-background handling unsafe without a defined policy.
+- `Unlabeled litter` remains explicit: 517 source annotations, of which 362 are conservatively usable in 170 images.
+
+| Label | Source annotation total | Attached to readable images | Conservative usable objects | Unique usable images |
+| --- | --- | --- | --- | --- |
+| `cigarette` | 667 | 539 | 478 | 155 |
+| `plastic_bottle` | 335 | 275 | 246 | 185 |
+| `plastic_bag` | 92 | 74 | 62 | 49 |
+| `plastic_wrapper` | 299 | 261 | 192 | 151 |
+| `plastic_film` | 451 | 381 | 344 | 231 |
+| `drink_can` | 229 | 186 | 164 | 110 |
+| `plastic_cup` | 104 | 93 | 84 | 71 |
+| `styrofoam_piece` | 112 | 91 | 83 | 59 |
+
+Negative origins are small but still explicit: annotation IDs 371, 387, 707, 859, 1621, 1777 and 2186. Whether clipping is appropriate requires a documented later decision. Duplicate IDs are preserved with source indexes rather than silently renumbered.
+
+## Verification and remaining decisions
+
+```powershell
+.venv/Scripts/python.exe -m unittest discover -s tests -q
+.venv/Scripts/python.exe tests/windows_taco_check.py --report reports/taco/review-v1
+.venv/Scripts/python.exe tests/windows_taco_check.py --report reports/taco/review-v1 --frame exif --image-id 228
+```
+
+Actual existing Windows `.venv` results: **101 tests, 100 passed, one existing Windows symlink-privilege skip**, 11.552 seconds on the first full run and 6.112 seconds on the subsequent check. Nine new synthetic tests cover all eleven mappings, preserved COCO metadata, missing/corrupt/unsafe files, malformed boxes/references, duplicate IDs, exact xywh drawing, excluded/unlabeled styles, deterministic selection, report reuse, source identity and explicit EXIF preview. These fixtures do not establish annotation quality. CLI help, compilation and whitespace checks passed; 159 relative Markdown links and five strict JSON examples validated. Protected inference scripts and dependency files match the starting main; the owner's detection configuration remains uncommitted.
+
+Native Tk check passed over ten downloaded source images, exercising one-per-class sampling, Next navigation, class selection, excluded/unlabeled boxes, selectable details, exact rectangle geometry, zoom/Home, figure cleanup and normal closure. Explicit EXIF-mode native check also passed over three source images. No model modules or network connections occurred. Source hashes remained unchanged. An independent final hash pass verified **all 1,248 audited source images unchanged**, and the original annotation hash matched.
+
+Agent in-memory visual inspection: image 18 shows a can with `Drink can -> drink_can`; image 274 shows `Plastic film -> plastic_film` alongside an explicit `Unlabeled litter` box; image 228's EXIF preview places the excluded `Plastic glooves` box on the visible glove. The original spelling is preserved. These limited visual observations are separate from human acceptance, which remains pending. They do not certify the full dataset's box/category quality.
+
+Before the next stage, the owner must decide how to handle excluded and unlabeled annotations in mixed images, approve an orientation/coordinate policy, resolve duplicate IDs and negative boxes, and assess sampled annotation quality/class imbalance. Later split design, source/license review for intended use, model loss/prompt encoding and actual fine-tuning need their own preparation/authorization. No final train/validation/test split, source correction, training export, download or fine-tuning occurred here.
+
+
+---
+
+## 6. Phase 1 Milestone Register (D-001 through D-020)
+
+- **D-001**: Model direction established: Grounding DINO-T (Swin-T configuration) through Hugging Face Transformers.
+- **D-002**: Direct text-guided zero-shot evaluation approved before considering grouping algorithms.
+- **D-003**: Hardware target identified: NVIDIA GeForce GTX 1660 Ti, 6144 MiB VRAM, driver 472.19 on Windows 10/11 x64.
+- **D-004**: Virtual environment `.venv` configured with Python 3.11.9 x64.
+- **D-005**: Strict separation of concerns: Model A (trash detection) separated from web backend and Model B.
+- **D-006**: Bounding box geometry formalized in standard COCO format `[x_min, y_min, width, height]`.
+- **D-007**: Coordinate frame fixed to stored raster dimensions without EXIF transpose.
+- **D-008**: Numeric contract: invalid numeric values (`NaN`, `Inf`) serialized as null with diagnostics.
+- **D-009**: Processing status decoupled from display status (`display.status` vs `inference.status`).
+- **D-010**: In-memory visualization chosen; automatic export of annotated images disabled to protect originals.
+- **D-011**: Zero-test-split access rule established: `test.json` strictly held out.
+- **D-012**: TACO dataset analysis: 1,500 images categorized, background non-trash images audited.
+- **D-013**: Supervised class candidates mapped to canonical BANTAI categories.
+- **D-014**: Bounded Tk/TkAgg viewer architecture proposed for visual verification.
+- **D-015**: Exact phrase mapping contract formalized; unmapped phrases retain null category ID.
+- **D-016**: Multi-image replay specification designed with deterministic ordering.
+- **D-017**: Model score percentage defined strictly as confidence indicator, not ground-truth accuracy.
+- **D-018**: Duplicate detection flags established without destructive NMS.
+- **D-019**: Initial Hungarian matcher loss routing investigated.
+- **D-020**: Phase 1 handoff completed; Phase 2 authorized.

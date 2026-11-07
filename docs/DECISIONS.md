@@ -1,5 +1,39 @@
 # Decision register
 
+## D-116: Core Architecture Docs Restoration & 5 Consolidated Phase Documents - 2026-11-07
+
+Owner clarification and authorization D-116 executed on `feat/stage5-paper-category`. Active supervised taxonomy strictly locked to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and 5 canonical BANTAI categories. Zero unaudited or unsupervised classes added. Zero test-split reads (`test.json` unopened).
+
+1. **Restoration of Core Architecture & Governance Documents**:
+   - Restored and updated the repository's foundational architecture documents:
+     * `docs/SCOPE.md`: System boundary, Model A vs Model B, 9-class / 5-category taxonomy guardrails, and non-commercial academic research basis.
+     * `docs/ARCHITECTURE.md`: Complete Grounding DINO Swin-T architecture, Three-Model Consensus routing, scale-normalized DBSCAN spatial grouping, and pipeline lifecycle.
+     * `docs/SCHEMA.md`: Complete JSON schemas for detections, regional groupings, diagnostic telemetry, and unified dual-model API responses.
+     * `docs/EVALUATION.md`: Formal evaluation methodology, COCO AP metrics, 5-category mapping rules, visual review protocols, and split hygiene.
+     * `docs/PHASES.md`: Master phase roadmap linking all 5 project phases and core documents.
+     * `docs/DECISIONS.md`: Full milestone register from D-001 through D-116.
+     * `docs/HANDOFF.md`: Production handoff report for Argon, backend engineers, and municipal stakeholders.
+     * `docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md`: Master end-to-end website and dual-model integration manual.
+2. **Consolidation of 73 Sub-Iteration Reports into 5 Structured Phase Documents**:
+   - Consolidated repetitive per-experiment files into 5 comprehensive, non-repetitive phase progress files:
+     * `docs/PHASE_1_PLANNING_AND_READINESS.md`: Planning, environment readiness, and TACO dataset preparation (D-001 to D-020).
+     * `docs/PHASE_2_BASELINE_AND_VISUAL_REVIEW.md`: Zero-shot baseline evaluation and TkAgg visual review (D-021 to D-039).
+     * `docs/PHASE_3_ADAPTER_AND_SYNTHETIC_QUALIFICATION.md`: Adapter synthesis and synthetic qualification (D-040).
+     * `docs/PHASE_4_EIGHT_CLASS_FINE_TUNING.md`: 8-class bounded fine-tuning, coordinate bugfix, and scale-576 training (D-041 to D-069).
+     * `docs/PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md`: 9-class paper expansion, model soup champion (D-095), three-model consensus, video extraction, and scale-normalized disjoint spatial grouping (D-070 to D-116).
+3. **Repository Cleanliness**: Total Markdown documentation across the entire repository reduced from 88 scattered files to exactly **15 clean, well-organized files**. Zero broken markdown links.
+
+
+## D-115: Single Master Documentation Guide Initial Consolidation - 2026-11-07
+
+Owner instruction D-115 executed on `feat/stage5-paper-category`. Active supervised taxonomy strictly locked to `0..8` and 5 canonical BANTAI categories. Zero test-split reads (`test.json` unopened).
+
+1. **Initial Markdown Consolidation**:
+   - Initial pass consolidating 88 scattered markdown files into `docs/ARGON_WEBSITE_INTEGRATION_GUIDE.md` and repo root `README.md`.
+2. **Verification**:
+   - Guarded Stage 4 test suite passed (417 passed, 38 skipped). All production model weights verified intact.
+
+
 ## D-114: Comprehensive Website & Dual-Model Integration Guide for Argon - 2026-11-07
 
 Owner authorization D-114 executed on `feat/stage5-paper-category`. Active supervised taxonomy remained strictly fixed to `0..8` (`cigarette`, `plastic_bottle`, `plastic_bag`, `plastic_wrapper`, `plastic_film`, `drink_can`, `plastic_cup`, `styrofoam_piece`, `paper`) and the 5 canonical BANTAI categories. Zero unaudited or unsupervised classes were added. Zero test-split reads (`test.json` unopened; 0 held-out test photos opened) occurred.
@@ -42,7 +76,7 @@ Owner authorization D-113 executed on `feat/stage5-paper-category`. Active super
    - Full 65 validation benchmark bitwise preserved: AP9 = $0.301350$, AP5 = **$0.497161$**, `paper` AP = $0.640610$, total TPs = $77$, lost TPs = $0$ (`lost_tps == []`), total FPs = $63$, clean images = $36 / 65$.
    - Unit tests: 120 passed (22 skipped) in `tests/test_stage5_d*.py`.
    - Guarded Stage 4 tests: 417 passed (38 skipped, 0 failures, 0 errors).
-   - See [TACO Stage 5 D-113 Surgical Cleanup Report](TACO_STAGE_5_D113_SURGICAL_CLEANUP.md).
+   - See [TACO Stage 5 D-113 Surgical Cleanup Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 
 ## D-112: Rework Garbage Pile Minimum Cardinality Rule to k >= 8 Bounding Boxes (min_pile_items = 8) - 2026-11-07
@@ -68,7 +102,7 @@ Owner authorization D-112 executed on `feat/stage5-paper-category`. Active super
    - All 14 validation showcase images preserved with 0 regressions.
    - Unit tests: 7 passed in `tests/test_stage5_d112_garbage_pile_min8_rule.py`; 120 passed in `tests/test_stage5_d*.py`.
    - 433 guarded Stage 4 tests passed (22 skipped, 0 failures, 0 errors).
-   - See [TACO Stage 5 D-112 Garbage Pile Min-8 Rule Report](TACO_STAGE_5_D112_GARBAGE_PILE_MIN8_RULE.md).
+   - See [TACO Stage 5 D-112 Garbage Pile Min-8 Rule Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 
 ## D-111: Cross-Model Small-Litter Recall Recovery (Motion_Extract_Testing_2.mp4 Paper Towels) & Intra-Group Paper Consistency - 2026-11-07
@@ -96,7 +130,7 @@ Owner authorization D-111 executed on `feat/stage5-paper-category`. Active super
 4. **Verified Evidence**:
    - Full 65 validation benchmark: 0 lost True Positives (`lost_tps == []`), AP9 = $0.301350$, AP5 = **$0.497161$**, `paper` AP = $0.640610$, total FPs = $63$, clean images = $36 / 65$.
    - All 14 validation showcase images preserved with 0 bitwise regressions.
-   - See [TACO Stage 5 D-111 Paper Towel Recall and Multi-Video Report](TACO_STAGE_5_D111_PAPER_TOWEL_RECALL_AND_MULTI_VIDEO.md).
+   - See [TACO Stage 5 D-111 Paper Towel Recall and Multi-Video Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-110: Standalone Input Image (data/input/For_testing.jpg) Three-Model Detection, Distractor Guardrails & GUI Integration - 2026-11-07
 
@@ -129,7 +163,7 @@ Owner authorization D-110 executed on `feat/stage5-paper-category`. Active super
    - All 14 validation showcase images preserved.
    - Unit tests: 7 passed in `tests/test_stage5_d110_for_testing_image.py`; 106 passed in `tests/test_stage5_d*.py`.
    - All 441 guarded Stage 4 tests passed (0 failures, 0 errors).
-   - See [TACO Stage 5 D-110 Standalone Input Image Report](TACO_STAGE_5_D110_FOR_TESTING_IMAGE.md).
+   - See [TACO Stage 5 D-110 Standalone Input Image Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-109: Spatially Disjoint Pile/Group Region Consolidation, Wall/Pavement Hallucination Suppression & Clean Overlay Rendering - 2026-11-06
 
@@ -151,7 +185,7 @@ Owner authorization D-109 executed on `feat/stage5-paper-category`. Active super
    - Frame 10001: 0 wall-banner FPs, 0 hazard FPs, 1 unified Garbage Pile + 1 Individual Litter.
    - 0 overlapping multi-region pairs across all 16 video frames.
    - Unit tests: 5 passed in `tests/test_stage5_d109_disjoint_regions_and_video_cleanup.py`; 99 passed in `tests/test_stage5_d*.py`.
-   - See [TACO Stage 5 D-109 Disjoint Regions and Video Cleanup Report](TACO_STAGE_5_D109_DISJOINT_REGIONS_AND_VIDEO_CLEANUP.md).
+   - See [TACO Stage 5 D-109 Disjoint Regions and Video Cleanup Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-108: Dense-Group Intra-Region Trash Recall Recovery, Distinct-Item NMS Preservation & Top-K Uncapping - 2026-11-06
 
@@ -172,7 +206,7 @@ Owner authorization D-108 executed on `feat/stage5-paper-category`. Active super
    - Full 65 validation benchmark: 0 lost True Positives (`lost_tps == []`), AP9 = $0.301240$, AP5 increases to **$0.496946$** (+0.0042 gain), total FPs decrease to 58, clean images increase to 40 / 65 (61.5%).
    - Frame 10003 visible items increase from 15 to 37 (4 Garbage Piles, 1 Group of Individual Litter).
    - Unit tests: 6 passed in `tests/test_stage5_d108_dense_group_recall_recovery.py`; 94 passed in `tests/test_stage5_d*.py`.
-   - See [TACO Stage 5 D-108 Dense Group Recall Recovery Report](TACO_STAGE_5_D108_DENSE_GROUP_RECALL_RECOVERY.md).
+   - See [TACO Stage 5 D-108 Dense Group Recall Recovery Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-107: Two-Tier Hierarchical Spatial Grouping, Sachet Hazard Tie-Break & Video GUI De-Cluttering - 2026-11-06
 
@@ -194,7 +228,7 @@ Owner authorization D-107 executed on `feat/stage5-paper-category`. Active super
    - Adjusted figure margins (`left=0.02, right=0.98, top=0.92, bottom=0.02, wspace=0.06, hspace=0.16`), optimizing display for portrait $1080 \times 1920$ video frames.
 4. **Verified Evidence**:
    - Unit tests: 6 passed in `tests/test_stage5_d107_hierarchical_video_grouping.py`; 88 passed in `tests/test_stage5_d*.py`.
-   - See [TACO Stage 5 D-107 Hierarchical Video Grouping Report](TACO_STAGE_5_D107_HIERARCHICAL_VIDEO_GROUPING.md).
+   - See [TACO Stage 5 D-107 Hierarchical Video Grouping Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-106: Video Frame Extraction & Three-Model Stage 5 Detection on Motion_Extract_Testing.mp4 - 2026-11-06
 
@@ -222,7 +256,7 @@ Owner authorization D-106 executed on `feat/stage5-paper-category`. Active super
 5. **Verified Evidence**:
    - Unit tests: 5 passed in `tests/test_stage5_d106_video_extraction.py`; 123 passed in `tests/test_stage5*.py`; 401 passed (0 failures, 0 errors) in `scripts/verify_stage4_guarded.py`.
    - All 65 validation images retain exact metrics: $AP_9 = 0.298963, AP_5 = 0.492729$, 76 TPs, 63 visible FPs, 36 clean images.
-   - See [TACO Stage 5 D-106 Video Extraction Report](TACO_STAGE_5_D106_VIDEO_EXTRACTION.md).
+   - See [TACO Stage 5 D-106 Video Extraction Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-105: Elimination of False Spatial Groupings, Repetitive Background Clutter Suppression & Bounded-Density Calibration - 2026-11-06
 
@@ -250,7 +284,7 @@ Owner authorization D-105 executed on `feat/stage5-paper-category`. Active super
    - Monotonic AP gain: Official 9-Specific AP increased from $0.295136 \to \mathbf{0.298963}$; BANTAI 5-Category AP increased from $0.491688 \to \mathbf{0.492729}$.
    - Image 1243: 0 FPs (all 8 stump clutter boxes pruned), 1 TP plastic bottle preserved, grouping is exactly 1 `Individual Litter`.
    - Unit tests: 5 passed in `tests/test_stage5_d105_false_group_elimination.py`; 113 passed in `tests/test_stage5*.py`; 396 passed (0 failures, 0 errors) in `scripts/verify_stage4_guarded.py`.
-   - See [TACO Stage 5 D-105 False Group Elimination Report](TACO_STAGE_5_D105_FALSE_GROUP_ELIMINATION.md).
+   - See [TACO Stage 5 D-105 False Group Elimination Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-104: Scale-Normalized Spatial Grouping & Visual Review GUI Integration - 2026-11-06
 
@@ -286,7 +320,7 @@ Owner authorization D-104 executed on `feat/stage5-paper-category`. Active super
    - Image 802 (`000021.jpg`): 1 Individual Litter ($n=1, \text{score}=0.281$, 1 independent region).
    - Image 998 (`000030.jpg`): 2 Individual Litter ($n=1, n=1$, 2 independent regions).
    - Unit tests: 8 passed in `tests/test_stage5_d104_spatial_grouping.py`; 105 passed in `tests/test_stage5*.py`; 407 passed (0 failures, 0 errors) in `scripts/verify_stage4_guarded.py`.
-   - See [TACO Stage 5 D-104 Spatial Grouping Report](TACO_STAGE_5_D104_SPATIAL_GROUPING.md).
+   - See [TACO Stage 5 D-104 Spatial Grouping Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-103: Full 65-Image Precision Sweep & False-Positive Clutter Elimination - 2026-11-06
 
@@ -318,7 +352,7 @@ Owner authorization D-103 executed on `feat/stage5-paper-category`. Active super
    - `tests/test_stage5_d103_full65_precision_sweep.py`: 4 tests passed.
    - `tests/test_stage5*.py`: 105 tests passed.
    - `scripts/verify_stage4_guarded.py`: 399 tests (383 passed, 0 failures, 0 errors, 16 skipped training fixtures).
-   - See [TACO Stage 5 D-103 Full 65-Image Precision Sweep Report](TACO_STAGE_5_D103_FULL65_PRECISION_SWEEP.md).
+   - See [TACO Stage 5 D-103 Full 65-Image Precision Sweep Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-102: Complete 65-Image False-Positive Elimination via Three-Model Cross-Stage Consensus (Stage 4 Baseline + Stage 5 Run 1 + D-095 Champion) - 2026-11-06
 
@@ -358,7 +392,7 @@ Owner authorization D-102 executed on `feat/stage5-paper-category`. Active super
    - `tests/test_stage5_d102_three_model_consensus.py`: 6 tests passed.
    - `tests/test_stage5*.py`: 101 tests passed.
    - `scripts/verify_stage4_guarded.py`: 395 tests (379 passed, 0 failures, 0 errors, 16 skipped training fixtures).
-   - See [TACO Stage 5 D-102 Three-Model Consensus Report](TACO_STAGE_5_D102_THREE_MODEL_CONSENSUS.md).
+   - See [TACO Stage 5 D-102 Three-Model Consensus Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-101: Global 65-Image Cross-Stage Calibration & Consensus Refactoring (Dataset-Wide Generalization) - 2026-11-06
 
@@ -387,7 +421,7 @@ Owner authorization D-101 executed on `feat/stage5-paper-category`. Active super
    - `tests/test_stage5_d101_global_cross_stage_consensus.py`: 5 tests passed.
    - `tests/test_stage5_d100_cross_stage_consensus.py`: 6 tests passed.
    - `scripts/verify_stage4_guarded.py`: 389 tests (373 passed, 0 failures, 0 errors, 16 skipped training fixtures).
-   - See [TACO Stage 5 D-101 Global Cross-Stage Consensus Report](TACO_STAGE_5_D101_GLOBAL_CROSS_STAGE_CONSENSUS.md).
+   - See [TACO Stage 5 D-101 Global Cross-Stage Consensus Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-100: Cross-Stage Prior-Anchored Consensus (Stage 4 Baseline + Stage 5 Champion) for Cluttered Natural Scenes - 2026-11-06
 
@@ -420,7 +454,7 @@ Owner authorization D-100 executed on `feat/stage5-paper-category`. Active super
 5. **Tests & Verification**:
    - `tests/test_stage5_d100_cross_stage_consensus.py`: 6 tests passed.
    - `scripts/verify_stage4_guarded.py`: 384 tests (368 passed, 0 failures, 0 errors, 16 skipped training fixtures).
-   - See [TACO Stage 5 D-100 Cross-Stage Consensus Report](TACO_STAGE_5_D100_CROSS_STAGE_CONSENSUS.md).
+   - See [TACO Stage 5 D-100 Cross-Stage Consensus Report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-099: Full 65-Image False-Positive Audit, Same-Family Cluster Consolidation & Ghost Suppression - 2026-11-06
 
@@ -534,7 +568,7 @@ Owner authorization D-096 executed on `feat/stage5-paper-category`. Active super
    - Verified on Image 777: produces 0 anchors, 0 suppressions, 0 relabelings. Under `CONSENSUS_STATE`, bottle is preserved as Plastic and cigarette butts as Potentially Hazardous.
    - Verified on Image 1: both GT Paper matches prominent, over 500 low-confidence interior speckles suppressed.
 5. **D-095 Documentation & Parameter Corrections**:
-   - Corrected parameter SHA-256 digests in [D-095 report](TACO_STAGE_5_D095_BOX_CONTRASTIVE.md) for E1 (`80c6086b...`), E2 (`4b989ad1...`), 75/25 (`3285c365...`), and hybrid (`823a344d...`).
+   - Corrected parameter SHA-256 digests in [D-095 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md) for E1 (`80c6086b...`), E2 (`4b989ad1...`), 75/25 (`3285c365...`), and hybrid (`823a344d...`).
    - Corrected Champion legacy_47 AP to `0.249448` (the previously stated `0.274150` was not supported by `report.json`; D-093 champion legacy_47 is `0.256137`).
    - Stated hybrid recipe accurately as `0.40 D095-E2 + 0.30 D093-E3 + 0.30 D091 Champion` (matching `scripts/taco_stage5_d095_box_contrastive.py` line 854).
    - Removed consensus AP claims for non-champion states; cited exact training wall-clock time from `runs/training/stage5-d095-box-contrastive-20261102-a/report.json` field `total_seconds` (`1904.4990426000004` seconds, ~31.7 minutes).
@@ -573,7 +607,7 @@ Owner authorization D-095 executed locally on `feat/stage5-paper-category`. Acti
 5. **Multi-Scale Query Fusion Integration**:
    - `Tri_Model_D086_S2575_HR448_D095_Champ` established benchmark records of **`0.262348`** 9-Specific AP and **`0.438939`** BANTAI 5-Category AP.
 
-Full report: [D-095 report](TACO_STAGE_5_D095_BOX_CONTRASTIVE.md).
+Full report: [D-095 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-094: D093-HN State Audit + Multi-Checkpoint Class-Optimal Query Routing - 2026-11-02
 
@@ -599,7 +633,7 @@ Owner authorization D-094 executed locally on `feat/stage5-paper-category` as a 
    - Unit tests passed in `tests/test_stage5_multiscale_consensus.py`.
    - Native Tk smoke passed in `tests/windows_stage5_image777_check.py` (50 GUI state combinations).
 
-Full report: [D-093 & D-094 report](TACO_STAGE_5_D093_MULTIEPOCH_HN_TRAINING.md).
+Full report: [D-093 & D-094 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-093: 3-Epoch Hard-Negative & Absent-Class-Suppressed Fine-Tuning Run & Multi-Scale Update - 2026-11-02
 
@@ -630,7 +664,7 @@ Owner authorization D-093 executed locally on `feat/stage5-paper-category`. Acti
    - Passed `tests/windows_stage5_image777_check.py` (50 GUI state combinations).
    - Passed `scripts/verify_stage4_guarded.py` (359 tests checked, 343 passed, 0 failures, 0 errors, 0 GPU calls).
 
-Full report: [D-093 report](TACO_STAGE_5_D093_MULTIEPOCH_HN_TRAINING.md).
+Full report: [D-093 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-092: Visual Review D-091 Single-Model Champion Integration & Remote Branch Push - 2026-11-02
 
@@ -680,7 +714,7 @@ Owner authorization D-091 executed locally on `feat/stage5-paper-category`. Acti
    - Tri-Model combination `Tri_Model_D086_S2575_HR448_D091_Champ` achieved **`0.260171`** 9-Specific AP and **`0.434033`** BANTAI 5-Category AP.
    - The all-time project benchmark champion remains `Tri_Model_D086_S2575_HR448_D089_S5050` with **`0.260674`** 9-Specific AP and **`0.435166`** BANTAI 5-Category AP (53.27% AP50).
 
-Full report: [D-091 report](TACO_STAGE_5_D091_BALANCED_TIER3_TRAINING.md).
+Full report: [D-091 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-090: Tri-Model Class-Specialized Query Routing & Paper-Plastic Disambiguation Audit - 2026-11-01
 
@@ -701,7 +735,7 @@ Owner authorization D-090 executed locally on `feat/stage5-paper-category` as a 
    - `multiscale-consensus-replay.json`, `scores-multiscale-consensus.npz` (shape `(65, 100, 9)`), and `multiscale-consensus-audit.json` updated with `Tri_Model_D086_S2575_HR448_D089_S5050` winning configuration.
    - All tests in `tests/test_stage5_multiscale_consensus.py` and `tests/windows_stage5_image777_check.py` passed cleanly.
 
-Full report: [D-090 report](TACO_STAGE_5_D090_TRI_MODEL_ROUTING.md).
+Full report: [D-090 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-089: Stage 5 Tier 3 Core Expansion (576 Train Images / 1,240 Boxes) with Omitted-Accessory Masking & Soup Evaluation - 2026-11-01
 
@@ -736,7 +770,7 @@ Owner authorization D-089 executed locally on `feat/stage5-paper-category`. Acti
 6. **Integrity Snapshot**:
    - 2,089 protected files verified unchanged (digest `de43089895ecd4e42c77dc22f8750a39e709a818738852cc2606a5537981b6d0`).
 
-Full report: [D-089 report](TACO_STAGE_5_D089_TIER3_CORE_TRAINING.md).
+Full report: [D-089 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-088: Class-Calibrated Multi-Scale Query Routing + D-079 Consensus Optimization - 2026-10-31
 
@@ -758,7 +792,7 @@ Owner authorization D-088 executed locally on `feat/stage5-paper-category` as a 
 3. **GUI Verification**:
    - Verified Native Tk visual review tool on Image 777 in both CLI and GUI modes with zero Tcl/Tk errors.
 
-Full report: [D-086, D-087 & D-088 report](TACO_STAGE_5_D086_HIGHRES_TRAINING.md#8-class-calibrated-multi-scale-query-routing--d-079-consensus-optimization-d-088).
+Full report: [D-086, D-087 & D-088 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md#8-class-calibrated-multi-scale-query-routing--d-079-consensus-optimization-d-088).
 
 ## D-087: Multi-Scale Query Fusion + D-079 Consensus Integration and Native Tk Review Replay Mode - 2026-10-31
 
@@ -780,7 +814,7 @@ Owner authorization D-087 executed locally on `feat/stage5-paper-category` as a 
    - Added interactive GUI switcher combobox and dynamic multi-scale score vector loading.
    - Successfully verified Native Tk GUI replay on Image 777 with full display loop and zero errors.
 
-Full report: [D-086 & D-087 report](TACO_STAGE_5_D086_HIGHRES_TRAINING.md#7-multi-scale-query-fusion--d-079-consensus-integration-d-087).
+Full report: [D-086 & D-087 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md#7-multi-scale-query-fusion--d-079-consensus-integration-d-087).
 
 ## D-086: Stage 5 High-Resolution (448/672) 1-Epoch Fine-Tuning & Multi-Scale Evaluation - 2026-10-31
 
@@ -798,7 +832,7 @@ Execution Budget: Exactly 379 training updates + 448 validation forwards (4 stat
 3. **Multi-Scale Query Fusion**: Pooling standard-resolution (`384/576`) queries with high-resolution (`448/672`) queries via class-aware IoU 0.55 NMS achieved a new benchmark high AP of **`0.244213`** (`+0.008084` over champion) on 9-Specific detection and **`0.422337`** (`+0.021089` over champion) on BANTAI 5-Category aggregation.
 4. **D-079 Consensus Audit**: Applied to `soup_d086_d083_2575_std384`, consensus raised 9-Specific AP to **`0.238178`** and BANTAI 5-Category AP to **`0.410301`** while strictly preserving all bounding box coordinates and query scores.
 
-Full report: [D-086 report](TACO_STAGE_5_D086_HIGHRES_TRAINING.md).
+Full report: [D-086 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 
 ## D-085: Candidate Extensible Object Class Dataset Coverage & BANTAI 5-Category Audit - 2026-10-31
@@ -815,7 +849,7 @@ The deterministic audit script `scripts/taco_stage5_extensible_class_audit.py` (
    - `Metal`: `scrap_metal` (119 pool boxes, 75 clean train, 0 val), `metal_bottle_cap` (90 pool boxes, 33 clean train, 0 val), `aluminium_foil` (68 pool boxes, 45 clean train, 0 val) -> `ZERO_SHOT_HYBRID_ONLY` due to 0 validation boxes. `food_can` is a `SUBTYPE_MERGE_CANDIDATE` (already merged into `drink_can`).
    - `Potentially Hazardous`: `broken_glass` (138 pool boxes, 31 clean train, 0 val), `glass_bottle` (104 pool boxes, 43 clean train, 0 val), `aerosol` (10 pool boxes, 5 clean train, 0 val), `battery` (2 pool boxes, 1 clean train, 0 val) -> `ZERO_SHOT_HYBRID_ONLY`. `syringe` has 0 instances in TACO.
    - `Organic`: `food_waste` (8 pool boxes, 4 clean train, 0 val) -> `ZERO_SHOT_HYBRID_ONLY`.
-3. Complete structured data stored in `work/stage5-paper/extensible_class_coverage_audit.json` and report in [D-085 report](TACO_STAGE_5_EXTENSIBLE_CLASS_AUDIT.md). Active supervised classes in `scripts/taco_stage5_material_hierarchy.py` were not modified.
+3. Complete structured data stored in `work/stage5-paper/extensible_class_coverage_audit.json` and report in [D-085 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md). Active supervised classes in `scripts/taco_stage5_material_hierarchy.py` were not modified.
 
 Guarded suite passed; Markdown links and `git diff --check` passed.
 
@@ -844,7 +878,7 @@ Part B executed 1 bounded epoch of 379 updates on `strict-clean-stage5-d083-core
 - `soup_d083_d074_5050` (50/50 D074 champion + D083 E1): combined-65 AP **0.236129**, legacy-47 AP `0.252820`.
 - `soup_d083_d076_5050` (50/50 D076 champion + D083 E1): combined-65 AP `0.232746`, legacy-47 AP `0.253044`.
 
-Champion `soup_d083_d074_5050` (parameter hash `82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`) was serialized to `checkpoints/best-inference` with `best-score-vectors.npz` and wired into `scripts/taco_stage5_visual_review.py`. Full report: [D-083 report](TACO_STAGE_5_D083_CORE_TRAINING.md). Guarded verification: **333 tests: 317 passed, 16 skips, 0 failures/errors**. Native Tk Image 777 passed 50 combinations. Markdown links and `git diff --check` passed.
+Champion `soup_d083_d074_5050` (parameter hash `82c0a5bf3a104db5f5ff35e1cbfc1bd239595ec9946e22cf085986985d95fddc`) was serialized to `checkpoints/best-inference` with `best-score-vectors.npz` and wired into `scripts/taco_stage5_visual_review.py`. Full report: [D-083 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md). Guarded verification: **333 tests: 317 passed, 16 skips, 0 failures/errors**. Native Tk Image 777 passed 50 combinations. Markdown links and `git diff --check` passed.
 
 
 ## D-080: Organic / Food waste support audit - 2026-10-30
@@ -863,7 +897,7 @@ accessory omission remains 4 / 4. All fixed 65 validation and 65 test images hav
 zero Food waste GT boxes. The strict blockers are Unlabeled litter (three Food
 waste boxes on two images), plus Food Can / Disposable food container / Other
 plastic exclusions depending on tier. No audited Food waste image is in a frozen
-duplicate component. Details: [complete per-image D-080 ledger](TACO_STAGE_5_ORGANIC_AUDIT.md).
+duplicate component. Details: [complete per-image D-080 ledger](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 Decision: TACO does not support a reliable tenth supervised class or validation
 estimate at 2-4 training images/boxes. Keep supervised IDs 0..8. Consider a
@@ -902,7 +936,7 @@ The CPU rule audit and native Tk Image777 GUI matrix are qualified: **323 guarde
 tests, 307 passed, 16 documented skips, zero failures/errors; 50 GUI control
 combinations plus consensus assertions passed with zero TclError**. No GPU
 execution, optimizer updates, protected writes, commit, push, or merge occurred.
-See [D-079 audit and display evidence](TACO_STAGE_5_IMAGE777_CALIBRATION.md#d-079-canonical-bantai-categories-and-score-preserving-subtype-consensus).
+See [D-079 audit and display evidence](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md#d-079-canonical-bantai-categories-and-score-preserving-subtype-consensus).
 
 ## D-078: Tcl/Tk runtime repair and champion query score vectors - 2026-10-30
 
@@ -989,7 +1023,7 @@ The full 660-case data and Image 777 ledger are in the private
 Guarded suite: **316 tests, 300 passed, 16 documented skips, zero failures/errors**.
 Three focused D077 tests cover score floors, cross-class/containment suppression,
 and GUI selector integration. Native Tk resolution was repaired and verified under D078.
-See the [full audit and profile comparisons](TACO_STAGE_5_IMAGE777_CALIBRATION.md).
+See the [full audit and profile comparisons](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 No commit, push, merge, or promotion.
 
 ## D-076: Tier2 sibling-subtype continuation and paired soup comparison - 2026-10-30
@@ -1033,7 +1067,7 @@ CPU verification confirms 449 photo hashes, complete optimizer/RNG/position/samp
 state, source/new bundles, best-state AP selection and protected inputs. Viewer offers
 all Tier1/Tier2 states; D074 default remains unchanged pending owner review.
 
-[Full D076 report, comparison tables, evidence and exact replay command](TACO_STAGE_5_TIER2_TRAINING.md).
+[Full D076 report, comparison tables, evidence and exact replay command](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 Stop for owner review. No further training, commit, push, merge or promotion is implied.
 
 
@@ -1081,7 +1115,7 @@ Remaining owner decisions: saved visual acceptance, PR review/merge, and any lat
 experiment or deployment/promotion authorization. None is implied by persistence.
 Official nine-specific combined AP0.231226 remains separate from diagnostic5/4-material
 AP0.344601 /0.402577, test generalization and production readiness. See the
-[D074 evidence report](TACO_STAGE_5_TIER1_TRAINING.md) and [Stage5 progression](../README.md).
+[D074 evidence report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md) and [Stage5 progression](../README.md).
 Private [bundle manifest](../runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/checkpoints/soup-tier1-hr-blend2575/soup_manifest.json) and [D075 publication evidence](../runs/training/stage5-tier1-69d61fae160544468f155d34f0cb6337/d075-persistence-bf03350809564a4d8316708faa158924/publication.json) remain local.
 
 Publication verification and final SHA are recorded in the D075 execution evidence;
@@ -1124,7 +1158,7 @@ taxonomy and NMS combinations. Guarded suite: **305 tests, 289 passed, 16 docume
 skips, zero failures/errors**. CPU checks verified 401 photo hashes, source/new bundles,
 558 optimizer counters, RNG/positions/sampler order and all protected inputs.
 
-See [full D074 results, evidence and exact GUI command](TACO_STAGE_5_TIER1_TRAINING.md).
+See [full D074 results, evidence and exact GUI command](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 Stop for owner saved review. No commit, push, merge, promotion or further training.
 
 ## D-073: read-only Stage 5 dataset expansion audit - 2026-10-29
@@ -1157,7 +1191,7 @@ Qualification: 299 guarded tests, **283 passed, 16 documented skips, zero failur
 eight expansion fixtures include restored exact-duplicate quarantine propagation.
 Audit inputs, taxonomy v2 and six core source hashes match before/after. Private
 structured evidence and all per-class box/image counts are linked in the
-[full D-073 report](TACO_STAGE_5_DATA_EXPANSION_AUDIT.md). Stop for owner review.
+[full D-073 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md). Stop for owner review.
 
 ## D-072: Stage 5 material/hazard diagnostics and four-panel taxonomy replay - 2026-10-29
 
@@ -1184,7 +1218,7 @@ access, checkpoint reads/writes, taxonomy v2 or six-core-source changes. No comm
 push, merge or promotion. Next owner action: optional local saved replay/review;
 no further model execution is implied.
 
-See [full diagnostic results, methods, evidence and PowerShell replay command](TACO_STAGE_5_MATERIAL_HIERARCHY.md).
+See [full diagnostic results, methods, evidence and PowerShell replay command](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-071 Stage 5 High-Resolution Adaptation and Model Soup - 2026-10-28
 
@@ -1229,7 +1263,7 @@ nine-prompt metrics remain separately labeled. Guarded suite: 286 run, 270 passe
 614-step sampler trace, frozen hashes, two source bundles, all runtime/core source
 hashes, dataset/rights hashes and 372 authorized photo hashes pass postchecks.
 Existing 64 bundles remain unchanged; nothing is promoted or wired into inference.
-[Results, actual counts, scope distinctions and checkpoint evidence](TACO_STAGE_5_TRAINING.md).
+[Results, actual counts, scope distinctions and checkpoint evidence](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 ## D-070 Stage 5 paper-category authorization and Option A split adoption - 2026-10-26
 
@@ -1284,7 +1318,7 @@ metrics would be separate from the legacy 47-image eight-class benchmark. If tot
 holdout sizes must stay exactly 47/47, an alternative puts all 122 new images into
 training (343/47/47), but leaves zero paper evaluation support. Rare-subtype
 limitations, waterfall, counts, exact metadata anchors and proposed file-impact
-list are in the [paper audit](TACO_STAGE_5_PAPER_AUDIT.md).
+list are in the [paper audit](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 No photo bytes/decodes, test.json access, torch/Transformers import, GPU, training,
 inference or export occurred. Nineteen source/metadata/core-source hashes remained
@@ -1336,7 +1370,7 @@ decision remain with the owner; no follow-up experiment is implied.
 
 Owner authorized exactly92 updates at steps351..442 from verified D-057 step350 with exact model/AdamW/RNG restore, unchanged native adapter/loss and frozen backbones/text. The isolated objective selects each GT query by detached argmax(IoU+mean ordinary-subword probability), sums weighted positive BCE (cigarette1.5, other.75, film0), and sums absent-class p>.03 selected-query mean penalties weighted10. LR8e-6 on67 batches,1e-6 on25 pure-film batches. Native checked_loss passes before augmentation, finite gradients/encoder updates and clip norm1 are audited. FP32/TF32-off384/576 and original sampler suffix remain fixed. Two complete new bundles and94 validation forwards completed; all62 prior plus2 new bundles verified (64 total), six core files unchanged. No reference GPU reruns, test access, commit, push, merge or promotion.
 
-Endpoint official AP0.245944; prespecified25/75 original350/new442 blend AP0.251234, versus previous integrated0.265563. Cigarette coverage is15/24 and15/24; Image777 4/7 and4/7. At score.10, strict eight-class F1 is0.116129/0.121622; Image833 cigarette FP counts are0/0. Full official/material/polymer metrics, strict matching at.05/.08/.10/.12/.15/.20, Image777 GT278..284 scores/ranks/IoUs and Image833 FP audit are in the [D-067 report](TACO_STAGE_4_576_SCORE_CALIBRATION.md). This is one diagnostic validation experiment; higher confidence is not calibrated correctness or a promoted checkpoint.
+Endpoint official AP0.245944; prespecified25/75 original350/new442 blend AP0.251234, versus previous integrated0.265563. Cigarette coverage is15/24 and15/24; Image777 4/7 and4/7. At score.10, strict eight-class F1 is0.116129/0.121622; Image833 cigarette FP counts are0/0. Full official/material/polymer metrics, strict matching at.05/.08/.10/.12/.15/.20, Image777 GT278..284 scores/ranks/IoUs and Image833 FP audit are in the [D-067 report](PHASE_4_EIGHT_CLASS_FINE_TUNING.md). This is one diagnostic validation experiment; higher confidence is not calibrated correctness or a promoted checkpoint.
 
 The new saved choice is `42 / 1e-5 @ 384/576 (score-calibrated vs integrated)`, with prior D061 integration, cal_442 and cal_blend_2575. Both GUI modes retain taxonomy/NMS controls and support explicit top15; all47 validation IDs remain accessible. All12 prior choices are preserved. Guarded suite: 278 tests, 262 passed, 16 documented skips, zero failures/errors. Two native Tk cases pass all15 taxonomy/NMS combinations, navigation/GT selection/zoom/pan at777/top15 with no model/GPU/state/export execution. Human visual acceptance remains pending. Next authorized action is saved visual review; no further experiment or promotion follows automatically.
 
@@ -1346,7 +1380,7 @@ The combined confidence/suppression objective is not achieved: Image833 cigarett
 
 Owner authorized exactly92 updates at steps351..442 from verified D-057 step350 (epoch1/next_batch129), restoring exact model/AdamW/RNG. Original sampler suffix contains11 cigarette images (LR1.5e-5),25 pure-film images (LR1e-7),56 other images (LR5e-6), with no resampling or loss/architecture/core-source changes. Two47-image validations completed94 forwards: endpoint and prespecified50/50 new-endpoint/original-constant442 blend; no reference GPU reruns or test access. Complete new step400 and step442 bundles were saved; all60 prior plus2 new verified (62 total). No commit, push, merge or promotion.
 
-Negative result for cigarette improvement: endpoint AP0.250675 and blend0.257129, both below prior integrated0.265563. Both new states cover14/24 cigarettes and4/7 on Image777, versus prior integration15/24 and5/7. Raw standard first15 coverage is2/7 for both, versus prior3/7; topK15 does not guarantee all cigarettes are drawn. Four-material diagnostic AP is0.307638/0.306513, versus prior0.309859; these mapped tasks are separate from official eight-class detection. Peak allocated VRAM3.550GiB. Full official/material/polymer metrics, all24-cigarette and GT278..284 score/rank/IoU ledgers, locked bins and launch commands are in the [D-066 report](TACO_STAGE_4_576_CIGARETTE_BOOST.md).
+Negative result for cigarette improvement: endpoint AP0.250675 and blend0.257129, both below prior integrated0.265563. Both new states cover14/24 cigarettes and4/7 on Image777, versus prior integration15/24 and5/7. Raw standard first15 coverage is2/7 for both, versus prior3/7; topK15 does not guarantee all cigarettes are drawn. Four-material diagnostic AP is0.307638/0.306513, versus prior0.309859; these mapped tasks are separate from official eight-class detection. Peak allocated VRAM3.550GiB. Full official/material/polymer metrics, all24-cigarette and GT278..284 score/rank/IoU ledgers, locked bins and launch commands are in the [D-066 report](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 
 The new local choice is `42 / 1e-5 @ 384/576 (cigarette-boost vs integrated)`; panels are prior integration, new endpoint and new50/50 blend. Both GUI modes retain D-065 taxonomy/NMS controls and accept `--box-top-k 15`. Existing11 manifest choices are unchanged. Guarded suite: 273 tests, 257 passed, 16 documented skips, zero failures/errors. Two native Tk cases passed all15 taxonomy/NMS combinations at Image777, top15, all47 IDs and navigation/zoom/pan; no replay model/GPU/weight-state/export operations. Human visual acceptance remains pending.
 
@@ -1358,7 +1392,7 @@ The owner's latest attached authorization replaces the earlier top-backbone-unfr
 
 Both Tk viewers now have reversible Taxonomy view and five NMS choices, retaining official eight-class/raw defaults. Mapped labels retain specific subtype and hazard flag; class-aware suppression and GT agreement use mapped IDs. Greedy containment suppresses at IoU >= .50 OR IoMin >= .80. Audit: seven states x three taxonomies x three suppression settings = 63 diagnostic COCO cases, plus strict one-to-one matching at .05/.07/.10/.12, non-exclusive coverage, Image 777/GT259/cigarettes, the fixed ten D-058 regressions and raw 4784 versus Stage-2 538 category support. Paper has zero Stage-2 support; Food waste/Organic has eight raw, zero Stage-2 annotations. Neither receives invented validated metrics.
 
-Integrated blend: raw eight-class AP 0.265563 and coverage 38/75; raw four-material AP 0.309859 and 55/75. Four-material class-aware containment yields AP 0.313529 and 49/75, with strict TP/FP/FN 49/597/26 at .05. It suppresses nested q4 under q0 and gives GT259 material agreement, while reducing cigarette coverage from 15/24 to 14/24 (Image 777 remains 5/7). Material-task AP is not an improvement to official eight-class detection. Four-material grouping covers nine fixed plastic regressions; polymer grouping additionally accepts the Styrofoam confusion. [Complete report, artifacts, caveats and PowerShell commands](TACO_STAGE_4_MATERIAL_HIERARCHY.md).
+Integrated blend: raw eight-class AP 0.265563 and coverage 38/75; raw four-material AP 0.309859 and 55/75. Four-material class-aware containment yields AP 0.313529 and 49/75, with strict TP/FP/FN 49/597/26 at .05. It suppresses nested q4 under q0 and gives GT259 material agreement, while reducing cigarette coverage from 15/24 to 14/24 (Image 777 remains 5/7). Material-task AP is not an improvement to official eight-class detection. Four-material grouping covers nine fixed plastic regressions; polymer grouping additionally accepts the Styrofoam confusion. [Complete report, artifacts, caveats and PowerShell commands](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 
 Verification: 267 guarded tests, 251 passed, 16 documented skips, zero failures/errors. Four native Windows Tk cases pass all 15 taxonomy/NMS combinations in both modes at Image 777, all 47 validation IDs and navigation/zoom/pan; two focused final cases verify per-annotation hazard columns. All 60 bundles verified before/after; prior protected files and replay manifest unchanged. Human visual acceptance remains pending. Next authorized action is saved visual review; no training or promotion follows automatically.
 
@@ -1368,7 +1402,7 @@ Historical interruption is retained separately: the earlier vision-unfreeze atte
 
 Owner authorized exactly 221 updates from the verified D-057 E1 step 221 model/AdamW/RNG state. LR 1e-6 applies only to 61 pure-film batches; LR 1e-5 to 160 other batches, including all 30 cigarette images, with original ordering/loss/architecture. Three 47-image validations (CB350, CB442, in-memory 25/75 blend) completed 141 forwards; historical references were not rerun. All 55 prior and 5 new bundles verified (60 total); six core files and protected prior artifacts preserved. No test access, commit, push, merge or promotion.
 
-CB Step 350 AP **0.258631**, Step 442 **0.242594**, and CB 25/75 blend **0.257303**. Cigarette coverage is 13/24, 14/24, 13/24; Image 777 coverage 4/7 for all three. The fixed ten-regression retention is 4/10, 2/10, 2/10; the nine-large subset is 3/9, 2/9, 2/9. This is partial recovery, not preservation of all desired gains. The requested fixed ten-loss set contains nine >=16-pixel objects and one 8--<16 object; both denominators are reported. [Full comparison, ledger and GUI commands](TACO_STAGE_4_576_CLASS_BALANCED.md). Next authorized action: owner inspects saved results; no further experiment or promotion follows automatically.
+CB Step 350 AP **0.258631**, Step 442 **0.242594**, and CB 25/75 blend **0.257303**. Cigarette coverage is 13/24, 14/24, 13/24; Image 777 coverage 4/7 for all three. The fixed ten-regression retention is 4/10, 2/10, 2/10; the nine-large subset is 3/9, 2/9, 2/9. This is partial recovery, not preservation of all desired gains. The requested fixed ten-loss set contains nine >=16-pixel objects and one 8--<16 object; both denominators are reported. [Full comparison, ledger and GUI commands](PHASE_4_EIGHT_CLASS_FINE_TUNING.md). Next authorized action: owner inspects saved results; no further experiment or promotion follows automatically.
 
 D-064 verification: 255 guarded tests, 239 passed, 16 documented skips, zero failures/errors. Four native Tk cases passed, each checking all three NMS options; all 47 image IDs selectable, correct labels, navigation and zoom/pan. No saved JSON changes or model/GPU execution during replay. Human visual acceptance remains pending.
 
@@ -1376,7 +1410,7 @@ D-064 verification: 255 guarded tests, 239 passed, 16 documented skips, zero fai
 
 Owner authorized an explicit saved-GUI-only NMS selector and saved-prediction audit. Default none preserves historical behavior; optional class-aware/class-agnostic modes greedily suppress passing queries at inclusive IoU>=0.50. Filtering is image-wide, after source/score selection and before standard top K, or before per-GT matching in object mode. No model/GPU execution, core SOURCES edits, official protocol/metric updates, checkpoint changes, commit, push or merge.
 
-All five saved 384/576 states were audited at 0.05/0.07 for remaining boxes, first 10/15 GT/cigarette coverage, and separately labeled post-NMS diagnostic COCO metrics. Agnostic NMS can trade correct-class coverage for fewer boxes. For the blend at 0.05/K 10, raw/class-aware/agnostic coverage is 30/31/27 of 75 GTs; cigarettes 10/11/11 of 24. Original official metric dictionaries reproduce exactly on CPU and remain unchanged. [Full audit, scope distinctions and exact GUI commands](TACO_STAGE_4_NMS_AUDIT.md).
+All five saved 384/576 states were audited at 0.05/0.07 for remaining boxes, first 10/15 GT/cigarette coverage, and separately labeled post-NMS diagnostic COCO metrics. Agnostic NMS can trade correct-class coverage for fewer boxes. For the blend at 0.05/K 10, raw/class-aware/agnostic coverage is 30/31/27 of 75 GTs; cigarettes 10/11/11 of 24. Original official metric dictionaries reproduce exactly on CPU and remain unchanged. [Full audit, scope distinctions and exact GUI commands](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 
 All 55 checkpoint bundles and 1703 protected files verified unchanged; the six core bytes and no-NMS official protocol are identical. Guarded suite: 235 passed, 16 documented skips, zero failures/errors. Native runtime evidence is recorded separately; human visual confirmation remains pending.
 
@@ -1386,17 +1420,17 @@ Native verification: 24 Tk cases passed at Image 777, covering both GUI modes, a
 
 Owner authorized continuation from D-057 E1 step 221 using the exact restored model/AdamW/RNG state, 221 updates only and two validation evaluations (94 forwards). LR decays per step from 5e-6 to 1e-6. The six core SOURCES files stay byte-for-byte unchanged; the isolated continuation module reuses their verified functions. Five complete new bundles were saved; all 50 original plus5 new bundles verified, and protected prior artifacts preserved. No test access, reference GPU rerun, commit, push, merge or promotion.
 
-Cosine step 350 AP **0.217172**; step 442 AP **0.221592**, above constant-LR E2 0.170508 but below E1 0.249891 and D-061 blend 0.265563. Endpoint cigarette coverage is 10/24 overall and 3/7 on Image 777; large-bin coverage 14/36. Passing queries at 0.05: 1133 across 47 images and 28 on Image 777, versus constant E2 1118/29. This is a negative/mixed diagnostic result for the combined preservation-and-clutter hypothesis, with unchanged validation selection bias. [Complete evidence and exact GUI commands](TACO_STAGE_4_576_LR_DECAY.md). Next authorized action: owner reviews saved results; no additional training or checkpoint promotion is implied.
+Cosine step 350 AP **0.217172**; step 442 AP **0.221592**, above constant-LR E2 0.170508 but below E1 0.249891 and D-061 blend 0.265563. Endpoint cigarette coverage is 10/24 overall and 3/7 on Image 777; large-bin coverage 14/36. Passing queries at 0.05: 1133 across 47 images and 28 on Image 777, versus constant E2 1118/29. This is a negative/mixed diagnostic result for the combined preservation-and-clutter hypothesis, with unchanged validation selection bias. [Complete evidence and exact GUI commands](PHASE_4_EIGHT_CLASS_FINE_TUNING.md). Next authorized action: owner reviews saved results; no additional training or checkpoint promotion is implied.
 
 ## D-061 384/576 weight integration - 2026-10-25
 
 Owner authorized exactly four inference-only in-memory FP32 parameter averages of D-057 step221/350/442, evaluated on the unchanged47 validation images, maximum188 forwards. Existing D-056/D-057/D-058 references are reused. Zero backward, optimizer updates, training-photo reads and test access; no checkpoint promotion, commit, push or merge.
 
-Highest integrated eight-class AP: `blend_350_442_2575` **0.265563**, versus step350 0.262337 and E2 0.170508. All900/.05 same-class coverage: 38/75 objects, 15/24 cigarettes, and 5/7 Image777 cigarettes. This selects a diagnostic replay view only and retains validation selection bias. All50 saved checkpoint bundles verified before/after; frozen persisted tensors are bitwise identical; only558 canonical trainable tensors enter averaging. The first47-image result was retained after a cleanup guard stop; remaining states ran in isolated processes, with no repeated inference and CUDA context release between states. [Complete evidence and GUI commands](TACO_STAGE_4_576_WEIGHT_INTEGRATION.md).
+Highest integrated eight-class AP: `blend_350_442_2575` **0.265563**, versus step350 0.262337 and E2 0.170508. All900/.05 same-class coverage: 38/75 objects, 15/24 cigarettes, and 5/7 Image777 cigarettes. This selects a diagnostic replay view only and retains validation selection bias. All50 saved checkpoint bundles verified before/after; frozen persisted tensors are bitwise identical; only558 canonical trainable tensors enter averaging. The first47-image result was retained after a cleanup guard stop; remaining states ran in isolated processes, with no repeated inference and CUDA context release between states. [Complete evidence and GUI commands](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 
 ## D-060 Saved 384/576 visual GUI replay ? 2026-10-24
 
-Owner authorized saved-JSON replay for D-056/D-057/D-058 in standard and per-object modes, retaining all four 256/384 choices. No GPU, training or detector inference is authorized by this task. The local augmented manifest adds endpoint and step-350 choices; checkpoint JSON context/position and anchored evaluations bind their identity. No checkpoint promotion or merge. [Implementation, verification and exact commands](TACO_SAVED_REVIEW_384_576.md).
+Owner authorized saved-JSON replay for D-056/D-057/D-058 in standard and per-object modes, retaining all four 256/384 choices. No GPU, training or detector inference is authorized by this task. The local augmented manifest adds endpoint and step-350 choices; checkpoint JSON context/position and anchored evaluations bind their identity. No checkpoint promotion or merge. [Implementation, verification and exact commands](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 
 ## D-059 Stage 4 wrap-up and focused publication — 2026-10-24
 
@@ -1425,7 +1459,7 @@ automatic follow-up actions. Higher sampled validation AP does not select a mode
 Owner authorized inference-only evaluation of D-057 step250/300/350/400 on47
 validation images,188 forwards total, reusing saved step0/221/442 endpoints.
 Observed status: **completed**. 188 validation forwards completed; all three gates passed. Cigarette same-class trajectory [8, 10, 11, 14, 14, 15]; large-bin same-class trajectory [21, 18, 16, 15, 15, 14]. No checkpoint selection or promotion.
-[Trajectory report, flip ledger and limitations](TACO_STAGE_4_576_TRAJECTORY.md).
+[Trajectory report, flip ledger and limitations](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 Audit `scale576-trajectory-c84b9d9344e64578ba1f2fb85f353d0c`. Validation checkpoint inspection is diagnostic and
 introduces selection bias; it is not a generalization claim or selection rule.
 No training/backward, train-photo/test access, core/GUI/dependency changes,
@@ -1443,7 +1477,7 @@ Epoch2 regresses to0.170508/0.370118 despite cigarette same-class coverage
 improving5→8→15/24 at0.05 and seven-class AP excluding bag rising.
 Ten new bundles verified; final optimizer step442 across558 parameters.
 All1766 protected hashes matched after execution; no checkpoint is promoted.
-[Full gates, results and limits](TACO_STAGE_4_576_TRAINING.md).
+[Full gates, results and limits](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 Audit `scale576-experiment-0b2a846e659a429cbe8a65c1ca0444e1`. No retry, promotion, test access, dependency/GUI changes,
 annotated exports or Git publication. Stop for owner review.
 
@@ -1456,7 +1490,7 @@ software, fresh protected/source hashes, both exact low baselines before any
 high pass, then both high evaluations. Fixed weights/FP32/900 queries/prompt/
 taxonomy/COCO v2 and locked14/10/15/36 bins. No updates/backward, train-photo/test
 access, core/GUI/dependency changes, exports, promotion or Git publication.
-[Completed results and qualification](TACO_STAGE_4_RESOLUTION_REPLICATION.md)
+[Completed results and qualification](PHASE_4_EIGHT_CLASS_FINE_TUNING.md)
 show shared small-bin coverage gains, checkpoint-dependent raw AP and positive
 bag-excluded AP deltas in all three states. No further experiment is authorized;
 stop for owner review.
@@ -1467,7 +1501,7 @@ The owner explicitly authorizes one retry from Gate1, preserving the original
 stopped attempt `resolution-experiment-629229adf1c6480d930aac79250d18f8`.
 The isolated pointer records that retry consumed and zero retries remaining.
 All five gates and the47-image384/576 pass completed on the fixed42/1e-5/E1
-checkpoint. [Measured results and limits](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md)
+checkpoint. [Measured results and limits](PHASE_4_EIGHT_CLASS_FINE_TUNING.md)
 record improved aggregate AP, partial small-object recovery, persistent <4px
 failures and three larger-object regressions. No updates/backward, training-photo
 reads, test access, core/GUI edits, promotions or Git publication. All next steps
@@ -1483,7 +1517,7 @@ in that order. Stop immediately at any failed gate; no fallback or parameter
 changes. Use an isolated work harness and focused resolution tests; core training,
 evaluation and GUI files remain untouched. No updates/backward, train-photo/test
 access, promotion, exports, dependencies or Git publication. All proposals remain
-unimplemented. [Actual stopped attempt and cause](TACO_STAGE_4_RESOLUTION_EXPERIMENT.md):
+unimplemented. [Actual stopped attempt and cause](PHASE_4_EIGHT_CLASS_FINE_TUNING.md):
 the software gate failed due to harness guard scoping; no real inference ran.
 Prepared fixes are unqualified and no retry is authorized by this stopped record.
 
@@ -1496,7 +1530,7 @@ states. Separate size-associated localization, class assignment, score/rank
 effects and annotation uncertainty; preserve the original20-image manifest and
 existing GUI. Record current owner-supplied image777 observations separately.
 Rank resolution/classification/data-quality directions as proposals only;
-[report evidence and one next experiment](TACO_STAGE_4_SMALL_OBJECT_CLASSIFICATION_AUDIT.md).
+[report evidence and one next experiment](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 No new training or model inference without separate authorization, optimizer
 updates, model/data/protocol/GUI/dependency changes, test access, promotion,
 exports, uploads or Git publication. Stop for owner review after verification.
@@ -1512,7 +1546,7 @@ four seed/LR runs with unchanged pretrained baseline and same-run E1/E2.
 Preserve the original manifest and add separate machine evidence. No training,
 inference, optimizer/model/data/protocol/dependency changes, test use, promotion,
 exports or automatic Git operations. Verify software and native Windows GUI;
-[report findings](TACO_STAGE_4_PER_OBJECT_REVIEW.md), separate automated diagnostics
+[report findings](PHASE_4_EIGHT_CLASS_FINE_TUNING.md), separate automated diagnostics
 from human material/annotation confirmation, then stop for human review. No
 training recommendation is authorized solely from image777.
 
@@ -1527,7 +1561,7 @@ only the minimal explicit saved-run viewer extension. Separate automated
 diagnostics from pending human confirmation. Compare the four possible research
 directions as proposals only. No new training, inference, test evaluation, model
 or dataset changes, dependency upgrades, promotion, exports, publication or Git
-publication. Stop after [the report and review preparation](TACO_STAGE_4_CROSS_SEED_ANALYSIS.md)
+publication. Stop after [the report and review preparation](PHASE_4_EIGHT_CLASS_FINE_TUNING.md)
 for owner review; no additional experiment is authorized.
 
 ## Paired seed-123 replication — 2026-10-22
@@ -1545,7 +1579,7 @@ pretrained model and performs 442 full updates (884 full + six pilot total).
 Stop on critical preflight/integrity failure, and after both final validations.
 No test access, model/data/inference changes, extra experiments, dependencies,
 uploads, promotion or automatic Git operations. Compare both seeds/rates and
-recommend further work only as proposals in [the replication report](TACO_STAGE_4_SEED_REPLICATION.md).
+recommend further work only as proposals in [the replication report](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 
 ## Controlled learning-rate experiment — 2026-10-21
 
@@ -1561,7 +1595,7 @@ default 1e-5, bind the chosen rate in settings/checkpoint context and test its
 actual delivery to AdamW. Preflight must pass before updates. No historical
 resume, test access, data/prompt/model/inference changes, dependency changes,
 promotion, uploads, automatic tuning or Git operations. Compare all five
-pretrained/reference/new states in [the LR experiment report](TACO_STAGE_4_LR_EXPERIMENT.md).
+pretrained/reference/new states in [the LR experiment report](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 Stop after epoch 2/final validation for owner review.
 
 ## Corrected-run diagnostic investigation — 2026-10-20/21
@@ -1574,7 +1608,7 @@ configuration, data, checkpoints, strict resume and corrected COCO settings.
 No training, optimizer updates, test access, promotion, dependency changes,
 uploads or automatic Git operations. Report confirmed observations separately
 from hypotheses and rank single-variable experiments as proposals only. See
-[corrected diagnostics and next experiment proposal](TACO_STAGE_4_CORRECTED_DIAGNOSTICS.md).
+[corrected diagnostics and next experiment proposal](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 Stop for owner review; no further experiment is approved by this decision.
 
 ## Controlled corrected-target restart — 2026-10-20
@@ -1593,7 +1627,7 @@ uploads, publication, checkpoint promotion or automatic Git operations.
 Compare pretrained, both corrected-protocol historical results, and both new
 epochs; retain losses, AP/recall, fixed-threshold diagnostics, score distributions,
 memory/timing, checkpoint integrity and preservation evidence in
-[the corrected-retrain report](TACO_STAGE_4_CORRECTED_RETRAIN.md).
+[the corrected-retrain report](PHASE_4_EIGHT_CLASS_FINE_TUNING.md).
 Stop after epoch 2/final validation and await owner review.
 
 ## Explicit opt-in validation viewer — 2026-10-20
@@ -1625,7 +1659,7 @@ Preserve all user work, inference, strict resume, checkpoints, taxonomy, splits,
 originals and environments. No training, optimizer restoration/updates, test access,
 downloads, dependency changes, exports/publication, promotion or automatic commits.
 
-[Actual evidence](TACO_STAGE_4_VISUAL_REVIEW.md) distinguishes automated annotation
+[Actual evidence](PHASE_4_EIGHT_CLASS_FINE_TUNING.md) distinguishes automated annotation
 associations and native runtime checks from pending human photo-level judgments.
 Recommendations for a future corrected-target restart/resolution/score investigation
 remain proposals requiring later authorization. No further experiment is started.
@@ -1640,7 +1674,7 @@ optimizer/RNG/training position, update weights, access test data, publish priva
 artifacts, promote a checkpoint or automatically commit/push/merge. Qualify using
 synthetic fixtures before reevaluating unchanged epoch-1/2 validation models.
 
-[Completed evidence](TACO_STAGE_4_REEVALUATION.md) records corrected metrics, preserved
+[Completed evidence](PHASE_4_EIGHT_CLASS_FINE_TUNING.md) records corrected metrics, preserved
 historical evidence, unchanged strict resume rejection and zero guarded forbidden
 operations. Step 2 visual comparison is recommended, not started or implicitly
 approved. Corrected evaluation does not repair historical training targets.
@@ -1655,7 +1689,7 @@ environments. No optimizer updates, test access, publication, promotion, automat
 merge or Step 2 visual analysis. Stop checkpoint comparison if integrity/source
 binding blocks it; do not falsify provenance or disable checks.
 
-[Actual Step 1B evidence](TACO_STAGE_4_COORDINATES.md): corrections/tests pass;
+[Actual Step 1B evidence](PHASE_4_EIGHT_CLASS_FINE_TUNING.md): corrections/tests pass;
 pretrained reevaluation completed; epoch comparisons blocked by unchanged
 exact-source/protocol checks. An evaluation-only provenance contract for historical
 weights is a proposal requiring approval, not an implemented exception or permission
@@ -1663,7 +1697,7 @@ to retrain. Historical run artifacts remain unchanged.
 
 ## Stage 4 owner academic-use declaration — 2026-10-19
 
-D-042: The owner confirms non-commercial academic purpose, local training/evaluation, no publication/redistribution/cloud upload of TACO photos or annotations, and authorizes proceeding on a genuinely documented lawful-use basis if supportable. This is project-owner workflow authorization, not rightsholder permission, institutional approval or definitive legal clearance. The [case-specific Section 185 record](TACO_STAGE_4_ACADEMIC_USE.md) documents a defensible limited-use claim with remaining uncertainty, bound to the exact 221 training and 47 validation images/annotations. The v2 gate records that claim with clearance flags false and third-party authority explicitly not claimed. No new phase, model/loss/precision change, test use, cloud spending, publication or automatic merge is authorized. Existing Stage 4 pilot/training/evaluation proceeds within that scope.
+D-042: The owner confirms non-commercial academic purpose, local training/evaluation, no publication/redistribution/cloud upload of TACO photos or annotations, and authorizes proceeding on a genuinely documented lawful-use basis if supportable. This is project-owner workflow authorization, not rightsholder permission, institutional approval or definitive legal clearance. The [case-specific Section 185 record](PHASE_4_EIGHT_CLASS_FINE_TUNING.md) documents a defensible limited-use claim with remaining uncertainty, bound to the exact 221 training and 47 validation images/annotations. The v2 gate records that claim with clearance flags false and third-party authority explicitly not claimed. No new phase, model/loss/precision change, test use, cloud spending, publication or automatic merge is authorized. Existing Stage 4 pilot/training/evaluation proceeds within that scope.
 
 ## Current Stage 4 authorization — 2026-10-19
 
@@ -1671,7 +1705,7 @@ D-042: The owner confirms non-commercial academic purpose, local training/evalua
 | --- | --- | --- |
 | D-041 | Owner authorizes real-image fine-tuning and initial validation directly on Stage 3D's verified adapter as one continuous implementation task, conditional on verified permission or an appropriately approved lawful-use basis for source photos and annotations/database. | Implement loader, full resumable checkpoints, progress, real-memory pilot and bounded 2–3 epochs with fixed pretrained/validation comparison; preserve eight labels/splits, inference/environment and original weights. If rights remain unresolved, finish runnable software and identify exact approval before processing actual photos. No test-photo use, cloud spending/upload/publication, promotion or PR merge. Earlier synthetic-only boundaries are superseded within this scope. |
 
-Implementation/evidence: [Stage 4](TACO_STAGE_4.md). Software and generated-image qualification are recorded separately from real-photo gates. Missing rights evidence currently blocks actual photo processing/training; no permission, real-data outcome or benchmark is invented. The fixed initial protocol/settings in the implementation are bounded engineering choices, not measured optimal defaults or a taxonomy/architecture decision.
+Implementation/evidence: [Stage 4](PHASE_4_EIGHT_CLASS_FINE_TUNING.md). Software and generated-image qualification are recorded separately from real-photo gates. Missing rights evidence currently blocks actual photo processing/training; no permission, real-data outcome or benchmark is invented. The fixed initial protocol/settings in the implementation are bounded engineering choices, not measured optimal defaults or a taxonomy/architecture decision.
 
 ## Historical Phase 0 decisions — retained record
 
@@ -1713,7 +1747,7 @@ Source: the owner's Phase 1 planning, publication, documentation-correction and 
 | D-018 | Codex corrects documentation; Antigravity performs later authorized implementation. | The correction does not authorize installation, weight downloads, inference, or Phase 1 acceptance. Retain agreed phase boundaries without new approval gates for routine defaults. |
 | D-019 | Preserve original ignore rules and append missing `/data/input/`, `/results/`, `/.cache/huggingface/` exclusions. | Additive clarification to D-004; no directory creation, silent untracking, or moving photos. |
 | D-020 | Phase 0 is complete and Phase 1 planning is published through merged PR #3 (`b366f76`). Current work is documentation correction on a focused branch. | Replaces D-003/D-013 task-state wording and old pending-merge claims. Publication is not environment readiness, successful detection, or approval of every proposal. No main changes or merge. |
-| D-021 | Functional outputs must be standards-compliant JSON with invalid numbers represented as null plus diagnostics, and display outcome separate from inference outcome. | Corrects the plan's prior nonfinite-retention ambiguity and missing display lifecycle. Persist inference results before viewing and atomically update display outcome; unfinished pending attempts remain explicit. Detailed contract conventions are in the [plan](PHASE_1_IMPLEMENTATION_PLAN.md#7-proposed-json-contract). |
+| D-021 | Functional outputs must be standards-compliant JSON with invalid numbers represented as null plus diagnostics, and display outcome separate from inference outcome. | Corrects the plan's prior nonfinite-retention ambiguity and missing display lifecycle. Persist inference results before viewing and atomically update display outcome; unfinished pending attempts remain explicit. Detailed contract conventions are in the [plan](PHASE_1_PLANNING_AND_READINESS.md#7-proposed-json-contract). |
 
 ## Subsequent owner decisions — current Phase 2A authorization
 
@@ -1724,9 +1758,9 @@ Source: the owner's Phase 1 planning, publication, documentation-correction and 
 
 ## Subsequent target evidence — supplied Windows preflight
 
-The owner supplied Command Prompt output reporting Windows 10 build 19045.6466, Git 2.45.1.windows.1, GTX 1660 Ti, NVIDIA driver 472.19 and 6144 MiB total VRAM (5235–5236 MiB free across successful queries). This supersedes the RTX 2080 Super assumption in D-012/D-015 for the current target, while preserving those rows as history. `py` is not recognized in that shell; Python itself is not yet proven absent. These are supplied observations, not a Codex-executed local check, CUDA compatibility result or accepted readiness decision. See [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md) for next checks.
+The owner supplied Command Prompt output reporting Windows 10 build 19045.6466, Git 2.45.1.windows.1, GTX 1660 Ti, NVIDIA driver 472.19 and 6144 MiB total VRAM (5235–5236 MiB free across successful queries). This supersedes the RTX 2080 Super assumption in D-012/D-015 for the current target, while preserving those rows as history. `py` is not recognized in that shell; Python itself is not yet proven absent. These are supplied observations, not a Codex-executed local check, CUDA compatibility result or accepted readiness decision. See [PHASE_2A_READINESS.md](PHASE_1_PLANNING_AND_READINESS.md) for next checks.
 
-These decisions are sourced from the owner's latest instruction; no additional approval date or local readiness evidence is invented. Initially missing Windows preflight/results were execution prerequisites, not repeated authorization requirements. Subsequent supplied evidence completed Phase 2A checks as recorded below and in [PHASE_2A_READINESS.md](PHASE_2A_READINESS.md).
+These decisions are sourced from the owner's latest instruction; no additional approval date or local readiness evidence is invented. Initially missing Windows preflight/results were execution prerequisites, not repeated authorization requirements. Subsequent supplied evidence completed Phase 2A checks as recorded below and in [PHASE_2A_READINESS.md](PHASE_1_PLANNING_AND_READINESS.md).
 
 D-001/D-006 and D-009–D-011 remain current: modelling-only trash still images, direct prompts first, mixed categories/multiple candidate regions, and no automatic grouping in the baseline. Category codes are `individual_litter`, `group_of_individual_litter`, and `garbage_pile`. Predictions do not prove membership or physical-object/independent-region counts; unresolved counts remain null. Application modules, APIs, databases, road anomalies, video/cameras, incident consolidation, and hotspots remain outside scope.
 
@@ -1738,14 +1772,14 @@ After the initial Store-alias failure, owner-supplied WinGet output reports Pyth
 
 Supplied results now complete the preparation checks: dependency consistency/direct imports; CPU and CUDA tensors (2.0); native TkAgg rendering and explicit normal return; checkpoint API/model-card/configuration and same-revision processor metadata; official NVIDIA Table 2 driver minimum; and full 36-package freeze plus local environment record. Revision is `a2bb814dd30d776dcf7e30523b00659f4f141c71`, with Apache-2.0 metadata, non-gated access and safetensors availability. Windows driver 472.19 exceeds the documented CUDA 11.8 minor-compatibility minimum 452.39, and the actual tensor test passed. The toolkit's separate 522.06 listing is not that minimum.
 
-These are technical observations and Codex's preparation assessment, not a new owner decision or automatic approval to implement/run a detector. All prior D-001–D-023 rows remain intact. No model-memory or detection-quality claim is made. [PHASE_2A_ENVIRONMENT_SNAPSHOT.md](PHASE_2A_ENVIRONMENT_SNAPSHOT.md) preserves the exact supplied metadata, processor settings, dependency freeze and evidence provenance; [PHASES.md](PHASES.md) records the stop gate.
+These are technical observations and Codex's preparation assessment, not a new owner decision or automatic approval to implement/run a detector. All prior D-001–D-023 rows remain intact. No model-memory or detection-quality claim is made. [PHASE_2A_ENVIRONMENT_SNAPSHOT.md](PHASE_1_PLANNING_AND_READINESS.md) preserves the exact supplied metadata, processor settings, dependency freeze and evidence provenance; [PHASES.md](PHASES.md) records the stop gate.
 
 ## Technical proposals and pending verification
 
-- P-001: The [architecture](ARCHITECTURE.md) and [plan](PHASE_1_IMPLEMENTATION_PLAN.md) retain the proposed detector workflow. Checkpoint/processor revision, configuration, license/access metadata, exact dependencies/source and basic Windows package/device/viewer readiness are now verified to the limited 2A scope in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md). Prior unverified wording is historical. Model loading, memory fit, prompt/category quality and inference remain untested; 2B software fixtures do not establish them.
-- P-002: The current [test plan](TEST_PLAN.md) applies D-016 functional checks. Earlier P-002's mandatory annotated/held-out protocol is superseded; formal annotated evaluation is optional, separately scoped future work.
+- P-001: The [architecture](ARCHITECTURE.md) and [plan](PHASE_1_PLANNING_AND_READINESS.md) retain the proposed detector workflow. Checkpoint/processor revision, configuration, license/access metadata, exact dependencies/source and basic Windows package/device/viewer readiness are now verified to the limited 2A scope in the [snapshot](PHASE_1_PLANNING_AND_READINESS.md). Prior unverified wording is historical. Model loading, memory fit, prompt/category quality and inference remain untested; 2B software fixtures do not establish them.
+- P-002: The current [test plan](EVALUATION.md) applies D-016 functional checks. Earlier P-002's mandatory annotated/held-out protocol is superseded; formal annotated evaluation is optional, separately scoped future work.
 - P-003: Follow [PHASES.md](PHASES.md). Earlier Phase 0-only task state was superseded by D-020; current Phase 2C authorization is D-025 below; D-024 remains the historical 2B scope.
-- P-004: The proposed baseline is now observed in supplied target results: Python 3.11.9 x64, torch 2.7.1+cu118, torchvision 0.22.1+cu118, Transformers 4.51.3, Pillow 11.2.1 and Matplotlib 3.10.3. Installation/imports and `pip check` passed; CPU/GPU tensors each returned 2.0 with capability (7,5). Full 36-package freeze/source capture, native TkAgg rendering/normal return and pinned checkpoint/processor metadata have subsequently been verified in supplied outputs and preserved in the [snapshot](PHASE_2A_ENVIRONMENT_SNAPSHOT.md); no model compatibility/performance is inferred. Earlier source-only proposal status is retained in Git history.
+- P-004: The proposed baseline is now observed in supplied target results: Python 3.11.9 x64, torch 2.7.1+cu118, torchvision 0.22.1+cu118, Transformers 4.51.3, Pillow 11.2.1 and Matplotlib 3.10.3. Installation/imports and `pip check` passed; CPU/GPU tensors each returned 2.0 with capability (7,5). Full 36-package freeze/source capture, native TkAgg rendering/normal return and pinned checkpoint/processor metadata have subsequently been verified in supplied outputs and preserved in the [snapshot](PHASE_1_PLANNING_AND_READINESS.md); no model compatibility/performance is inferred. Earlier source-only proposal status is retained in Git history.
 - P-005: Starting prompts, `threshold=0.35`, `text_threshold=0.25`, exact aliases, visual grouping boundaries, identical-box/same-phrase collapse, and IoU >=0.8 review flags are unvalidated defaults. No general NMS or spatial grouping algorithm is selected. Routine refinements inside an authorized phase are recorded rather than treated as new owner approval gates.
 
 | Area | Remaining evidence or operational choice | Relevant stage |
@@ -1768,7 +1802,7 @@ For each approval, record the decision, approving owner, rationale, evidence lin
 
 Routine implementation choices: separate `bantai.preparation.v1` and `bantai.preparation-run.v1` schemas prevent decoding from being mislabeled functional success. The functional contract adds an explicit `inference.completed` guard. UUID run directories are reserved exclusively; source filenames use a SHA-256 of full source identity plus source-byte digest. External inputs use an absolute image ID because no repository-relative path exists; project inputs use relative IDs. Initial JSON uses atomic hard-link publication without overwrite; final display updates use same-directory `os.replace`. Filesystems lacking hard links fail visibly. Single writer per functional result is required; power-loss directory durability is not claimed. These are software choices, not measured model capability or new owner approval of prompt hypotheses.
 
-The complete 36-package requirements snapshot is transcribed from supplied 2A evidence with the CUDA source retained. No package reinstall/fresh-install verification occurred. Actual 2B cloud software checks and target-version limitations are recorded separately in [PHASE_2B_CHECKS.md](PHASE_2B_CHECKS.md). Historical 2A readiness/snapshot stop wording applies to that earlier task and is superseded by D-024 for the foundation only.
+The complete 36-package requirements snapshot is transcribed from supplied 2A evidence with the CUDA source retained. No package reinstall/fresh-install verification occurred. Actual 2B cloud software checks and target-version limitations are recorded separately in [PHASE_2B_CHECKS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md). Historical 2A readiness/snapshot stop wording applies to that earlier task and is superseded by D-024 for the foundation only.
 
 ## Phase 2C owner instruction — 2026-10-17
 
@@ -1776,75 +1810,75 @@ The complete 36-package requirements snapshot is transcribed from supplied 2A ev
 | --- | --- | --- |
 | D-025 | “proceed now with phase 2C” | Supersedes D-024's stop-before-2C boundary. Implement the baseline previously described as the next phase: pinned loading/inference, exact mapping, conservative duplicates/review flags and native in-memory display. Preserve dependencies, originals, contract/evidence boundaries and no automatic merge. No grouping, training, web/application modules or later optimization. |
 
-Codex interprets this phase instruction using the published 2B next-phase description and implementation-plan baseline; no successful model behavior or blanket validation of prompts/thresholds is inferred. Routine choices: preparation remains the default; inference is explicit, with optional cached-only execution. Raw query auditing precedes upstream threshold loss; missing decoded phrases remain empty rather than invented. Duplicate policy now uses identical raw boxes plus normalized phrases and highest-score retention; near duplicates remain. Functional results require an observed pinned Transformers version for completed inference; unavailable metadata is null for pre-model errors. Actual driver is not inferred from old 2A observations. Headless canvas and mock tests remain software evidence; target/model/native-photo execution is unrun. See [PHASE_2C_CHECKS.md](PHASE_2C_CHECKS.md).
+Codex interprets this phase instruction using the published 2B next-phase description and implementation-plan baseline; no successful model behavior or blanket validation of prompts/thresholds is inferred. Routine choices: preparation remains the default; inference is explicit, with optional cached-only execution. Raw query auditing precedes upstream threshold loss; missing decoded phrases remain empty rather than invented. Duplicate policy now uses identical raw boxes plus normalized phrases and highest-score retention; near duplicates remain. Functional results require an observed pinned Transformers version for completed inference; unavailable metadata is null for pre-model errors. Actual driver is not inferred from old 2A observations. Headless canvas and mock tests remain software evidence; target/model/native-photo execution is unrun. See [PHASE_2C_CHECKS.md](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Terminal viewer owner instruction - 2026-10-17
 
-D-026: The owner explicitly requested replacing TkAgg with ANSI/Unicode rendering in the VS Code terminal, results beneath each image, all raw query/non-padding token sigmoid scores, summary/full modes, complete JSON diagnostics, unchanged filtering and pinned model, tests/docs, and a dedicated branch commit without merging. This supersedes the prior native-window display requirement only. No grouping, training or web modules are authorized. PASS/FAIL denotes retention or strict threshold decisions, never measured correctness. See [terminal contract](TERMINAL_VIEWER.md).
+D-026: The owner explicitly requested replacing TkAgg with ANSI/Unicode rendering in the VS Code terminal, results beneath each image, all raw query/non-padding token sigmoid scores, summary/full modes, complete JSON diagnostics, unchanged filtering and pinned model, tests/docs, and a dedicated branch commit without merging. This supersedes the prior native-window display requirement only. No grouping, training or web modules are authorized. PASS/FAIL denotes retention or strict threshold decisions, never measured correctness. See [terminal contract](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Terminal presentation correction owner instruction - 2026-10-17
 
-D-027: Continue `feat/terminal-viewer-diagnostics`/PR #9; diagnose missing inline output, require IMAGE-first actual terminal rendering and aligned decimal-score tables, compact configurable summary selection, bounded full output, explicit special-token inclusion, separate threshold/policy states, and honest unsupported-terminal outcomes. Preserve raw precision, inference, thresholds, pinned checkpoint, originals and atomic display lifecycle. No new branch or merge. See [presentation contract and evidence](TERMINAL_VIEWER.md).
+D-027: Continue `feat/terminal-viewer-diagnostics`/PR #9; diagnose missing inline output, require IMAGE-first actual terminal rendering and aligned decimal-score tables, compact configurable summary selection, bounded full output, explicit special-token inclusion, separate threshold/policy states, and honest unsupported-terminal outcomes. Preserve raw precision, inference, thresholds, pinned checkpoint, originals and atomic display lifecycle. No new branch or merge. See [presentation contract and evidence](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Passing-only console and replay owner instruction - 2026-10-18
 
-D-028: The owner supersedes below-threshold/full-dump console selection with passing-only retained query rows and passing ordinary-token rows, preserving all diagnostics in JSON. Authorizes independent synthetic renderer checks and source-verified display-only replay before further inference. Requires honest pending visual status when the actual Windows/VS Code surface cannot be inspected; keep the same branch/PR and no merge. Model revision, thresholds, originals and inference/display persistence remain protected. See [current terminal contract](TERMINAL_VIEWER.md).
+D-028: The owner supersedes below-threshold/full-dump console selection with passing-only retained query rows and passing ordinary-token rows, preserving all diagnostics in JSON. Authorizes independent synthetic renderer checks and source-verified display-only replay before further inference. Requires honest pending visual status when the actual Windows/VS Code surface cannot be inspected; keep the same branch/PR and no merge. Model revision, thresholds, originals and inference/display persistence remain protected. See [current terminal contract](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Width-driven previews and full-mode restoration - 2026-10-18
 
-D-029: The owner requests larger configurable-width/aspect-preserving terminal previews with vertical scrolling, fewer pauses, fixed table alignment, token rows grouped by query, passing-only summary and working full below-threshold diagnostics. This supersedes D-028's restriction on explicit full-mode console output only. Preserve all inference, checkpoint/threshold, source/JSON and terminal-only boundaries. Verify using saved-result replay without rerunning inference; same branch and no merge. See [current terminal contract](TERMINAL_VIEWER.md).
+D-029: The owner requests larger configurable-width/aspect-preserving terminal previews with vertical scrolling, fewer pauses, fixed table alignment, token rows grouped by query, passing-only summary and working full below-threshold diagnostics. This supersedes D-028's restriction on explicit full-mode console output only. Preserve all inference, checkpoint/threshold, source/JSON and terminal-only boundaries. Verify using saved-result replay without rerunning inference; same branch and no merge. See [current terminal contract](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Consistent mapping and presentation owner instruction - 2026-10-18
 
-D-030: The owner requests consistent detection summaries containing image/query IDs, raw decoded phrase, mapped category and mapping reason, score, threshold status and rounded boxes. Keep unmapped predictions distinct from failed detections; never force incomplete phrases into categories. Improve wrapping and terminal preview quality within the actual grid, explain resolution limits without claiming recovered detail, retain complete raw precision/token scores in JSON and summary/full modes. Use saved results where possible; preserve model inference, prompts, thresholds, originals and existing functionality. Continue the same feature branch/PR without merging. See [current presentation contract](TERMINAL_VIEWER.md).
+D-030: The owner requests consistent detection summaries containing image/query IDs, raw decoded phrase, mapped category and mapping reason, score, threshold status and rounded boxes. Keep unmapped predictions distinct from failed detections; never force incomplete phrases into categories. Improve wrapping and terminal preview quality within the actual grid, explain resolution limits without claiming recovered detail, retain complete raw precision/token scores in JSON and summary/full modes. Use saved results where possible; preserve model inference, prompts, thresholds, originals and existing functionality. Continue the same feature branch/PR without merging. See [current presentation contract](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Native viewer restoration owner instruction - 2026-10-18
 
-D-031: The owner explicitly replaces terminal image rendering with an existing-dependency Matplotlib/TkAgg window, superseding terminal-only/no-pop-up instructions. Display the oriented original with valid retained boxes, matching query IDs, phrases/categories, percentage scores and original pixel coordinates; retain zoom/pan, readable labels and passing-only terminal tables. Keep in-memory rendering, no image copies/exports, source-verified replay and atomic separate inference/display statuses. Test alignment, empty images, closure and failures; report actual Windows observations separately. Preserve user configuration edits, model inference, prompts, thresholds and weights. Continue current branch/open PR without merging. Subsequent owner feedback prioritizes output over additional navigation checks and explicitly requests only mapped-category text on image labels; keep IDs, scores, phrases and coordinates in the same-window details panel and terminal tables. See [native viewer contract and evidence](NATIVE_VIEWER.md).
+D-031: The owner explicitly replaces terminal image rendering with an existing-dependency Matplotlib/TkAgg window, superseding terminal-only/no-pop-up instructions. Display the oriented original with valid retained boxes, matching query IDs, phrases/categories, percentage scores and original pixel coordinates; retain zoom/pan, readable labels and passing-only terminal tables. Keep in-memory rendering, no image copies/exports, source-verified replay and atomic separate inference/display statuses. Test alignment, empty images, closure and failures; report actual Windows observations separately. Preserve user configuration edits, model inference, prompts, thresholds and weights. Continue current branch/open PR without merging. Subsequent owner feedback prioritizes output over additional navigation checks and explicitly requests only mapped-category text on image labels; keep IDs, scores, phrases and coordinates in the same-window details panel and terminal tables. See [native viewer contract and evidence](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## One scrollable results tab owner instruction - 2026-10-18
 
-D-032: The owner supersedes terminal-only and separate image-window layouts with one scrollable GUI tab repeating Image #N, Detection Summary, Text-Token Details and Configuration in that order. Only numbered headings precede images. Use raw decoded phrase labels immediately above valid passing boxes, bounded readable wrapping, original pixel ticks, zoom/pan and matching IDs where space permits; keep scores in the summary. Passing-only tables must be selectable/copyable and show actual saved configuration. Preserve complete JSON, inference/model/mapping behavior, originals and atomic separate display outcomes, and support source-verified multi-image replay without inference. Verify synthetic and actual Windows observations separately. Continue the existing branch, update an open PR if present, and do not merge. See [current scrollable GUI contract](SCROLLABLE_VIEWER.md).
+D-032: The owner supersedes terminal-only and separate image-window layouts with one scrollable GUI tab repeating Image #N, Detection Summary, Text-Token Details and Configuration in that order. Only numbered headings precede images. Use raw decoded phrase labels immediately above valid passing boxes, bounded readable wrapping, original pixel ticks, zoom/pan and matching IDs where space permits; keep scores in the summary. Passing-only tables must be selectable/copyable and show actual saved configuration. Preserve complete JSON, inference/model/mapping behavior, originals and atomic separate display outcomes, and support source-verified multi-image replay without inference. Verify synthetic and actual Windows observations separately. Continue the existing branch, update an open PR if present, and do not merge. See [current scrollable GUI contract](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 The owner confirmed the corrected raw phrase labels were complete and subsequently requested smaller label fonts to reduce occupied image space. Use 8.5-point labels with an 8-point fallback, retaining full readable tables and the disclosed zoom/detail fallback. This changes presentation only.
 
 ## Phase 2D authorization - 2026-10-18
 
-D-033: The owner explicitly authorizes Phase 2D - Display and Summaries, completing and validating the existing shared Tk/TkAgg viewer. Preserve local prompt/threshold/font edits, environment, model/mapping, originals and raw JSON. Use latest main and a focused branch, carry relevant unmerged work, prefer saved-image replay, distinguish automated from visual evidence, publish a PR without merging. Phase 2E, fine-tuning, grouping, new data collection and web modules remain excluded. Supersedes the earlier same-feature-branch instruction. See [2D acceptance evidence](PHASE_2D_CHECKS.md).
+D-033: The owner explicitly authorizes Phase 2D - Display and Summaries, completing and validating the existing shared Tk/TkAgg viewer. Preserve local prompt/threshold/font edits, environment, model/mapping, originals and raw JSON. Use latest main and a focused branch, carry relevant unmerged work, prefer saved-image replay, distinguish automated from visual evidence, publish a PR without merging. Phase 2E, fine-tuning, grouping, new data collection and web modules remain excluded. Supersedes the earlier same-feature-branch instruction. See [2D acceptance evidence](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 ## Phase 2E authorization - 2026-10-18
 
-D-034: The owner authorizes Phase 2E - Functional Checking and Handoff, superseding the stop-before-2E boundary. Use existing owner photos and pinned cached inference in the preserved Windows environment, compare current settings with a small controlled prompt/threshold set, inspect boxes and raw phrases, verify display/persistence and publish evidence without merging. Keep human confirmation separate; missing observations/scenarios remain pending. Stop before Phase 3 decisions or optimization. No training, grouping, model/dependency changes, collection or application modules. See [results and recommendations](PHASE_2E_RESULTS.md).
+D-034: The owner authorizes Phase 2E - Functional Checking and Handoff, superseding the stop-before-2E boundary. Use existing owner photos and pinned cached inference in the preserved Windows environment, compare current settings with a small controlled prompt/threshold set, inspect boxes and raw phrases, verify display/persistence and publish evidence without merging. Keep human confirmation separate; missing observations/scenarios remain pending. Stop before Phase 3 decisions or optimization. No training, grouping, model/dependency changes, collection or application modules. See [results and recommendations](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 During this work the owner reported that current labels needed to be smaller and some were absent for small/nested boxes. This authorizes the focused presentation correction: 7.5/7-point defaults, placement beyond narrow box width while bounded by axes and clear of box borders, query IDs/connectors. Corrected human acceptance remains pending. Existing 8.5/8-point decisions above describe history. Experimental prompt/threshold findings and proposed Phase 3 directions are evidence/proposals, not approved defaults or phase transitions.
 
 ## TACO harmonization and annotation visualization authorization
 
-D-035 (2026-10-18): The owner authorizes preparation of the existing external TACO dataset with the eight-label object taxonomy in [config/taco_taxonomy.v1.json](../config/taco_taxonomy.v1.json): cigarette, plastic_bottle, plastic_bag, plastic_wrapper, plastic_film, drink_can, plastic_cup, styrofoam_piece. Match the eleven explicitly approved source names exactly and preserve their IDs and all original metadata. Implement read-only auditing and local annotation visualization with class sampling and explicit excluded/Unlabeled litter handling. No source modification, additional downloads, final splits, implicit negative examples, dependency/model changes or fine-tuning. Keep the existing inference pipeline and viewer unchanged. See [evidence](TACO_PREPARATION.md).
+D-035 (2026-10-18): The owner authorizes preparation of the existing external TACO dataset with the eight-label object taxonomy in [config/taco_taxonomy.v1.json](../config/taco_taxonomy.v1.json): cigarette, plastic_bottle, plastic_bag, plastic_wrapper, plastic_film, drink_can, plastic_cup, styrofoam_piece. Match the eleven explicitly approved source names exactly and preserve their IDs and all original metadata. Implement read-only auditing and local annotation visualization with class sampling and explicit excluded/Unlabeled litter handling. No source modification, additional downloads, final splits, implicit negative examples, dependency/model changes or fine-tuning. Keep the existing inference pipeline and viewer unchanged. See [evidence](PHASE_1_PLANNING_AND_READINESS.md).
 
 Unresolved preparation decisions: excluded/unlabeled/crowd handling for later training, stored-versus-EXIF coordinate policy, duplicate-ID resolution, negative-origin box repairs, final splits and training export format. Conservative audit holds and explicit EXIF previews are review behavior, not owner approval of a training transformation. The eight object labels do not replace the three existing inference project categories.
 
 ## Fine-Tuning Preparation Stage 2 authorization
 
-D-036 (2026-10-18): The owner reports representative annotations visually reviewed and authorizes non-destructive strict-clean conversion and seeded image-level train/validation/test splitting of existing external TACO. Use the eight-class taxonomy/order, default proposed 70/15/15 ratios and seed 42, preserve original metadata/source identity, quarantine whole missing/unaligned/invalid/mixed/unlabeled images, and report losses/bias. Do not clip boxes, repair duplicated source annotation IDs, assume trainer ignore flags, copy photos, download data, change dependencies/inference or load/fine-tune Grounding DINO. This supersedes D-035's export/split stop only. No merge. See [Stage 2 evidence](TACO_STAGE_2.md).
+D-036 (2026-10-18): The owner reports representative annotations visually reviewed and authorizes non-destructive strict-clean conversion and seeded image-level train/validation/test splitting of existing external TACO. Use the eight-class taxonomy/order, default proposed 70/15/15 ratios and seed 42, preserve original metadata/source identity, quarantine whole missing/unaligned/invalid/mixed/unlabeled images, and report losses/bias. Do not clip boxes, repair duplicated source annotation IDs, assume trainer ignore flags, copy photos, download data, change dependencies/inference or load/fine-tune Grounding DINO. This supersedes D-035's export/split stop only. No merge. See [Stage 2 evidence](PHASE_2_BASELINE_AND_VISUAL_REVIEW.md).
 
 Implementation choices within this scope: hold non-identity/ambiguous EXIF cases in addition to dimension mismatches; coassign exact/perceptual candidate photograph groups; propagate dirty exact-peer quarantine and hold conflicting exact-peer annotations; preserve full source records alongside unique export annotation IDs. These choices do not approve source repairs or confirm that all near duplicates were found. Licensing, trainer compatibility, small evaluation classes and strict-clean sampling bias remain pending readiness decisions. The existing three final inference categories remain unchanged.
 
 ## Stage 3A assessment authorization
 
-D-037 (2026-10-18): The owner authorizes review of completed Stage 2 and a technical assessment of exact pinned Grounding DINO Tiny training implementation, excluded/unlabeled handling, existing-dataset recovery, GPU/cloud feasibility, licensing and a small smoke/evaluation proposal. Preserve strict-clean exports, eight-label taxonomy, original sources and inference environment/pipeline. No fine-tuning, taxonomy modification or replacement training export is authorized. See [assessment, primary sources and pending gates](TACO_STAGE_3A.md).
+D-037 (2026-10-18): The owner authorizes review of completed Stage 2 and a technical assessment of exact pinned Grounding DINO Tiny training implementation, excluded/unlabeled handling, existing-dataset recovery, GPU/cloud feasibility, licensing and a small smoke/evaluation proposal. Preserve strict-clean exports, eight-label taxonomy, original sources and inference environment/pipeline. No fine-tuning, taxonomy modification or replacement training export is authorized. See [assessment, primary sources and pending gates](PHASE_3_ADAPTER_AND_SYNTHETIC_QUALIFICATION.md).
 
 Proposals, not approvals: use Transformers 4.51.3's native loss with a separate PyTorch trainer/environment; qualify missing SciPy/evaluation dependencies separately; retain strict-clean as the first smoke reference; review coordinates before expansion; investigate auxiliary supervision of known excluded categories while keeping unresolved unlabeled photos quarantined; prefer approximately 24 GB GPU headroom. Rights clearance, runtime memory/backward/save-reload qualification, provider/budget, auxiliary taxonomy/ignore semantics and future versioned expansion/evaluation remain owner decisions. No training readiness or model quality is established by this assessment.
 
 ## Stage 3B synthetic training authorization
 
-D-038 (2026-10-18): The owner authorizes a separate reproducible training environment, required dependencies including SciPy, and bounded synthetic-only PyTorch forward/backward/optimizer checks using the exact pinned Grounding DINO Tiny and Transformers 4.51.3 native loss. Verify all-eight prompt mapping, COCO preprocessing/batching, actual GPU peaks and model/processor saving/reloading. Preserve functioning inference `.venv`, pipeline/settings, source photos/annotations, taxonomy and strict-clean splits. No TACO photo training, cloud uploads/spending, replacement exports or real-data fine-tuning. See [actual implementation and evidence](TACO_STAGE_3B.md).
+D-038 (2026-10-18): The owner authorizes a separate reproducible training environment, required dependencies including SciPy, and bounded synthetic-only PyTorch forward/backward/optimizer checks using the exact pinned Grounding DINO Tiny and Transformers 4.51.3 native loss. Verify all-eight prompt mapping, COCO preprocessing/batching, actual GPU peaks and model/processor saving/reloading. Preserve functioning inference `.venv`, pipeline/settings, source photos/annotations, taxonomy and strict-clean splits. No TACO photo training, cloud uploads/spending, replacement exports or real-data fine-tuning. See [actual implementation and evidence](PHASE_3_ADAPTER_AND_SYNTHETIC_QUALIFICATION.md).
 
 Recorded implementation choices for this software qualification only: FP32 batch 2, frozen vision/BERT, 192/256 input edges, 900 queries and unchanged native loss. The earlier 128/192 attempt failed spatial top-k capacity and remains preserved; there is no automatic model/device fallback. The successful small synthetic run is not an approved real-data hyperparameter configuration or evidence that full training fits 6 GB. Native encoder regression lacks gradients and encoder classification dominates the loss; investigating/correcting that behavior, real-data readiness, rights, resume/evaluation design, taxonomy/ignore policies and expansion remain future decisions. No library version/weight replacement or hidden loss patch is approved by this result.
 
 ## Stage 3C loss investigation authorization
 
-D-039 (2026-10-18): The owner authorizes tracing pinned native encoder/decoder losses and controlled synthetic target-count/empty experiments in `.venv-training`, with masks, matching, normalization, gradient/update and memory diagnostics. Preserve environments, inference, original checkpoint, taxonomy and splits. Do not train on real TACO, patch Transformers, silently change coefficients/architecture or spend on cloud resources. Explain any proposed correction with supporting evidence and request approval before implementing a substantive training-method change. See [actual results and next-stage proposal](TACO_STAGE_3C.md).
+D-039 (2026-10-18): The owner authorizes tracing pinned native encoder/decoder losses and controlled synthetic target-count/empty experiments in `.venv-training`, with masks, matching, normalization, gradient/update and memory diagnostics. Preserve environments, inference, original checkpoint, taxonomy and splits. Do not train on real TACO, patch Transformers, silently change coefficients/architecture or spend on cloud resources. Explain any proposed correction with supporting evidence and request approval before implementing a substantive training-method change. See [actual results and next-stage proposal](PHASE_3_ADAPTER_AND_SYNTHETIC_QUALIFICATION.md).
 
 Investigation findings, not an adopted correction within Stage 3C: native encoder supervision uses a detached box copy and recomputed learned-query/pre-encoder text scores. Selected proposal tensors with the same criterion show expected image-conditioned scores and encoder-head gradient paths; Stage 3C hypothesis terms are diagnostic only and never optimized. Native source, weights, loss and Stage 3B implementation remain unchanged. Its proposed Stage 3D required separate approval, recorded below. Rights, evaluator/resume design, resolution memory, excluded annotations and dataset coverage remain independent prerequisites.
 
@@ -1852,7 +1886,7 @@ Investigation findings, not an adopted correction within Stage 3C: native encode
 
 D-040 (2026-10-19): The owner explicitly approves the separate training-only encoder-output adapter and synthetic qualification using Stage 3C findings. Supply selected image-conditioned encoder proposal scores and undetached supervised boxes to the existing native loss; preserve detached decoder reference initialization, pretrained architecture/base weights, query count, text mapping and coefficients. Verify actual gradients/updates, empty paths, decoder equivalence, checkpoint/adapter reconstruction, memory and regression evidence. No installed-library modification/monkey patch, inference change, real TACO training, data/taxonomy/split modification, cloud spending or automatic promotion. Stop/report if invariants cannot be preserved, and stop after Stage 3D synthetic qualification.
 
-Actual Stage 3D outcome is a bounded synthetic PASS, detailed in [evidence](TACO_STAGE_3D.md). Every corrected case has two optimizer steps, finite values, intended encoder updates and exact decoder equivalence; empty regression is correctly zero. Experimental model/processor weights and explicit adapter context reload exactly. The checkpoint is weights/context only with `resume_supported=false`; no inference promotion or real-data readiness is approved by this outcome. Real-data trainer/resume/evaluator design, rights, coverage/leakage and intended-resolution memory remain future prerequisites.
+Actual Stage 3D outcome is a bounded synthetic PASS, detailed in [evidence](PHASE_3_ADAPTER_AND_SYNTHETIC_QUALIFICATION.md). Every corrected case has two optimizer steps, finite values, intended encoder updates and exact decoder equivalence; empty regression is correctly zero. Experimental model/processor weights and explicit adapter context reload exactly. The checkpoint is weights/context only with `resume_supported=false`; no inference promotion or real-data readiness is approved by this outcome. Real-data trainer/resume/evaluator design, rights, coverage/leakage and intended-resolution memory remain future prerequisites.
 ## D-081: bounded Organic hybrid showcase attempt — 2026-10-31
 
 D-081 execution record: D-080 was committed locally as `2802723`
@@ -1877,7 +1911,7 @@ order, and the D-076 champion bundle hashes matched before inference. Exactly
 eight FP32 CUDA forwards completed across images 68, 72, 92, and 841 at 384/576;
 no test JSON/held-out photo, training, backward pass, or optimizer update was
 used. The artifact and detailed measurements are in
-[the D-082 report](TACO_STAGE_5_ORGANIC_SHOWCASE.md).
+[the D-082 report](PHASE_5_NINE_CLASS_CONSENSUS_AND_SPATIAL_GROUPING.md).
 
 Best spatially localized Organic results: Image 68 GT163 q9, 0.138023 / IoU
 0.8911 / Organic rank 6; Image 72 GT171 q1, 0.176177 / 0.8997 / rank 2; Image
