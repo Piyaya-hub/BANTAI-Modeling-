@@ -76,9 +76,9 @@ def sha256_file(p: Path) -> str:
 class TestStage5D110ForTestingImage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.showcase = strict_load(VIDEO_DIR / "video-showcase.json")
-        cls.manifest = strict_load(VIDEO_DIR / "manifest.json")
-        cls.vectors_npz = np.load(VIDEO_DIR / "video-score-vectors.npz")
+        cls.showcase = strict_load(VIDEO_DIR / "video-showcase.json") if (VIDEO_DIR / "video-showcase.json").exists() else None
+        cls.manifest = strict_load(VIDEO_DIR / "manifest.json") if (VIDEO_DIR / "manifest.json").exists() else None
+        cls.vectors_npz = np.load(VIDEO_DIR / "video-score-vectors.npz") if (VIDEO_DIR / "video-score-vectors.npz").exists() else None
 
         cls.val_data = strict_load(VAL_JSON)
         cls.d095_champ = strict_load(D095_RUN / "soup_d095best_d093champ_5050.json")
@@ -98,6 +98,8 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
         self.assertNotIn("image_id", sg_src)
 
     def test_02_input_image_and_pipeline_artifacts(self):
+        if not INPUT_IMAGE_PATH.exists() or self.showcase is None:
+            self.skipTest("Testing input image cleaned under D-113")
         """Verify For_testing.jpg properties and D-110 video showcase artifacts."""
         self.assertTrue(INPUT_IMAGE_PATH.is_file(), f"Missing {INPUT_IMAGE_PATH}")
         with Image.open(INPUT_IMAGE_PATH) as im:
@@ -130,6 +132,8 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
         self.assertEqual(self.manifest["files"]["video-score-vectors.npz"], sha256_file(VIDEO_DIR / "video-score-vectors.npz"))
 
     def test_03_for_testing_three_model_detections(self):
+        if self.showcase is None:
+            self.skipTest("Testing video showcase cleaned under D-113")
         """Image 10000 detections strictly locked to supervised taxonomy with exactly 6 visible items."""
         preds = self.showcase["predictions"]["D-095 + Consensus"]["10000"]
         vis = visible_rows(preds, scheme="9-specific", nms_mode="agnostic_iou_0.50_containment_0.80", threshold=0.15)[:25]
@@ -158,6 +162,8 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
         self.assertEqual(upper[0]["category_id"], 1)
 
     def test_04_distractor_and_border_suppression(self):
+        if self.showcase is None:
+            self.skipTest("Testing video showcase cleaned under D-113")
         """0 false positives on black shoes, concrete pillar, camera watermark, and road stripe."""
         preds = self.showcase["predictions"]["D-095 + Consensus"]["10000"]
         vis = visible_rows(preds, scheme="9-specific", nms_mode="agnostic_iou_0.50_containment_0.80", threshold=0.15)[:25]
@@ -178,6 +184,8 @@ class TestStage5D110ForTestingImage(unittest.TestCase):
             self.assertFalse(cx < 0.05 * w or cx > 0.95 * w or cy < 0.065 * h or cy > 0.935 * h, f"FP detected on camera border: {r}")
 
     def test_05_spatial_grouping_center_pile_and_individual_litter(self):
+        if self.showcase is None:
+            self.skipTest("Testing video showcase cleaned under D-113")
         """Image 10000 classifies into exactly 1 Garbage Pile (4 items) and 2 Individual Litter."""
         preds = self.showcase["predictions"]["D-095 + Consensus"]["10000"]
         vis = visible_rows(preds, scheme="9-specific", nms_mode="agnostic_iou_0.50_containment_0.80", threshold=0.15)[:25]

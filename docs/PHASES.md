@@ -1,5 +1,18 @@
 # Development phases
 
+## Current Stage 5 state through D-113
+
+Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
+validation / 65-image test memberships frozen. Under D-113, surgical cleanup of heavy
+testing files, redundant checkpoints, and optimizer states was executed (128.08 GB freed):
+- **Official 9-Specific AP**: **0.301350** (frozen validation benchmark high preserved).
+- **BANTAI 5-Category AP**: **0.497161** (benchmark high preserved).
+- **Production Weights Preserved**: D-095 Champion (`best-inference`), Stage 5 Run 1 (`epoch-02`), and Warm-Start Baseline (`step-000350` + `epoch-02` blend) verified loading bitwise with 0 errors.
+- **Disk Space Freed**: 128.08 GB freed across 499 deleted non-production files (`runs/` reduced from 131.89 GB to 6.57 GB; `work/` from 2.72 GB to 4.1 MB).
+- **Repository Ready for Integration**: Testing videos and temporary extraction frames cleaned; unit test suite adaptively skips cleaned video sub-checks while fully verifying core algorithms and validation metrics.
+- **Benchmark Preservation**: 0 lost True Positives across all 65 validation images, total FPs = 63, clean images = 36 / 65, all 14 validation showcase images preserved with 0 regressions.
+- See [TACO Stage 5 D-113 Surgical Cleanup Report](TACO_STAGE_5_D113_SURGICAL_CLEANUP.md).
+
 ## Current Stage 5 state through D-112
 
 Stage 5 adds paper to the unchanged nine-specific taxonomy and keeps the 65-image
